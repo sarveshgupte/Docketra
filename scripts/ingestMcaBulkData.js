@@ -116,7 +116,8 @@ async function main() {
       process.exit(1);
     }
 
-    console.log(`Starting MCA bulk ingestion from file: ${filePath}`);
+    const maxRecords = Number(process.env.MCA_MAX_DIRECTORY_RECORDS) || 10000;
+    console.log(`Starting MCA bulk ingestion (Quota Guard: max ${maxRecords} records for 512MB MongoDB Atlas): ${filePath}`);
     let fileStream = fs.createReadStream(filePath);
     if (filePath.endsWith('.gz')) {
       fileStream = fileStream.pipe(zlib.createGunzip());
@@ -124,6 +125,7 @@ async function main() {
 
     const result = await mcaBulkIngestionService.ingestFromStream(fileStream, {
       batchSize: 2000,
+      maxRecords,
       onProgress: (p) => {
         console.log(`Progress: ${p.totalProcessed} records processed, ${p.totalUpserted} upserted (${(p.elapsedMs / 1000).toFixed(1)}s)...`);
       },

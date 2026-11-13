@@ -77,7 +77,11 @@ L72900MH2010PLC222222,"BETA VENTURES LIMITED",Active,Public,RoC-Mumbai,50000000,
   assert.strictEqual(result.totalProcessed, 2, 'Should process 2 valid rows');
   assert.strictEqual(result.totalUpserted, 2, 'Should upsert 2 rows');
   assert.strictEqual(result.errorsCount, 0);
-  console.log('✓ testIngestFromCsvContent passed');
+
+  // Quota guard test: Ensure maxRecords caps ingestion to protect 512MB free tier
+  const cappedResult = await mcaBulkIngestionService.ingestFromCsvContent(sampleCsv, { maxRecords: 1 });
+  assert.strictEqual(cappedResult.totalProcessed, 1, 'Quota guard should stop processing when maxRecords limit is reached');
+  console.log('✓ testIngestFromCsvContent and quota guard passed');
 })();
 
 // 4. Test Route Schema Validation for Directory Search

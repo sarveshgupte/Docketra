@@ -64,6 +64,8 @@ function normalizeClass(raw) {
   return 'OTHER';
 }
 
+const DEFAULT_MAX_DIRECTORY_RECORDS = Number(process.env.MCA_MAX_DIRECTORY_RECORDS) || 10000;
+
 class McaBulkIngestionService {
   /**
    * Normalizes raw CSV row object into schema attributes
@@ -130,8 +132,9 @@ class McaBulkIngestionService {
 
   /**
    * Streams a CSV from a readable stream and bulk upserts into McaCompanyDirectory in batches
+   * with automatic quota protection for 512MB MongoDB Atlas free tier.
    */
-  async ingestFromStream(readStream, { batchSize = 2000, onProgress = null } = {}) {
+  async ingestFromStream(readStream, { batchSize = 2000, maxRecords = DEFAULT_MAX_DIRECTORY_RECORDS, onProgress = null } = {}) {
     const startTime = Date.now();
     const rl = readline.createInterface({
       input: readStream,
@@ -145,6 +148,15 @@ class McaBulkIngestionService {
     let errorsCount = 0;
 
     for await (const line of rl) {
+      if (maxRecords && totalProcessed >= maxRecords) {
+        log.warn('MCA_INGESTION_QUOTA_GUARD_LIMIT_REACHED', {
+          maxRecords,
+          totalProcessed,
+          message: 'Capped directory ingestion to protect MongoDB 512MB free tier quota.',
+        });
+        break;
+      }
+
       const trimmed = line.trim();
       if (!trimmed) continue;
 
