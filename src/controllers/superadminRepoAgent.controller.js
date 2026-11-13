@@ -94,7 +94,8 @@ const dispatchRepoAgentTask = async (req, res) => {
     });
   } catch (error) {
     log.error('[REPO_AGENT] Task dispatch failed:', { error: error.message });
-    return res.status(500).json({
+    const isValidation = error.message.includes('Target file must reside') || error.message.includes('sensitive configuration');
+    return res.status(isValidation ? 400 : 500).json({
       success: false,
       message: error.message || 'Failed to dispatch code task.',
     });

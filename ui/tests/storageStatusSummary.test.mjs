@@ -75,4 +75,15 @@ const uppercaseRootRecoverySummary = buildStorageStatusSummary(
 assert.equal(uppercaseRootRecoverySummary.badgeLabel, 'Storage needs attention');
 assert.equal(uppercaseRootRecoverySummary.needsAttention, true);
 
+const authExpiredSummary = buildStorageStatusSummary(
+  'demo-firm',
+  { provider: 'google_drive', isConfigured: true, status: 'ACTIVE_BYOS' },
+  { activeStorage: { provider: 'google_drive', connectionStatus: 'ACTIVE_BYOS' } },
+  { status: 'auth_expired', code: 'STORAGE_AUTH_EXPIRED' },
+  null,
+);
+assert.equal(authExpiredSummary.badgeLabel, 'Storage needs attention');
+assert.equal(authExpiredSummary.needsAttention, true);
+assert.equal(authExpiredSummary.helperText, 'Google Drive authorization expired. Please reconnect.');
+
 console.log('storageStatusSummary.test.mjs passed');

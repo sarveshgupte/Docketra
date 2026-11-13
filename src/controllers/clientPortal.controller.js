@@ -135,6 +135,7 @@ const getClientStatusView = async (req, res) => {
     const restrictedIds = await getRestrictedClientIds(firmId, req.user?.restrictedClientIds);
 
     // 2. Resolve allowed client ObjectIds (for client users)
+    let filteredAllowed = null;
     if (req.user?.role === 'USER' && (req.user?.clientAccess?.length > 0 || req.user?.defaultClientId)) {
       const allowedIds = [];
       if (req.user.defaultClientId) {
@@ -145,7 +146,7 @@ const getClientStatusView = async (req, res) => {
       }
 
       // Intersect allowed client IDs with restricted ones
-      const filteredAllowed = allowedIds.filter(
+      filteredAllowed = allowedIds.filter(
         (id) => !restrictedIds.some((rid) => String(rid) === String(id))
       );
       query.clientId = { $in: filteredAllowed };
@@ -155,6 +156,9 @@ const getClientStatusView = async (req, res) => {
 
     // Specific Client filter (if requested in query)
     if (clientId) {
+      if (filteredAllowed && !filteredAllowed.some((id) => String(id) === String(clientId))) {
+        return res.status(403).json({ success: false, message: 'Access denied to this client' });
+      }
       if (restrictedIds.some((rid) => String(rid) === String(clientId))) {
         return res.status(403).json({ success: false, message: 'Access denied to this client' });
       }

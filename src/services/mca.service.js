@@ -87,6 +87,79 @@ function generatePastFilings(incorporationYear) {
 }
 
 /**
+ * Computes automated statutory compliance deadlines based on past filings and company structure
+ */
+function computeComplianceDeadlines({ pastFilings = [], directors = [], incorporationDate = null, entityType = '' }) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  // Financial Year in India runs from April 1 to March 31
+  // If current month >= April (3), current FY is currentYear-(currentYear+1)
+  const isPostApril = now.getMonth() >= 3;
+  const currentFyStartYear = isPostApril ? currentYear : currentYear - 1;
+  const assessmentFyString = `${currentFyStartYear - 1}-${String(currentFyStartYear).slice(-2)}`;
+  const upcomingFyString = `${currentFyStartYear}-${String(currentFyStartYear + 1).slice(-2)}`;
+
+  const isOpc = String(entityType).toLowerCase().includes('opc') || String(entityType).toLowerCase().includes('one person');
+
+  // Check if AOC-4 was already filed for the preceding assessment year
+  const hasAoc4Past = pastFilings.some(
+    (f) => f.formName === 'AOC-4' && (f.financialYear === assessmentFyString || (f.status && f.status.toLowerCase() === 'approved'))
+  );
+  // Check if MGT-7 was already filed
+  const hasMgt7Past = pastFilings.some(
+    (f) => (f.formName === 'MGT-7' || f.formName === 'MGT-7A') && (f.financialYear === assessmentFyString || (f.status && f.status.toLowerCase() === 'approved'))
+  );
+
+  const targetAoc4Fy = hasAoc4Past ? upcomingFyString : assessmentFyString;
+  const targetAoc4Year = hasAoc4Past ? currentFyStartYear + 1 : currentFyStartYear;
+
+  const targetMgt7Fy = hasMgt7Past ? upcomingFyString : assessmentFyString;
+  const targetMgt7Year = hasMgt7Past ? currentFyStartYear + 1 : currentFyStartYear;
+
+  const deadlines = [
+    {
+      formName: 'AOC-4',
+      title: isOpc ? 'Filing of Financial Statements (OPC)' : 'Filing of Financial Statements & Board Report',
+      financialYear: targetAoc4Fy,
+      dueDate: isOpc ? `${targetAoc4Year}-09-27` : `${targetAoc4Year}-10-30`,
+      status: 'UPCOMING',
+      basis: isOpc ? 'Section 137(1) third proviso (Within 180 days of FY closure)' : 'Section 137(1) of Companies Act, 2013 (Within 30 days of AGM)',
+      frequency: 'Annual',
+    },
+    {
+      formName: isOpc ? 'MGT-7A' : 'MGT-7',
+      title: isOpc ? 'Abridged Annual Return for OPC / Small Companies' : 'Annual Return Filing',
+      financialYear: targetMgt7Fy,
+      dueDate: `${targetMgt7Year}-11-29`,
+      status: 'UPCOMING',
+      basis: 'Section 92(4) of Companies Act, 2013 (Within 60 days of AGM)',
+      frequency: 'Annual',
+    },
+    {
+      formName: 'DIR-3 KYC',
+      title: 'Annual Director Identification KYC Verification',
+      financialYear: upcomingFyString,
+      dueDate: `${currentFyStartYear}-09-30`,
+      status: 'UPCOMING',
+      basis: 'Rule 12A of Companies (Appointment and Qualification of Directors) Rules, 2014',
+      frequency: 'Annual',
+      targetDirectors: directors.map((d) => `${d.name} (DIN ${d.din})`),
+    },
+    {
+      formName: 'DPT-3',
+      title: 'Return of Deposits & Non-Deposit Financial Receipts',
+      financialYear: upcomingFyString,
+      dueDate: `${currentFyStartYear}-06-30`,
+      status: 'UPCOMING',
+      basis: 'Rule 16 of Companies (Acceptance of Deposits) Rules, 2014',
+      frequency: 'Annual',
+    },
+  ];
+
+  return deadlines;
+}
+
+/**
  * Deterministic sandbox mock company generator from CIN
  */
 function generateDeterministicCompany(cinUpper, pan = null) {
@@ -162,6 +235,12 @@ function generateDeterministicCompany(cinUpper, pan = null) {
     contactPersonName: 'Aditya Sharma',
     directors,
     pastFilings,
+    complianceDeadlines: computeComplianceDeadlines({
+      pastFilings,
+      directors,
+      incorporationDate,
+      entityType: typeInfo.entityType,
+    }),
     source: 'MCA21 Regulatory Sandbox',
   };
 }
@@ -292,6 +371,12 @@ function fetchFromLiveGateway({ cin, pan, apiKey, apiUrl }) {
                   filingDate: f.filing_date ? new Date(f.filing_date) : null,
                   status: f.status || 'Approved',
                 })),
+                complianceDeadlines: computeComplianceDeadlines({
+                  pastFilings: (d.filings || []).map((f) => ({ formName: f.form_name, financialYear: f.financial_year, status: f.status })),
+                  directors: (d.directors || []).map((dir) => ({ din: dir.din, name: dir.name })),
+                  incorporationDate: d.incorporation_date,
+                  entityType: d.company_type || d.class,
+                }),
                 source: 'Live MCA Gateway',
               });
             }
@@ -316,6 +401,7 @@ function fetchFromLiveGateway({ cin, pan, apiKey, apiUrl }) {
 module.exports = {
   lookupCompany,
   generateDeterministicCompany,
+  computeComplianceDeadlines,
   ROC_MAP,
   COMPANY_TYPE_MAP,
 };

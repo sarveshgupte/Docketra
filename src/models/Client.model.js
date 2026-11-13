@@ -525,6 +525,18 @@ const clientSchema = new mongoose.Schema({
       filingDate: { type: Date },
       status: { type: String, trim: true },
     }],
+    complianceDeadlines: [{
+      formName: { type: String, trim: true },
+      title: { type: String, trim: true },
+      dueDate: { type: Date },
+      financialYear: { type: String, trim: true },
+      status: { type: String, trim: true, default: 'UPCOMING' },
+      basis: { type: String, trim: true },
+      frequency: { type: String, trim: true },
+      targetDirectors: [{ type: String, trim: true }],
+      isSyncedToCalendar: { type: Boolean, default: false },
+      syncedTaskId: { type: String, trim: true },
+    }],
   },
   
   /**

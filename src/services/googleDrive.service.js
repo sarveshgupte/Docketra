@@ -226,6 +226,24 @@ class GoogleDriveService {
     return folder.data.id;
   }
 
+  isGoogleAuthError(err) {
+    const status = Number(err?.status || err?.code || 0);
+    const msg = String(err?.message || '').toLowerCase();
+    const dataErr = String(err?.response?.data?.error || '').toLowerCase();
+    const dataDesc = String(err?.response?.data?.error_description || '').toLowerCase();
+    return (
+      status === 401
+      || dataErr === 'invalid_grant'
+      || dataErr === 'unauthorized'
+      || dataDesc.includes('expired')
+      || dataDesc.includes('revoked')
+      || msg.includes('invalid_grant')
+      || msg.includes('invalid credentials')
+      || msg.includes('token has been expired or revoked')
+      || msg.includes('unauthorized')
+    );
+  }
+
   async upsertRootManifest({ drive, rootFolderId, manifest }) {
     const found = await drive.files.list({
       q: `'${rootFolderId}' in parents and name = '${ROOT_MANIFEST_FILE}' and trashed = false`,
@@ -234,7 +252,7 @@ class GoogleDriveService {
       fields: 'files(id)',
     });
     const body = JSON.stringify(manifest, null, 2);
-    const media = { mimeType: 'application/json', body: Readable.from(body) };
+    const media = { mimeType: 'application/json', body: Readable.from([Buffer.from(body, 'utf8')]) };
     if (found.data.files?.[0]?.id) {
       await drive.files.update({ fileId: found.data.files[0].id, media, supportsAllDrives: true });
       return found.data.files[0].id;
@@ -260,21 +278,44 @@ class GoogleDriveService {
         status: err?.status || err?.code,
         message: err?.message,
       });
+      if (this.isGoogleAuthError(err)) {
+        return { valid: false, code: 'STORAGE_AUTH_EXPIRED', error: err.message };
+      }
       return { valid: false, code: 'STORAGE_ROOT_MISSING' };
     }
     if (folder?.trashed) return { valid: false, code: 'STORAGE_ROOT_MISSING' };
-    const files = await drive.files.list({
-      q: `'${rootFolderId}' in parents and name = '${ROOT_MANIFEST_FILE}' and trashed = false`,
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
-      fields: 'files(id)',
-    });
-    const manifestFileId = files.data.files?.[0]?.id;
+
+    let files = null;
+    try {
+      files = await drive.files.list({
+        q: `'${rootFolderId}' in parents and name = '${ROOT_MANIFEST_FILE}' and trashed = false`,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        fields: 'files(id)',
+      });
+    } catch (err) {
+      if (this.isGoogleAuthError(err)) {
+        return { valid: false, code: 'STORAGE_AUTH_EXPIRED', error: err.message };
+      }
+      return { valid: false, code: 'STORAGE_MANIFEST_MISSING' };
+    }
+
+    const manifestFileId = files?.data?.files?.[0]?.id;
     if (!manifestFileId) return { valid: false, code: 'STORAGE_MANIFEST_MISSING' };
-    const manifestRaw = await drive.files.get({ fileId: manifestFileId, alt: 'media', supportsAllDrives: true }, { responseType: 'stream' });
-    const chunks = [];
-    for await (const chunk of manifestRaw.data) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    const manifest = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+
+    let manifest = null;
+    try {
+      const manifestRaw = await drive.files.get({ fileId: manifestFileId, alt: 'media', supportsAllDrives: true }, { responseType: 'stream' });
+      const chunks = [];
+      for await (const chunk of manifestRaw.data) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      manifest = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    } catch (err) {
+      if (this.isGoogleAuthError(err)) {
+        return { valid: false, code: 'STORAGE_AUTH_EXPIRED', error: err.message };
+      }
+      return { valid: false, code: 'STORAGE_MANIFEST_MISSING' };
+    }
+
     const firmIdMatches = String(manifest?.firmId || '') === String(firm?._id || '')
       || (firm?.firmId && String(manifest?.firmId || '') === String(firm.firmId))
       || (firm?.slug && String(manifest?.firmSlug || '') === String(firm.slug))
@@ -343,6 +384,12 @@ class GoogleDriveService {
           resolvedFolderName = folderRes.data.name || canonicalName;
         }
       } catch (_err) {
+        if (this.isGoogleAuthError(_err)) {
+          const authErr = new Error('Google Drive authorization expired or was revoked. Please reconnect your account.');
+          authErr.code = 'STORAGE_AUTH_EXPIRED';
+          authErr.status = 401;
+          throw authErr;
+        }
         resolvedFolderId = null;
       }
     }
@@ -362,14 +409,30 @@ class GoogleDriveService {
           resolvedFolderName = match.name || canonicalName;
         }
       } catch (_err) {
+        if (this.isGoogleAuthError(_err)) {
+          const authErr = new Error('Google Drive authorization expired or was revoked. Please reconnect your account.');
+          authErr.code = 'STORAGE_AUTH_EXPIRED';
+          authErr.status = 401;
+          throw authErr;
+        }
         resolvedFolderId = null;
       }
     }
 
     // 3. If still not found, create new canonical root folder in Google Drive
     if (!resolvedFolderId) {
-      resolvedFolderId = await this.createFolder(canonicalName, null, drive);
-      resolvedFolderName = canonicalName;
+      try {
+        resolvedFolderId = await this.createFolder(canonicalName, null, drive);
+        resolvedFolderName = canonicalName;
+      } catch (_err) {
+        if (this.isGoogleAuthError(_err)) {
+          const authErr = new Error('Google Drive authorization expired or was revoked. Please reconnect your account.');
+          authErr.code = 'STORAGE_AUTH_EXPIRED';
+          authErr.status = 401;
+          throw authErr;
+        }
+        throw _err;
+      }
     }
 
     // 4. Upsert/repair root manifest in resolved folder

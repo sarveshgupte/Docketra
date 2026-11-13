@@ -71,7 +71,6 @@ const auditLogSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
     immutable: true,
-    index: true,
   },
 }, {
   strict: true,
@@ -114,5 +113,7 @@ auditLogSchema.pre('remove', function (next) {
 auditLogSchema.index({ tenantId: 1, entityId: 1 });
 auditLogSchema.index({ tenantId: 1, createdAt: -1 });
 auditLogSchema.index({ tenantId: 1, action: 1 });
+// Retain audit logs for 90 days to prevent uncontrolled growth on constrained clusters (Atlas M0 512MB)
+auditLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 module.exports = mongoose.model('AuditLog', auditLogSchema);

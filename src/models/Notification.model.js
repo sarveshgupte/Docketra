@@ -65,7 +65,6 @@ const notificationSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
-    index: true,
   },
   groupCount: {
     type: Number,
@@ -90,5 +89,7 @@ notificationSchema.virtual('timestamp').get(function timestamp() {
 
 notificationSchema.index({ firmId: 1, userId: 1, createdAt: -1 });
 notificationSchema.index({ firmId: 1, userId: 1, type: 1, docketId: 1, isRead: 1 });
+// Retain notifications for 90 days to prevent uncontrolled growth on constrained clusters (Atlas M0 512MB)
+notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

@@ -40,6 +40,8 @@ export const buildStorageStatusSummary = (firmSlug, configuration = {}, ownershi
   const strictMode = isStrictMode(configuration, ownershipSummary);
   const activeConnectionStatus = normalizeStatus(activeStorage.connectionStatus);
   const rootHealthStatus = normalizeStatus(rootHealth?.status);
+  const rootHealthCode = String(rootHealth?.code || '').toUpperCase();
+  const isAuthExpired = rootHealthCode === 'STORAGE_AUTH_EXPIRED' || rootHealthStatus === 'AUTH_EXPIRED';
 
   const byosProvider = ['google_drive', 'onedrive', 's3'].includes(provider);
   const byosConfigured = Boolean(byosProvider || activeConnectionStatus === 'ACTIVE_BYOS');
@@ -48,6 +50,7 @@ export const buildStorageStatusSummary = (firmSlug, configuration = {}, ownershi
     || ['ERROR', 'DISCONNECTED'].includes(healthStatus)
     || ['ERROR', 'DISCONNECTED'].includes(activeConnectionStatus)
     || error
+    || isAuthExpired
     || (rootHealthStatus === 'RECOVERY_REQUIRED' && (strictMode || byosConfigured || byosProvider))
   );
 
@@ -73,7 +76,11 @@ export const buildStorageStatusSummary = (firmSlug, configuration = {}, ownershi
     badgeLabel = 'Storage needs attention';
     providerLabel = getProviderLabel(provider, byosProvider);
     businessDataLocation = byosProvider ? 'Firm-owned cloud storage' : 'Docketra-managed storage';
-    helperText = rootHealthStatus === 'RECOVERY_REQUIRED' ? 'Google Drive root recovery required' : 'Storage connection requires attention from a Primary Admin.';
+    if (isAuthExpired) {
+      helperText = 'Google Drive authorization expired. Please reconnect.';
+    } else {
+      helperText = rootHealthStatus === 'RECOVERY_REQUIRED' ? 'Google Drive root recovery required' : 'Storage connection requires attention from a Primary Admin.';
+    }
     statusLabel = 'Needs attention';
   } else if (strictMode && byosActive) {
     badgeTone = 'success';

@@ -254,11 +254,19 @@ async function dispatchCodeTask({ agent, prompt, mode = 'preview', targetFile })
     ruleContext = fs.readFileSync(julesFile, 'utf8');
   }
 
-  // If a target file is specified and exists, load its content
+  // If a target file is specified and exists, load its content safely within repository bounds
   let targetFileContent = '';
   if (targetFile) {
     const fullTarget = path.resolve(REPO_ROOT, targetFile);
-    if (fs.existsSync(fullTarget)) {
+    const normalizedRepoRoot = REPO_ROOT.endsWith(path.sep) ? REPO_ROOT : `${REPO_ROOT}${path.sep}`;
+    if (!fullTarget.startsWith(normalizedRepoRoot)) {
+      throw new Error('Target file must reside within repository root');
+    }
+    const relativeTarget = path.relative(REPO_ROOT, fullTarget);
+    if (/^\.env/i.test(relativeTarget) || /(^|\/|\\)\.env/i.test(relativeTarget)) {
+      throw new Error('Access to sensitive configuration files is restricted');
+    }
+    if (fs.existsSync(fullTarget) && fs.statSync(fullTarget).isFile()) {
       targetFileContent = `\n--- Target File Content (${targetFile}) ---\n` + fs.readFileSync(fullTarget, 'utf8').slice(0, 4000);
     }
   }

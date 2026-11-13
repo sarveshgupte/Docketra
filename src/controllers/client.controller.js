@@ -1,4 +1,5 @@
 const Case = require('../models/Case.model');
+const Task = require('../models/Task');
 const ClientRepository = require('../repositories/ClientRepository');
 const AttachmentRepository = require('../repositories/AttachmentRepository');
 const { mapClientResponse } = require('../mappers/client.mapper');
@@ -574,6 +575,128 @@ const lookupMcaEntity = async (req, res) => {
       success: false,
       code: error.code || 'MCA_LOOKUP_FAILED',
       message: error.message || 'Failed to fetch MCA details',
+    });
+  }
+};
+
+/**
+ * Synchronize automated compliance deadlines for a client based on MCA past filings
+ * POST /api/clients/:clientId/mca/sync-deadlines
+ */
+const syncClientComplianceDeadlines = async (req, res) => {
+  try {
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to sync compliance deadlines');
+    if (!accessContext) return;
+    const { firmId, role } = accessContext;
+    const { clientId } = req.params;
+
+    const client = await ClientRepository.findByClientId(firmId, clientId, role, {
+      logContext: buildClientLogContext(req, { model: 'Client', clientId }),
+    });
+    if (!client) {
+      return res.status(404).json({ success: false, message: 'Client not found' });
+    }
+
+    const hydrated = await hydrateClientFromProfileIfAvailable(firmId, client);
+    const profile = await clientProfileStorageService.getClientProfile({ firmId, client }).catch(() => null);
+    const cin = hydrated.CIN || profile?.profile?.identifiers?.cin || client.CIN || null;
+    const pan = hydrated.PAN || profile?.profile?.identifiers?.pan || client.PAN || null;
+
+    let dossier = client.mcaDossier;
+    if (!dossier || !dossier.pastFilings || !dossier.pastFilings.length) {
+      if (cin || pan) {
+        dossier = await mcaService.lookupCompany({ cin, pan });
+      }
+    }
+
+    if (!dossier) {
+      return res.status(400).json({
+        success: false,
+        message: 'No MCA dossier or CIN/PAN available for this client. Please configure a CIN or PAN first.',
+      });
+    }
+
+    const deadlines = mcaService.computeComplianceDeadlines({
+      pastFilings: dossier.pastFilings || [],
+      directors: dossier.directors || [],
+      incorporationDate: dossier.incorporationDate,
+      entityType: dossier.entityType || client.entityType,
+    });
+
+    const syncedDeadlines = [];
+    for (const item of deadlines) {
+      const dueDateObj = new Date(item.dueDate);
+      const year = dueDateObj.getFullYear();
+      const existing = await Task.findOne({
+        firmId,
+        clientId: client.clientId,
+        tags: 'compliance-calendar',
+        title: { $regex: new RegExp(`^${item.formName}`, 'i') },
+        dueDate: {
+          $gte: new Date(year, 0, 1),
+          $lte: new Date(year, 11, 31),
+        },
+      });
+
+      let taskId = existing?._id?.toString() || null;
+      if (!existing) {
+        const created = await Task.create({
+          firmId,
+          title: `${item.formName}: ${item.title} (${hydrated.businessName || client.businessName})`,
+          description: `Automated compliance filing obligation under ${item.basis}. Target FY: ${item.financialYear}.`,
+          dueDate: dueDateObj,
+          priority: 'high',
+          status: 'pending',
+          tags: ['compliance-calendar', 'mca-statutory', item.formName.toLowerCase()],
+          clientId: client.clientId,
+          clientName: hydrated.businessName || client.businessName,
+          calendarEntryType: 'important_date',
+        });
+        taskId = created._id?.toString();
+      }
+
+      syncedDeadlines.push({
+        ...item,
+        isSyncedToCalendar: true,
+        syncedTaskId: taskId,
+      });
+    }
+
+    const rawDossier = dossier.toObject ? dossier.toObject() : dossier;
+    const updatedDossier = {
+      ...rawDossier,
+      complianceDeadlines: syncedDeadlines,
+    };
+
+    await ClientRepository.updateById(firmId, client._id, {
+      $set: { mcaDossier: updatedDossier },
+    });
+
+    await logAuditEvent({
+      firmId,
+      actorId: req.user?._id,
+      targetId: client._id,
+      action: 'CLIENT_COMPLIANCE_DEADLINES_SYNCED',
+      metadata: {
+        clientId: client.clientId,
+        businessName: hydrated.businessName || client.businessName,
+        syncedCount: syncedDeadlines.length,
+      },
+    }).catch(() => null);
+
+    return res.json({
+      success: true,
+      message: `Synchronized ${syncedDeadlines.length} compliance deadlines to the calendar.`,
+      data: {
+        deadlines: syncedDeadlines,
+        mcaDossier: updatedDossier,
+      },
+    });
+  } catch (error) {
+    logClientError('SYNC_COMPLIANCE_DEADLINES_ERROR', req, error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to sync compliance deadlines',
     });
   }
 };
@@ -1948,6 +2071,7 @@ module.exports = {
   getClients,
   getClientById,
   lookupMcaEntity,
+  syncClientComplianceDeadlines: wrapWriteHandler(syncClientComplianceDeadlines),
   createClient,
   sendClientStatusOtp: wrapWriteHandler(sendClientStatusOtp),
   verifyClientStatusOtp: wrapWriteHandler(verifyClientStatusOtp),

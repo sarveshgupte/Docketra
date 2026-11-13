@@ -161,6 +161,23 @@ async function run() {
   assert.strictEqual(recRes.body.success, true);
   console.log('  ✓ controller.recoverStorageRoot handles recovery successfully');
 
+  // expired/revoked credentials return STORAGE_AUTH_EXPIRED
+  const authExpiredDrive = {
+    files: {
+      get: async () => {
+        const err = new Error('invalid_grant: Token has been expired or revoked');
+        err.status = 401;
+        throw err;
+      },
+      list: async () => { throw new Error('unauthorized'); },
+      create: async () => { throw new Error('unauthorized'); },
+    },
+  };
+  const authResult = await googleDriveService.validateRootFolder({ drive: authExpiredDrive, firm: { _id: 'firm-1' }, rootFolderId: 'root-1' });
+  assert.strictEqual(authResult.valid, false);
+  assert.strictEqual(authResult.code, 'STORAGE_AUTH_EXPIRED');
+  console.log('  ✓ auth expired/revoked returns STORAGE_AUTH_EXPIRED instead of missing folder');
+
   Module._load = originalLoad;
   console.log('byosRootIdentity.test.js passed');
 }

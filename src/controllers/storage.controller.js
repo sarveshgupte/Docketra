@@ -726,7 +726,9 @@ const getStorageRootHealth = async (req, res) => {
           rootHealth = { valid: true, folderName: recovery.rootFolderName };
         }
       } catch (_recErr) {
-        // preserve failure reporting below
+        if (_recErr?.code === 'STORAGE_AUTH_EXPIRED' || googleDriveService.isGoogleAuthError?.(_recErr)) {
+          rootHealth = { valid: false, code: 'STORAGE_AUTH_EXPIRED' };
+        }
       }
     }
 
@@ -736,11 +738,12 @@ const getStorageRootHealth = async (req, res) => {
         STORAGE_ROOT_MISSING: 'The connected Google Drive folder may have been deleted or moved to trash.',
         STORAGE_MANIFEST_MISSING: 'The Docketra identity file is missing from the storage root.',
         STORAGE_ROOT_MISMATCH: 'The connected folder does not match this workspace.',
+        STORAGE_AUTH_EXPIRED: 'Your Google Drive authorization has expired or was revoked. Please reconnect your account.',
       };
       return res.json({
         success: true,
         provider: 'google-drive',
-        status: 'recovery_required',
+        status: code === 'STORAGE_AUTH_EXPIRED' ? 'auth_expired' : 'recovery_required',
         code,
         message: baseMessage || codeMessageMap[code] || 'Docketra could not verify your firm-owned Google Drive root.',
         checkedAt,

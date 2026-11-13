@@ -85,6 +85,7 @@ const restoreSwaps = () => {
     listClientActivity: noOp,
     repairClientEncryptionKey: noOp,
     lookupMcaEntity: noOp,
+    syncClientComplianceDeadlines: noOp,
     sendClientStatusOtp: noOp,
     verifyClientStatusOtp: noOp,
   });

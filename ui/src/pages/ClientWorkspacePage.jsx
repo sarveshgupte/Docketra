@@ -46,6 +46,9 @@ export const ClientWorkspacePage = () => {
   const [loadError, setLoadError] = useState('');
   const [syncingMca, setSyncingMca] = useState(false);
   const [mcaSyncError, setMcaSyncError] = useState('');
+  const [syncingDeadlines, setSyncingDeadlines] = useState(false);
+  const [deadlinesSyncFeedback, setDeadlinesSyncFeedback] = useState(null);
+  const [copiedDin, setCopiedDin] = useState(null);
   const [cfsForm, setCfsForm] = useState({ entity_type: '', cin_llpin: '', incorporation_date: '', registered_address: '', industry: '', contact_person: '', contact_email: '', contact_phone: '', compliance_notes: '' });
 
   const currentTab = useMemo(() => {
@@ -127,6 +130,30 @@ export const ClientWorkspacePage = () => {
       setMcaSyncError(err.message || 'Failed to sync MCA details');
     } finally {
       setSyncingMca(false);
+    }
+  };
+  const handleCopyDin = (din) => {
+    if (!din) return;
+    navigator.clipboard?.writeText(din);
+    setCopiedDin(din);
+    setTimeout(() => setCopiedDin(null), 2000);
+  };
+
+  const handleSyncDeadlines = async () => {
+    if (!clientId) return;
+    setSyncingDeadlines(true);
+    setDeadlinesSyncFeedback(null);
+    try {
+      const res = await clientApi.syncComplianceDeadlines(clientId);
+      if (!res?.success) throw new Error(res?.message || 'Failed to sync deadlines');
+      setDeadlinesSyncFeedback({ type: 'success', message: res.message || 'Compliance deadlines synced to calendar.' });
+      if (res.data?.mcaDossier) {
+        setClient((prev) => ({ ...prev, mcaDossier: res.data.mcaDossier }));
+      }
+    } catch (err) {
+      setDeadlinesSyncFeedback({ type: 'error', message: err.message || 'Failed to sync compliance deadlines' });
+    } finally {
+      setSyncingDeadlines(false);
     }
   };
   const onSaveCfs = async () => {
@@ -314,9 +341,256 @@ export const ClientWorkspacePage = () => {
           </Card>}
 
           {currentTab === 'compliance' && (
-            <Card>
-              <p className="text-sm text-gray-600">Use linked dockets to manage compliance execution for this client. Create or open a docket from the Dockets tab.</p>
-            </Card>
+            <div className="space-y-6">
+              {/* Compliance Master Card */}
+              <Card>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <h2 className="text-lg font-bold text-slate-900">MCA21 Compliance Registry & Filings</h2>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Entity master data, Board of Directors registry, past RoC filings, and automated Companies Act, 2013 deadlines.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="small"
+                      variant="outline"
+                      onClick={handleSyncMca}
+                      disabled={syncingMca}
+                    >
+                      {syncingMca ? 'Syncing MCA…' : '↻ Refresh MCA Data'}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="primary"
+                      onClick={handleSyncDeadlines}
+                      disabled={syncingDeadlines}
+                    >
+                      {syncingDeadlines ? 'Syncing Deadlines…' : 'Sync Deadlines to Calendar'}
+                    </Button>
+                  </div>
+                </div>
+
+                {mcaSyncError && (
+                  <div className="p-3 mb-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs">
+                    {mcaSyncError}
+                  </div>
+                )}
+
+                {deadlinesSyncFeedback && (
+                  <div className={`p-3 mb-4 rounded-lg text-xs ${deadlinesSyncFeedback.type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-rose-50 border border-rose-200 text-rose-800'}`}>
+                    {deadlinesSyncFeedback.message}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <span className="text-slate-400 block mb-1">RoC Jurisdiction</span>
+                    <span className="font-semibold text-slate-800">{client?.mcaDossier?.roc || '—'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <span className="text-slate-400 block mb-1">Company Class / Category</span>
+                    <span className="font-semibold text-slate-800">{client?.mcaDossier?.class || client?.entityType || 'Private Limited'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <span className="text-slate-400 block mb-1">Authorized Capital</span>
+                    <span className="font-semibold text-slate-800">{client?.mcaDossier?.authorizedCapital ? `₹${client.mcaDossier.authorizedCapital.toLocaleString('en-IN')}` : '—'}</span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    <span className="text-slate-400 block mb-1">Paid-up Capital</span>
+                    <span className="font-semibold text-slate-800">{client?.mcaDossier?.paidUpCapital ? `₹${client.mcaDossier.paidUpCapital.toLocaleString('en-IN')}` : '—'}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Automated Compliance Deadlines Card */}
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                      Automated Statutory Deadlines (Companies Act, 2013)
+                    </h3>
+                    <p className="text-xs text-slate-500">Upcoming annual statutory obligations linked automatically from past filings history.</p>
+                  </div>
+                  <span className="text-xs font-mono text-slate-400">
+                    {(client?.mcaDossier?.complianceDeadlines || []).length} obligations
+                  </span>
+                </div>
+
+                {!(client?.mcaDossier?.complianceDeadlines || []).length ? (
+                  <div className="text-center py-8 bg-slate-50/60 rounded-lg border border-slate-100 text-xs text-slate-500">
+                    <p>No statutory compliance deadlines generated yet.</p>
+                    <p className="mt-1 text-slate-400">Click "Sync Deadlines to Calendar" above to compute upcoming filing dates from past filings.</p>
+                  </div>
+                ) : (
+                  <div className="case-detail-table-wrap">
+                    <table className="case-detail-table text-xs">
+                      <thead>
+                        <tr>
+                          <th>Form</th>
+                          <th>Statutory Obligation</th>
+                          <th>Statutory Due Date</th>
+                          <th>Target FY</th>
+                          <th>Governing Legal Section / Rule</th>
+                          <th>Calendar Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(client.mcaDossier.complianceDeadlines || []).map((item, idx) => (
+                          <tr key={item.formName + idx}>
+                            <td>
+                              <span className="px-1.5 py-0.5 font-bold font-mono text-[11px] bg-amber-50 text-amber-800 border border-amber-200 rounded">
+                                {item.formName}
+                              </span>
+                            </td>
+                            <td className="font-semibold text-slate-800">{item.title}</td>
+                            <td className="font-bold text-indigo-700 font-mono">
+                              {item.dueDate ? formatDate(item.dueDate) : '—'}
+                            </td>
+                            <td className="font-medium text-slate-600">{item.financialYear || '—'}</td>
+                            <td className="text-slate-500 max-w-xs">{item.basis || 'Companies Act, 2013'}</td>
+                            <td>
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${item.isSyncedToCalendar ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
+                                {item.isSyncedToCalendar ? '✓ Synced to Calendar' : 'Pending Sync'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+
+              {/* Directors Registry Card */}
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                      Directors Registry & Signatories
+                    </h3>
+                    <p className="text-xs text-slate-500">Active board members, DINs, and designated signatory powers.</p>
+                  </div>
+                  <span className="text-xs font-mono text-slate-400">
+                    {(client?.mcaDossier?.directors || []).length} registered
+                  </span>
+                </div>
+
+                {!(client?.mcaDossier?.directors || []).length ? (
+                  <div className="text-center py-8 bg-slate-50/60 rounded-lg border border-slate-100 text-xs text-slate-500">
+                    <p>No directors registry data available for this client.</p>
+                    <p className="mt-1 text-slate-400">Sync with MCA to retrieve official director records and DINs.</p>
+                  </div>
+                ) : (
+                  <div className="case-detail-table-wrap">
+                    <table className="case-detail-table text-xs">
+                      <thead>
+                        <tr>
+                          <th>Director Name</th>
+                          <th>DIN</th>
+                          <th>Designation</th>
+                          <th>Appointment Date</th>
+                          <th>Signatory Authority</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(client.mcaDossier.directors || []).map((dir, idx) => (
+                          <tr key={dir.din || idx}>
+                            <td className="font-semibold text-slate-900">{dir.name}</td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyDin(dir.din)}
+                                className="inline-flex items-center gap-1 font-mono text-[11px] bg-slate-100 hover:bg-slate-200 px-1.5 py-0.5 rounded text-slate-700 transition"
+                                title="Click to copy DIN"
+                              >
+                                <span>{dir.din}</span>
+                                <span className="text-[10px] text-slate-400">{copiedDin === dir.din ? '✓' : '⧉'}</span>
+                              </button>
+                            </td>
+                            <td className="text-slate-600">{dir.designation || 'Director'}</td>
+                            <td className="text-slate-500">{dir.appointmentDate ? formatDate(dir.appointmentDate) : '—'}</td>
+                            <td>
+                              {dir.isSignatory ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  Signatory
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
+                                  Director
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+
+              {/* Past Filings Card */}
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-slate-500" />
+                      Past Statutory Filings History
+                    </h3>
+                    <p className="text-xs text-slate-500">Historical records of annual returns and statutory forms submitted to RoC.</p>
+                  </div>
+                  <span className="text-xs font-mono text-slate-400">
+                    {(client?.mcaDossier?.pastFilings || []).length} past filings
+                  </span>
+                </div>
+
+                {!(client?.mcaDossier?.pastFilings || []).length ? (
+                  <div className="text-center py-8 bg-slate-50/60 rounded-lg border border-slate-100 text-xs text-slate-500">
+                    <p>No past statutory filings imported yet.</p>
+                  </div>
+                ) : (
+                  <div className="case-detail-table-wrap">
+                    <table className="case-detail-table text-xs">
+                      <thead>
+                        <tr>
+                          <th>Form</th>
+                          <th>Filing Title</th>
+                          <th>SRN</th>
+                          <th>Financial Year</th>
+                          <th>Filing Date</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(client.mcaDossier.pastFilings || []).map((filing, idx) => (
+                          <tr key={filing.srn || idx}>
+                            <td>
+                              <span className="px-1.5 py-0.5 font-bold font-mono text-[11px] bg-indigo-50 text-indigo-800 border border-indigo-200 rounded">
+                                {filing.formName}
+                              </span>
+                            </td>
+                            <td className="font-medium text-slate-800">{filing.formTitle || filing.formName}</td>
+                            <td className="font-mono text-slate-500">{filing.srn || '—'}</td>
+                            <td className="font-semibold text-slate-600">{filing.financialYear || '—'}</td>
+                            <td className="text-slate-500">{filing.filingDate ? formatDate(filing.filingDate) : '—'}</td>
+                            <td>
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                {filing.status || 'Approved'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+            </div>
           )}
 
           {currentTab === 'documents' && <Card><p>Documents and references</p><p>Linked documents and references will appear here as client files are connected through Docketra.</p></Card>}

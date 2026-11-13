@@ -57,6 +57,8 @@ function stub(modulePath, exportsValue) {
       getStorageDataMap: (_req, res) => res.status(200).json({ ok: true }),
       updateBackupSettings: (_req, res) => res.status(200).json({ ok: true }),
       getStorageRootHealth: (_req, res) => res.status(200).json({ ok: true }),
+      recoverStorageRoot: (_req, res) => res.status(200).json({ ok: true }),
+      verifyStorageBoundary: (_req, res) => res.status(200).json({ ok: true }),
     });
 
     stub(rbacPath, {

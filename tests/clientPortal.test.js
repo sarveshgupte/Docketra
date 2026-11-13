@@ -216,6 +216,35 @@ async function testRoleAndVisibilityBoundaries() {
     assert.ok(capturedQuery.clientId.$in);
     assert.strictEqual(String(capturedQuery.clientId.$in[0]), allowedClientObjId.toString());
 
+    // Verify IDOR protection: requesting an unassigned clientId returns 403
+    const unallowedClientObjId = new mongoose.Types.ObjectId();
+    let idorStatusCode = 200;
+    let idorJson = null;
+    const idorRes = {
+      status: function (code) {
+        idorStatusCode = code;
+        return this;
+      },
+      json: function (data) {
+        idorJson = data;
+        return this;
+      },
+    };
+    const idorReq = {
+      query: { page: '1', limit: '10', clientId: unallowedClientObjId.toString() },
+      user: {
+        firmId: req.user.firmId,
+        role: 'USER',
+        defaultClientId: allowedClientObjId,
+        clientAccess: [],
+        restrictedClientIds: ['C000104'],
+      },
+    };
+    await controller.getClientStatusView(idorReq, idorRes);
+    assert.strictEqual(idorStatusCode, 403);
+    assert.strictEqual(idorJson.success, false);
+    assert.strictEqual(idorJson.message, 'Access denied to this client');
+
     // Verify individual detail lookups
     const detailCase = {
       caseId: 'DCK-00047',

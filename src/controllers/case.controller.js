@@ -934,6 +934,7 @@ const getClientFactSheetForCase = async (req, res) => {
       clientId: client.clientId,
       businessName: client.businessName,
       basicInfo: normalizedBasicInfo,
+      mcaDossier: client.mcaDossier || null,
       description: clientFactSheet?.description || '',
       notes: clientFactSheet?.notes || '',
       updatedAt: clientFactSheet?.updatedAt || null,

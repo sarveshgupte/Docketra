@@ -19,6 +19,10 @@ module.exports = {
       message: 'Either CIN or PAN must be provided',
     }),
   },
+  'POST /:clientId/mca/sync-deadlines': {
+    params: z.object({ clientId: clientIdString }),
+    body: z.object({}).passthrough().optional(),
+  },
   'POST /:clientId/status/send-otp': {
     params: z.object({ clientId: clientIdString }),
     body: z.object({}).strict(),

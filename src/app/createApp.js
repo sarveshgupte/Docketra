@@ -310,7 +310,12 @@ const createApp = () => {
   app.use(optionsPreflight(allowedOrigins, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS));
   app.use(cors(corsOptions));
   app.use(compression());
-  app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '100kb' }));
+  app.use(express.json({
+    limit: process.env.JSON_BODY_LIMIT || '100kb',
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }));
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
   app.use(enforceSameOriginForMutatingRequests);

@@ -127,6 +127,13 @@ const getDocketEfforts = async (req, res) => {
       query.caseInternalId = new mongoose.Types.ObjectId(caseInternalId);
     }
     if (clientId) {
+      if (restrictedIds.some((rid) => String(rid) === String(clientId))) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: Client is restricted',
+          code: 'CLIENT_ACCESS_RESTRICTED',
+        });
+      }
       query.clientId = new mongoose.Types.ObjectId(clientId);
     }
     if (userXID) {

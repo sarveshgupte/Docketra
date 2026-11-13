@@ -318,8 +318,9 @@ export function StorageSettingsPage() {
   const strictFirmOwnedStorage = Boolean(config?.strictFirmOwnedStorage);
   const rootHealthStatus = String(rootHealth?.status || '').toLowerCase();
   const rootHealthOk = rootHealthStatus === 'healthy' || rootHealthStatus === 'renamed_valid';
-  const credentialsNeedAttention = String(config?.status || '').includes('ERROR') || String(config?.status || '').includes('DISCONNECTED');
-  const rootNeedsAttention = normalizedProvider === 'google-drive' && Boolean(config?.isConfigured) && rootHealthStatus === 'recovery_required';
+  const isAuthExpired = rootHealth?.code === 'STORAGE_AUTH_EXPIRED' || rootHealthStatus === 'auth_expired';
+  const credentialsNeedAttention = String(config?.status || '').includes('ERROR') || String(config?.status || '').includes('DISCONNECTED') || isAuthExpired;
+  const rootNeedsAttention = normalizedProvider === 'google-drive' && Boolean(config?.isConfigured) && (rootHealthStatus === 'recovery_required' || isAuthExpired);
   const storageNeedsAttention = credentialsNeedAttention || rootNeedsAttention;
   const statusLabel = storageNeedsAttention ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
   const rootHealthMessage = rootHealth?.message || (config?.isConfigured ? 'Docketra could not verify your firm-owned cloud storage root.' : 'Connect firm cloud storage to verify root health.');
@@ -710,9 +711,15 @@ export function StorageSettingsPage() {
                     </Button>
                   )}
                   {normalizedProvider === 'google-drive' && rootNeedsAttention && (
-                    <Button type="button" variant="primary" onClick={onRecoverRoot} disabled={recoveringRoot}>
-                      {recoveringRoot ? 'Recovering Root…' : 'Recover Storage Root'}
-                    </Button>
+                    isAuthExpired ? (
+                      <Button type="button" variant="primary" onClick={() => connectGoogleDrive()}>
+                        Reconnect Google Drive
+                      </Button>
+                    ) : (
+                      <Button type="button" variant="primary" onClick={onRecoverRoot} disabled={recoveringRoot}>
+                        {recoveringRoot ? 'Recovering Root…' : 'Recover Storage Root'}
+                      </Button>
+                    )
                   )}
                   <Button type="button" variant="outline" onClick={onVerifyBoundary} disabled={verifyingBoundary}>
                     {verifyingBoundary ? 'Auditing Boundary…' : 'Audit Zero-Access Boundary'}
@@ -740,9 +747,15 @@ export function StorageSettingsPage() {
                 <p className="text-xs text-amber-800 font-semibold">
                   Firm storage credentials are connected, but the Google Drive root needs attention: {rootHealthMessage}
                 </p>
-                <Button type="button" variant="primary" size="sm" onClick={onRecoverRoot} disabled={recoveringRoot} className="shrink-0">
-                  {recoveringRoot ? 'Recovering…' : 'Recover Storage Root'}
-                </Button>
+                {isAuthExpired ? (
+                  <Button type="button" variant="primary" size="sm" onClick={() => connectGoogleDrive()} className="shrink-0">
+                    Reconnect Google Drive
+                  </Button>
+                ) : (
+                  <Button type="button" variant="primary" size="sm" onClick={onRecoverRoot} disabled={recoveringRoot} className="shrink-0">
+                    {recoveringRoot ? 'Recovering…' : 'Recover Storage Root'}
+                  </Button>
+                )}
               </div>
             )}
             {summaryWarning && <p className="text-xs text-amber-600 font-medium">{summaryWarning}</p>}
@@ -1033,9 +1046,15 @@ export function StorageSettingsPage() {
                 </div>
               </div>
               {!rootHealthOk && (
-                <Button type="button" variant="primary" size="sm" onClick={onRecoverRoot} disabled={recoveringRoot} className="shrink-0">
-                  {recoveringRoot ? 'Recovering…' : 'Recover Root Folder'}
-                </Button>
+                isAuthExpired ? (
+                  <Button type="button" variant="primary" size="sm" onClick={() => connectGoogleDrive()} className="shrink-0">
+                    Reconnect Google Drive
+                  </Button>
+                ) : (
+                  <Button type="button" variant="primary" size="sm" onClick={onRecoverRoot} disabled={recoveringRoot} className="shrink-0">
+                    {recoveringRoot ? 'Recovering…' : 'Recover Root Folder'}
+                  </Button>
+                )
               )}
             </div>
           )}

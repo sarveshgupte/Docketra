@@ -24,6 +24,11 @@ export const clientApi = {
 
   getClientById: (clientId) => request((http) => http.get(`/clients/${clientId}`), 'Failed to load client details'),
   lookupMca: ({ cin, pan }) => request((http) => http.post('/clients/mca/lookup', { cin, pan }), 'Failed to fetch MCA details'),
+  syncComplianceDeadlines: (clientId) =>
+    request(
+      (http) => http.post(`/clients/${clientId}/mca/sync-deadlines`),
+      'Failed to sync compliance deadlines'
+    ),
   createClient: (clientData) => request((http) => http.post('/clients', clientData), 'Failed to create client'),
   updateClient: (clientId, clientData) => request((http) => http.put(`/clients/${clientId}`, clientData), 'Failed to update client'),
   sendClientStatusOtp: (clientId) => request((http) => http.post(`/clients/${clientId}/status/send-otp`, {}), 'Failed to send client status OTP'),

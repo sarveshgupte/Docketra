@@ -125,13 +125,21 @@ async function testCreateEffortEntry() {
 // 2. Verify Client Exclusions and Security Restricting Boundaries
 async function testCreateEffortEntryRestrictedClient() {
   const originalFindCase = Case.findOne;
+  const originalFindClient = Client.find;
 
   const caseObjId = new mongoose.Types.ObjectId();
+  const restrictedClientObjId = new mongoose.Types.ObjectId();
 
   Case.findOne = () => ({
     _id: caseObjId,
     caseId: 'DCK-11111',
     clientId: 'RESTRICTED-C01',
+  });
+
+  Client.find = () => ({
+    select: () => ({
+      lean: async () => [{ _id: restrictedClientObjId }],
+    }),
   });
 
   const req = {
@@ -168,9 +176,35 @@ async function testCreateEffortEntryRestrictedClient() {
 
     assert.strictEqual(statusCode, 403);
     assert.strictEqual(jsonResult.code, 'CLIENT_ACCESS_RESTRICTED');
-    console.log('✓ Restricted client access boundaries blocked effort logging successfully');
+
+    // Also verify getDocketEfforts blocks querying by restricted clientId
+    let listStatusCode = null;
+    let listJson = null;
+    const listRes = {
+      status: function (code) {
+        listStatusCode = code;
+        return this;
+      },
+      json: function (data) {
+        listJson = data;
+        return this;
+      },
+    };
+    const listReq = {
+      query: { clientId: restrictedClientObjId.toString() },
+      user: {
+        firmId: req.user.firmId,
+        restrictedClientIds: ['RESTRICTED-C01'],
+      },
+    };
+    await controller.getDocketEfforts(listReq, listRes);
+    assert.strictEqual(listStatusCode, 403);
+    assert.strictEqual(listJson.code, 'CLIENT_ACCESS_RESTRICTED');
+
+    console.log('✓ Restricted client access boundaries blocked effort logging and querying successfully');
   } finally {
     Case.findOne = originalFindCase;
+    Client.find = originalFindClient;
   }
 }
 
