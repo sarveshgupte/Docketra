@@ -724,7 +724,7 @@ const createClient = async (req, res) => {
         legalName: businessName.trim(),
         businessAddress: businessAddress ? businessAddress.trim() : null,
         businessEmail: (typeof businessEmail === 'string' && businessEmail.trim()) ? businessEmail.trim().toLowerCase() : null,
-        primaryContactNumber: (typeof resolvedBusinessContactNumber === 'string' && resolvedBusinessContactNumber.trim()) ? resolvedBusinessContactNumber.trim() : null,
+        primaryContactNumber: (typeof primaryContactNumber === 'string' && primaryContactNumber.trim()) ? primaryContactNumber.trim() : ((typeof resolvedBusinessContactNumber === 'string' && resolvedBusinessContactNumber.trim()) ? resolvedBusinessContactNumber.trim() : null),
         secondaryContactNumber: secondaryContactNumber ? secondaryContactNumber.trim() : null,
         PAN: PAN ? PAN.trim().toUpperCase() : null,
         GST: GST ? GST.trim().toUpperCase() : null,

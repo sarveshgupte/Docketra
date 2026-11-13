@@ -143,6 +143,10 @@ export const ClientsPage = () => {
   const [sendingStatusOtp, setSendingStatusOtp] = useState(false);
   const [verifyingStatusOtp, setVerifyingStatusOtp] = useState(false);
   const [savingClientStatus, setSavingClientStatus] = useState(false);
+  const [mcaSearchTerm, setMcaSearchTerm] = useState('');
+  const [mcaLoading, setMcaLoading] = useState(false);
+  const [mcaFeedback, setMcaFeedback] = useState(null);
+  const [mcaDossier, setMcaDossier] = useState(null);
 
   const filteredClients = useMemo(() => {
     return clients.filter((client) => {
@@ -317,6 +321,56 @@ export const ClientsPage = () => {
   );
   const selectedFiles = selectedFactSheet.attachments || [];
 
+  const handleMcaLookup = async (overrideTerm) => {
+    const rawTerm = typeof overrideTerm === 'string' ? overrideTerm : (mcaSearchTerm || clientForm.CIN || clientForm.PAN || '');
+    const term = rawTerm.trim().toUpperCase();
+    if (!term) {
+      setMcaFeedback({ type: 'error', message: 'Please enter a valid CIN (21 characters) or PAN (10 characters).' });
+      return;
+    }
+    setMcaLoading(true);
+    setMcaFeedback(null);
+    try {
+      const isCin = term.length === 21 || /^[LU][0-9]{5}/i.test(term);
+      const payload = isCin ? { cin: term } : { pan: term };
+      const res = await clientApi.lookupMca(payload);
+      if (!res?.success || !res?.data) {
+        throw new Error(res?.message || 'No company details found for the provided identifier.');
+      }
+      const d = res.data;
+      setMcaDossier(d);
+      setClientForm((prev) => ({
+        ...prev,
+        businessName: d.businessName || prev.businessName,
+        businessAddress: d.registeredAddress || prev.businessAddress,
+        city: d.city || prev.city,
+        state: d.state || prev.state,
+        pincode: d.pincode || prev.pincode,
+        businessEmail: d.email || prev.businessEmail,
+        primaryContactNumber: d.primaryContactNumber || prev.primaryContactNumber,
+        contactPersonName: d.contactPersonName || (d.directors?.[0]?.name) || prev.contactPersonName,
+        CIN: d.cin || prev.CIN,
+        PAN: d.pan || prev.PAN,
+      }));
+      setClientFormErrors({});
+    setMcaSearchTerm('');
+    setMcaFeedback(null);
+    setMcaDossier(null);
+      setMcaFeedback({
+        type: 'success',
+        message: `Fetched from MCA: ${d.businessName}`,
+        data: d,
+      });
+      showSuccess(`MCA auto-fill complete for ${d.businessName}`);
+    } catch (err) {
+      setMcaFeedback({
+        type: 'error',
+        message: err.message || 'Failed to fetch MCA details. Please check the CIN or PAN and retry.',
+      });
+    } finally {
+      setMcaLoading(false);
+    }
+  };
   const resetClientForm = useCallback(() => {
     setSelectedClient(null);
     setSelectedClientId('');
@@ -349,6 +403,8 @@ export const ClientsPage = () => {
     const resolvedClientId = client?.clientId || client?.id || client?._id || '';
     setSelectedClient({ ...client, clientId: resolvedClientId });
     setSelectedClientId(resolvedClientId);
+    setMcaDossier(client.mcaDossier || null);
+    setMcaFeedback(null);
     setClientForm({
       businessName: normalizeClientField(client.businessName || client.legalName || client.name || ''),
       businessEmail: normalizeClientField(client.businessEmail || ''),
@@ -487,6 +543,7 @@ export const ClientsPage = () => {
           ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
           ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
           ...(clientForm.GST ? { GST: clientForm.GST } : {}),
+          ...(mcaDossier ? { mcaDossier } : {}),
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to update client');
         setClients((prev) => prev.map((client) => (client.clientId === selectedClientId
@@ -1087,6 +1144,55 @@ export const ClientsPage = () => {
             <p className={`client-form-message ${clientFormMessage.type === 'error' ? 'client-form-message--error' : 'client-form-message--success'}`}>{clientFormMessage.text}</p>
           ) : null}
           
+          {/* MCA Quick Intake Fast-Track */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 rounded-xl border border-indigo-900/40 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-200">MCA21 Regulatory Quick-Fill</h3>
+              </div>
+              <span className="text-[11px] text-slate-400">Pre-fills Master Data & Filings</span>
+            </div>
+            <p className="text-xs text-slate-300 mb-3 leading-relaxed">
+              Enter a 21-digit Corporate Identification Number (CIN) or 10-digit PAN to automatically pull company profile, ROC jurisdiction, active directors (with DINs), and past filing history (AOC-4, MGT-7).
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="e.g. U72900MH2021PTC368291 or AABCA1234F"
+                value={mcaSearchTerm}
+                onChange={(e) => setMcaSearchTerm(e.target.value.toUpperCase())}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleMcaLookup(); } }}
+                className="flex-1 px-3 py-1.5 text-xs font-mono bg-slate-800/90 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400 uppercase"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => handleMcaLookup()}
+                disabled={mcaLoading || !mcaSearchTerm.trim()}
+              >
+                {mcaLoading ? 'Querying MCA…' : 'Fetch from MCA'}
+              </Button>
+            </div>
+            {mcaFeedback?.type === 'success' && (
+              <div className="mt-3 p-2.5 bg-emerald-950/80 border border-emerald-700/50 rounded-lg text-xs text-emerald-200 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5 font-semibold text-emerald-100">
+                  <span>✓</span>
+                  <span>{mcaFeedback.data?.businessName} ({mcaFeedback.data?.roc || 'ROC'})</span>
+                  <span className="ml-auto px-1.5 py-0.5 text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded">{mcaFeedback.data?.companyStatus || 'Active'}</span>
+                </div>
+                <div className="text-[11px] text-emerald-300/80">
+                  {mcaFeedback.data?.directors?.length || 0} Directors with DINs • {mcaFeedback.data?.pastFilings?.length || 0} Past Filings (AOC-4, MGT-7, DIR-12) linked to compliance memory
+                </div>
+              </div>
+            )}
+            {mcaFeedback?.type === 'error' && (
+              <div className="mt-3 p-2.5 bg-rose-950/80 border border-rose-700/50 rounded-lg text-xs text-rose-200">
+                {mcaFeedback.message}
+              </div>
+            )}
+          </div>
           <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
             <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
               <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

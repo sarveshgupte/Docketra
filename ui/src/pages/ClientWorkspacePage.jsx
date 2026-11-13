@@ -44,6 +44,8 @@ export const ClientWorkspacePage = () => {
   const [commentText, setCommentText] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [syncingMca, setSyncingMca] = useState(false);
+  const [mcaSyncError, setMcaSyncError] = useState('');
   const [cfsForm, setCfsForm] = useState({ entity_type: '', cin_llpin: '', incorporation_date: '', registered_address: '', industry: '', contact_person: '', contact_email: '', contact_phone: '', compliance_notes: '' });
 
   const currentTab = useMemo(() => {
@@ -104,6 +106,29 @@ export const ClientWorkspacePage = () => {
 
   useEffect(() => { load(); }, [load]);
 
+  const handleSyncMca = async () => {
+    const cin = client?.CIN || client?.clientFactSheet?.basicInfo?.CIN || '';
+    const pan = client?.PAN || client?.clientFactSheet?.basicInfo?.PAN || '';
+    if (!cin && !pan) {
+      setMcaSyncError('Client does not have a CIN or PAN configured. Edit client to add a CIN or PAN first.');
+      return;
+    }
+    setSyncingMca(true);
+    setMcaSyncError('');
+    try {
+      const res = await clientApi.lookupMca({ cin, pan });
+      if (!res?.success || !res?.data) {
+        throw new Error(res?.message || 'Failed to fetch MCA details');
+      }
+      const updatedDossier = res.data;
+      await clientApi.updateClient(clientId, { mcaDossier: updatedDossier });
+      setClient((prev) => ({ ...prev, mcaDossier: updatedDossier }));
+    } catch (err) {
+      setMcaSyncError(err.message || 'Failed to sync MCA details');
+    } finally {
+      setSyncingMca(false);
+    }
+  };
   const onSaveCfs = async () => {
     await clientApi.updateClientFactSheet(clientId, cfsForm.compliance_notes, cfsForm.compliance_notes, {
       clientName: client?.businessName,

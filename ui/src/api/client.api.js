@@ -23,6 +23,7 @@ export const clientApi = {
   repairEncryptionKey: () => request((http) => http.post('/clients/encryption/repair', {}), 'Failed to repair client encryption setup'),
 
   getClientById: (clientId) => request((http) => http.get(`/clients/${clientId}`), 'Failed to load client details'),
+  lookupMca: ({ cin, pan }) => request((http) => http.post('/clients/mca/lookup', { cin, pan }), 'Failed to fetch MCA details'),
   createClient: (clientData) => request((http) => http.post('/clients', clientData), 'Failed to create client'),
   updateClient: (clientId, clientData) => request((http) => http.put(`/clients/${clientId}`, clientData), 'Failed to update client'),
   sendClientStatusOtp: (clientId) => request((http) => http.post(`/clients/${clientId}/status/send-otp`, {}), 'Failed to send client status OTP'),

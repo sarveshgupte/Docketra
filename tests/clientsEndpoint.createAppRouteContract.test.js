@@ -39,7 +39,7 @@ const restoreSwaps = () => {
   const pass = (_req, _res, next) => next();
   swap(bcryptModulePath, { hash: async () => 'mock-hash', compare: async () => true, genSalt: async () => 'mock-salt' });
   swap(authControllerModulePath, new Proxy({}, { get: () => noOp }));
-  swap(firmControllerModulePath, { getFirmSetupStatus: noOp });
+  swap(firmControllerModulePath, new Proxy({}, { get: () => noOp }));
   const baseRouteGroups = require(routeGroupsModulePath);
   swap(routeGroupsModulePath, {
     ...baseRouteGroups,
@@ -84,6 +84,9 @@ const restoreSwaps = () => {
     addClientCfsComment: noOp,
     listClientActivity: noOp,
     repairClientEncryptionKey: noOp,
+    lookupMcaEntity: noOp,
+    sendClientStatusOtp: noOp,
+    verifyClientStatusOtp: noOp,
   });
 
   delete require.cache[createAppModulePath];
