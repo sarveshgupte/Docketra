@@ -42,6 +42,11 @@ const { lookupCompany, generateDeterministicCompany, ROC_MAP, COMPANY_TYPE_MAP }
   assert.ok(Array.isArray(mhResult.pastFilings) && mhResult.pastFilings.length >= 2, 'Should include past filings');
   assert.ok(mhResult.pastFilings.some((f) => f.formName === 'AOC-4'), 'Should include AOC-4');
   assert.ok(mhResult.pastFilings.some((f) => f.formName === 'MGT-7'), 'Should include MGT-7');
+  assert.ok(Array.isArray(mhResult.charges) && mhResult.charges.length >= 1, 'Should include index of charges');
+  assert.ok(mhResult.charges[0].chargeId.startsWith('CHG-'), 'Charge ID should start with CHG-');
+  assert.ok(mhResult.charges[0].chargeHolder, 'Should contain chargeHolder/lender name');
+  assert.ok(mhResult.charges[0].amount > 0, 'Charge amount should be positive');
+  assert.ok(['Open', 'Satisfied', 'Closed'].includes(mhResult.charges[0].status), 'Status should be valid');
 
   // Test 5: Parse valid Gujarat Public Limited CIN
   const gjResult = await lookupCompany({ cin: 'L17120GJ1998PLC034567' });
@@ -49,6 +54,7 @@ const { lookupCompany, generateDeterministicCompany, ROC_MAP, COMPANY_TYPE_MAP }
   assert.strictEqual(gjResult.roc, 'ROC Ahmedabad');
   assert.strictEqual(gjResult.state, 'Gujarat');
   assert.strictEqual(gjResult.entityType, 'Public Limited Company');
+  assert.ok(gjResult.charges.length > 0, 'Public company should include charges');
 
   // Test 6: Lookup by PAN
   const panResult = await lookupCompany({ pan: 'AABCU3456F' });
@@ -56,6 +62,22 @@ const { lookupCompany, generateDeterministicCompany, ROC_MAP, COMPANY_TYPE_MAP }
   assert.ok(panResult.cin.length === 21, 'Derived CIN should be 21 chars');
   assert.ok(panResult.businessName, 'Should have business name');
   assert.ok(panResult.pastFilings.length > 0, 'Should have past filings');
+  assert.ok(panResult.charges.length > 0, 'PAN lookup should generate charges');
+
+  // Test 7: Gateway Connection Tester
+  const { testGatewayConnection } = require('../src/services/mca.service');
+  const sandboxTest = await testGatewayConnection({ provider: 'sandbox' });
+  assert.strictEqual(sandboxTest.success, true);
+  assert.strictEqual(sandboxTest.provider, 'sandbox');
+  assert.ok(sandboxTest.message.includes('Regulatory Sandbox operational'));
+
+  // Test 8: Gateway connection tester requires API key for non-sandbox
+  await assert.rejects(
+    async () => {
+      await testGatewayConnection({ provider: 'surepass', apiKey: '' });
+    },
+    /API Key is required/
+  );
 
   console.log('✓ All MCA Service tests passed successfully!');
 })();

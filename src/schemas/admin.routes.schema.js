@@ -84,6 +84,13 @@ const firmSettingsBody = z.object({
     strictFirmOwnedStorage: z.boolean().optional(),
     restrictTraineeDownloads: z.boolean().optional(),
     traineeLaptopShield: z.boolean().optional(),
+    weeklyAuditDigestEnabled: z.boolean().optional(),
+    mcaGateway: z.object({
+      provider: z.enum(['sandbox', 'surepass', 'karza', 'signzy']).optional(),
+      apiKey: z.string().trim().max(500).optional(),
+      apiUrl: z.string().trim().max(1000).optional(),
+      cacheTtlDays: z.coerce.number().int().min(1).max(365).optional(),
+    }).strict().optional(),
   }).strict().optional(),
   work: z.object({
     assignmentStrategy: z.enum(['manual', 'balanced']).optional(),

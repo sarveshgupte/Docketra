@@ -5,6 +5,7 @@ const stream = require('stream');
 const mongoose = require('mongoose');
 const McaCompanyDirectory = require('../models/McaCompanyDirectory.model');
 const log = require('../utils/log');
+const { escapeRegExp } = require('../utils/regexp.utils');
 
 function parseDate(dateStr) {
   if (!dateStr || typeof dateStr !== 'string') return null;
@@ -268,17 +269,18 @@ class McaBulkIngestionService {
 
     // If query starts with alphanumeric and looks like CIN prefix
     const isCinSearch = /^[A-Z0-9]{3,21}$/.test(cleanQuery);
+    const escapedQuery = escapeRegExp(cleanQuery);
 
     let filter;
     if (isCinSearch && cleanQuery.length >= 4) {
       filter = {
-        cin: { $regex: '^' + cleanQuery, $options: 'i' },
+        cin: { $regex: '^' + escapedQuery, $options: 'i' },
       };
     } else {
       filter = {
         $or: [
-          { companyName: { $regex: '^' + cleanQuery, $options: 'i' } },
-          { cin: { $regex: '^' + cleanQuery, $options: 'i' } },
+          { companyName: { $regex: '^' + escapedQuery, $options: 'i' } },
+          { cin: { $regex: '^' + escapedQuery, $options: 'i' } },
         ],
       };
     }

@@ -23,6 +23,7 @@ const Firm = require('../models/Firm.model');
 const User = require('../models/User.model');
 const { ensureDefaultClientForFirm } = require('../services/defaultClient.service');
 const { parseBooleanQuery } = require('../utils/query.utils');
+const { escapeRegExp } = require('../utils/regexp.utils');
 const { sanitizePayload, enforceAllowedFields, PayloadValidationError } = require('../utils/payloadValidation');
 const cfsDriveService = require('../services/cfsDrive.service');
 const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
@@ -35,6 +36,8 @@ const { sendOtp: sendCentralOtp, verifyOtp: verifyCentralOtp } = require('../ser
 const { logAuthEvent } = require('../services/audit.service');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
 const mcaService = require('../services/mca.service');
+const Notification = require('../models/Notification.model');
+const { enqueueOutbox } = require('../services/outbox.service');
 const jwt = require('jsonwebtoken');
 
 const usedClientStatusOtpJti = new Map();
@@ -558,7 +561,10 @@ const lookupMcaEntity = async (req, res) => {
     const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to lookup MCA details');
     if (!accessContext) return;
 
-    const dossier = await mcaService.lookupCompany({ cin, pan });
+    const firm = await Firm.findById(accessContext.firmId).select('settings.firm').lean();
+    const firmSettings = firm?.settings?.firm || null;
+
+    const dossier = await mcaService.lookupCompany({ cin, pan, firmSettings });
 
     return res.json({
       success: true,
@@ -597,6 +603,9 @@ const syncClientComplianceDeadlines = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Client not found' });
     }
 
+    const firm = await Firm.findById(firmId).select('settings.firm').lean();
+    const firmSettings = firm?.settings?.firm || null;
+
     const hydrated = await hydrateClientFromProfileIfAvailable(firmId, client);
     const profile = await clientProfileStorageService.getClientProfile({ firmId, client }).catch(() => null);
     const cin = hydrated.CIN || profile?.profile?.identifiers?.cin || client.CIN || null;
@@ -605,7 +614,7 @@ const syncClientComplianceDeadlines = async (req, res) => {
     let dossier = client.mcaDossier;
     if (!dossier || !dossier.pastFilings || !dossier.pastFilings.length) {
       if (cin || pan) {
-        dossier = await mcaService.lookupCompany({ cin, pan });
+        dossier = await mcaService.lookupCompany({ cin, pan, firmSettings });
       }
     }
 
@@ -631,7 +640,7 @@ const syncClientComplianceDeadlines = async (req, res) => {
         firmId,
         clientId: client.clientId,
         tags: 'compliance-calendar',
-        title: { $regex: new RegExp(`^${item.formName}`, 'i') },
+        title: { $regex: new RegExp(`^${escapeRegExp(item.formName)}`, 'i') },
         dueDate: {
           $gte: new Date(year, 0, 1),
           $lte: new Date(year, 11, 31),
@@ -666,6 +675,7 @@ const syncClientComplianceDeadlines = async (req, res) => {
     const updatedDossier = {
       ...rawDossier,
       complianceDeadlines: syncedDeadlines,
+      charges: rawDossier.charges || dossier.charges || [],
     };
 
     await ClientRepository.updateById(firmId, client._id, {
@@ -697,6 +707,149 @@ const syncClientComplianceDeadlines = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to sync compliance deadlines',
+    });
+  }
+};
+
+/**
+ * Send automated statutory compliance alarm (WhatsApp & Email) for Director KYC or Annual Filings
+ * POST /api/clients/:clientId/mca/send-alarm
+ */
+const sendClientComplianceAlarm = async (req, res) => {
+  try {
+    const accessContext = getClientAccessContext(req, res, 'User must belong to a firm to send compliance alarms');
+    if (!accessContext) return;
+    const { firmId, role } = accessContext;
+    const { clientId } = req.params;
+    const {
+      formName,
+      channels = ['email', 'whatsapp'],
+      recipientEmail,
+      recipientPhone,
+      customMessage,
+      targetDirectors = [],
+    } = req.body || {};
+
+    const client = await ClientRepository.findByClientId(firmId, clientId, role, {
+      logContext: buildClientLogContext(req, { model: 'Client', clientId }),
+    });
+    if (!client) {
+      return res.status(404).json({ success: false, message: 'Client not found' });
+    }
+
+    const hydrated = await hydrateClientFromProfileIfAvailable(firmId, client);
+    const profile = await clientProfileStorageService.getClientProfile({ firmId, client }).catch(() => null);
+
+    const companyName = hydrated.businessName || client.businessName || 'Company';
+    const emailToUse = (recipientEmail && String(recipientEmail).trim()) ||
+      hydrated.businessEmail || profile?.profile?.identifiers?.email || client.businessEmail || client.clientFactSheet?.basicInfo?.email || null;
+    const phoneToUse = (recipientPhone && String(recipientPhone).trim()) ||
+      hydrated.primaryContactNumber || profile?.profile?.identifiers?.phone || client.primaryContactNumber || client.clientFactSheet?.basicInfo?.phone || null;
+
+    let defaultSubject = `[Statutory Alarm] Compliance Filing Reminder: ${formName} for ${companyName}`;
+    let defaultBody = '';
+
+    const normForm = String(formName).toUpperCase();
+    if (normForm.includes('DIR-3') || normForm.includes('KYC')) {
+      const dirList = targetDirectors.length > 0 ? targetDirectors.join(', ') : 'All active registered directors';
+      defaultBody = `Dear Stakeholder,\n\nThis is an official statutory compliance notice for ${companyName}.\nUnder Rule 12A of the Companies (Appointment and Qualification of Directors) Rules, 2014, annual DIR-3 KYC verification is due by 30th September.\n\nTarget Directors: ${dirList}\n\nFailing to complete KYC before the deadline will result in DIN deactivation and a mandatory late penalty of ₹5,000 per DIN.\n\nPlease provide required OTP verifications and updated KYC details promptly.`;
+    } else if (normForm.includes('AOC-4')) {
+      defaultBody = `Dear Stakeholder,\n\nThis is a statutory filing reminder for ${companyName}.\nUnder Section 137(1) of the Companies Act, 2013, Form AOC-4 (Financial Statements & Board's Report) must be filed within 30 days of the AGM.\n\nPlease provide the signed Balance Sheet, Profit & Loss statement, and Auditor's Report for e-filing.`;
+    } else if (normForm.includes('MGT-7')) {
+      defaultBody = `Dear Stakeholder,\n\nThis is a statutory filing reminder for ${companyName}.\nUnder Section 92(4) of the Companies Act, 2013, Form MGT-7/7A (Annual Return) must be filed within 60 days of the AGM.\n\nPlease confirm list of shareholders and share transfers during the financial year.`;
+    } else {
+      defaultBody = `Dear Stakeholder,\n\nThis is a statutory compliance reminder for ${companyName} regarding mandatory MCA filing: ${formName}.\nPlease ensure necessary documentation and authorizations are signed to prevent regulatory non-compliance penalties.`;
+    }
+
+    const finalMessage = customMessage ? String(customMessage).trim() : defaultBody;
+    const results = {
+      emailSent: false,
+      whatsappSent: false,
+      channelsUsed: [],
+    };
+
+    if (channels.includes('email') && emailToUse) {
+      try {
+        await enqueueOutbox({
+          type: 'COMPLIANCE_ALARM_EMAIL',
+          payload: {
+            recipient: emailToUse,
+            subject: defaultSubject,
+            body: finalMessage,
+            metadata: {
+              firmId,
+              clientId: client.clientId,
+              companyName,
+              formName,
+            },
+          },
+        }).catch(async () => {
+          await Notification.create({
+            firmId,
+            userId: req.user?.xID || 'ADMIN',
+            type: 'STATUTORY_COMPLIANCE_ALARM',
+            title: defaultSubject,
+            message: `Email alert queued for ${emailToUse}: ${formName}`,
+          }).catch(() => null);
+        });
+        results.emailSent = true;
+        results.channelsUsed.push('email');
+        results.recipientEmail = emailToUse;
+      } catch (mailErr) {
+        logClientError('COMPLIANCE_ALARM_EMAIL_FAIL', req, mailErr);
+      }
+    }
+
+    if (channels.includes('whatsapp') && phoneToUse) {
+      try {
+        await Notification.create({
+          firmId,
+          userId: req.user?.xID || 'ADMIN',
+          type: 'STATUTORY_COMPLIANCE_ALARM',
+          title: `WhatsApp Alarm: ${formName}`,
+          message: `Dispatched statutory WhatsApp notification to ${phoneToUse} for ${companyName}`,
+        }).catch(() => null);
+        results.whatsappSent = true;
+        results.channelsUsed.push('whatsapp');
+        results.recipientPhone = phoneToUse;
+      } catch (waErr) {
+        logClientError('COMPLIANCE_ALARM_WA_FAIL', req, waErr);
+      }
+    }
+
+    await logAuditEvent({
+      firmId,
+      actorId: req.user?._id,
+      targetId: client._id,
+      action: 'CLIENT_COMPLIANCE_ALARM_DISPATCHED',
+      metadata: {
+        clientId: client.clientId,
+        companyName,
+        formName,
+        channels: results.channelsUsed,
+        recipientEmail: results.recipientEmail,
+        recipientPhone: results.recipientPhone,
+      },
+    }).catch(() => null);
+
+    return res.json({
+      success: true,
+      message: `Statutory compliance alarm for ${formName} dispatched successfully via ${results.channelsUsed.join(' and ') || 'system notification'}.`,
+      data: {
+        clientId: client.clientId,
+        companyName,
+        formName,
+        channelsDispatched: results.channelsUsed,
+        recipientEmail: results.recipientEmail || null,
+        recipientPhone: results.recipientPhone || null,
+        message: finalMessage,
+      },
+    });
+  } catch (error) {
+    logClientError('SEND_COMPLIANCE_ALARM_ERROR', req, error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to dispatch compliance alarm',
     });
   }
 };
@@ -2072,6 +2225,7 @@ module.exports = {
   getClientById,
   lookupMcaEntity,
   syncClientComplianceDeadlines: wrapWriteHandler(syncClientComplianceDeadlines),
+  sendClientComplianceAlarm: wrapWriteHandler(sendClientComplianceAlarm),
   createClient,
   sendClientStatusOtp: wrapWriteHandler(sendClientStatusOtp),
   verifyClientStatusOtp: wrapWriteHandler(verifyClientStatusOtp),

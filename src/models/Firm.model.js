@@ -406,6 +406,29 @@ const firmSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
       },
+      mcaGateway: {
+        provider: {
+          type: String,
+          enum: ['sandbox', 'surepass', 'karza', 'signzy'],
+          default: 'sandbox',
+        },
+        apiKey: {
+          type: String,
+          trim: true,
+          default: '',
+        },
+        apiUrl: {
+          type: String,
+          trim: true,
+          default: '',
+        },
+        cacheTtlDays: {
+          type: Number,
+          min: 1,
+          max: 365,
+          default: 30,
+        },
+      },
     },
     work: {
       assignmentStrategy: {

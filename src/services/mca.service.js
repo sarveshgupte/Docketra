@@ -87,6 +87,50 @@ function generatePastFilings(incorporationYear) {
 }
 
 /**
+ * Standard Index of Charges for Indian Companies (Sec 77/78 Companies Act, 2013)
+ */
+function generateCharges(regNo, year) {
+  const seed = parseInt(String(regNo).slice(-4) || '1234', 10);
+  const chargeIdBase = 10000000 + (seed * 10);
+  const creationYear = Math.max(year, 2018);
+
+  const lenders = [
+    { name: 'State Bank of India', branch: 'Corporate Accounts Group, Mumbai', hyp: 'First pari passu charge on all current assets and movable plant & machinery' },
+    { name: 'HDFC Bank Limited', branch: 'Commercial Banking Division, Mumbai', hyp: 'Exclusive charge on company intellectual property, software licenses and receivables' },
+    { name: 'ICICI Bank Limited', branch: 'Structured Finance Group, Bandra Kurla Complex', hyp: 'Floating charge on book debts, cash flows and bank balances' },
+    { name: 'Axis Bank Limited', branch: 'Mid-Corporate Center, Nariman Point', hyp: 'First charge on office equipment, furniture, fixtures and current assets' },
+  ];
+
+  const lender1 = lenders[seed % lenders.length];
+  const lender2 = lenders[(seed + 1) % lenders.length];
+
+  return [
+    {
+      chargeId: `CHG-${chargeIdBase}`,
+      chargeHolder: `${lender1.name} (${lender1.branch})`,
+      amount: 5000000 + ((seed % 10) * 1000000),
+      dateOfCreation: new Date(`${creationYear}-08-14T10:00:00.000Z`),
+      dateOfModification: new Date(`${creationYear + 1}-03-20T11:30:00.000Z`),
+      dateOfSatisfaction: null,
+      status: 'Open',
+      assetHypothecated: lender1.hyp,
+      instrumentType: 'Hypothecation Agreement / Working Capital Consortium',
+    },
+    {
+      chargeId: `CHG-${chargeIdBase + 1}`,
+      chargeHolder: `${lender2.name} (${lender2.branch})`,
+      amount: 2500000 + ((seed % 5) * 500000),
+      dateOfCreation: new Date(`${creationYear - 1 < year ? year : creationYear - 1}-11-05T09:30:00.000Z`),
+      dateOfModification: null,
+      dateOfSatisfaction: new Date(`${creationYear + 1}-01-15T15:00:00.000Z`),
+      status: 'Satisfied',
+      assetHypothecated: lender2.hyp,
+      instrumentType: 'Term Loan Agreement / Fixed Asset Mortgage',
+    },
+  ];
+}
+
+/**
  * Computes automated statutory compliance deadlines based on past filings and company structure
  */
 function computeComplianceDeadlines({ pastFilings = [], directors = [], incorporationDate = null, entityType = '' }) {
@@ -213,6 +257,7 @@ function generateDeterministicCompany(cinUpper, pan = null) {
   ];
 
   const pastFilings = generatePastFilings(year);
+  const charges = generateCharges(regNo, year);
 
   return {
     cin: cinUpper,
@@ -235,6 +280,7 @@ function generateDeterministicCompany(cinUpper, pan = null) {
     contactPersonName: 'Aditya Sharma',
     directors,
     pastFilings,
+    charges,
     complianceDeadlines: computeComplianceDeadlines({
       pastFilings,
       directors,
@@ -255,7 +301,7 @@ function generateDeterministicCompany(cinUpper, pan = null) {
  * @param {string} [params.pan] 10-character Permanent Account Number
  * @returns {Promise<Object>} Company dossier including master data, directors, and past filings
  */
-async function lookupCompany({ cin, pan }) {
+async function lookupCompany({ cin, pan, firmSettings = null }) {
   const normalizedCin = cin ? String(cin).trim().toUpperCase() : null;
   const normalizedPan = pan ? String(pan).trim().toUpperCase() : null;
 
@@ -286,11 +332,13 @@ async function lookupCompany({ cin, pan }) {
     }
   }
 
-  const apiKey = process.env.MCA_API_KEY || process.env.SUREPASS_API_KEY;
-  const apiUrl = process.env.MCA_API_URL || 'https://sandbox.surepass.io/api/v1/corporate/mca';
+  const gateway = firmSettings?.mcaGateway || {};
+  const provider = gateway.provider || process.env.MCA_API_PROVIDER || 'sandbox';
+  const apiKey = gateway.apiKey || process.env.MCA_API_KEY || process.env.SUREPASS_API_KEY;
+  const apiUrl = gateway.apiUrl || process.env.MCA_API_URL || 'https://sandbox.surepass.io/api/v1/corporate/mca';
 
   // Live upstream gateway call if key is provided and not disabled
-  if (apiKey && process.env.MCA_API_PROVIDER !== 'sandbox') {
+  if (apiKey && provider !== 'sandbox') {
     try {
       const liveData = await fetchFromLiveGateway({ cin: normalizedCin, pan: normalizedPan, apiKey, apiUrl });
       if (liveData) return liveData;
@@ -371,6 +419,17 @@ function fetchFromLiveGateway({ cin, pan, apiKey, apiUrl }) {
                   filingDate: f.filing_date ? new Date(f.filing_date) : null,
                   status: f.status || 'Approved',
                 })),
+                charges: (d.charges || []).map((chg) => ({
+                  chargeId: chg.charge_id || chg.id || chg.chargeId,
+                  chargeHolder: chg.charge_holder || chg.holder_name || chg.chargeHolder,
+                  amount: Number(chg.amount || 0),
+                  dateOfCreation: chg.creation_date || chg.date_of_creation ? new Date(chg.creation_date || chg.date_of_creation) : null,
+                  dateOfModification: chg.modification_date ? new Date(chg.modification_date) : null,
+                  dateOfSatisfaction: chg.satisfaction_date ? new Date(chg.satisfaction_date) : null,
+                  status: chg.status || (chg.satisfaction_date ? 'Satisfied' : 'Open'),
+                  assetHypothecated: chg.asset_hypothecated || chg.assets || '',
+                  instrumentType: chg.instrument_type || chg.type || 'Hypothecation Agreement',
+                })),
                 complianceDeadlines: computeComplianceDeadlines({
                   pastFilings: (d.filings || []).map((f) => ({ formName: f.form_name, financialYear: f.financial_year, status: f.status })),
                   directors: (d.directors || []).map((dir) => ({ din: dir.din, name: dir.name })),
@@ -398,10 +457,45 @@ function fetchFromLiveGateway({ cin, pan, apiKey, apiUrl }) {
   });
 }
 
+/**
+ * Lightweight test for firm MCA Gateway credentials
+ */
+async function testGatewayConnection({ provider = 'sandbox', apiKey = '', apiUrl = '' } = {}) {
+  if (provider === 'sandbox') {
+    return {
+      success: true,
+      provider: 'sandbox',
+      message: 'Regulatory Sandbox operational (deterministic statutory registry active).',
+    };
+  }
+
+  if (!apiKey) {
+    const error = new Error('API Key is required to test upstream gateway connection');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const endpoint = apiUrl || 'https://sandbox.surepass.io/api/v1/corporate/mca';
+  const liveResult = await fetchFromLiveGateway({
+    cin: 'U72900MH2021PTC368291',
+    apiKey,
+    apiUrl: endpoint,
+  });
+
+  return {
+    success: true,
+    provider,
+    message: `Connected successfully to ${provider.toUpperCase()} MCA Gateway.`,
+    testCompany: liveResult.businessName,
+  };
+}
+
 module.exports = {
   lookupCompany,
   generateDeterministicCompany,
+  generateCharges,
   computeComplianceDeadlines,
+  testGatewayConnection,
   ROC_MAP,
   COMPANY_TYPE_MAP,
 };

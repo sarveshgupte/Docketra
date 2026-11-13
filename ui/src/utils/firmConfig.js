@@ -16,6 +16,12 @@ const DEFAULT_FIRM_CONFIG = {
   brandLogoUrl: '',
   strictFirmOwnedStorage: false,
   restrictTraineeDownloads: false,
+  mcaGateway: {
+    provider: 'sandbox',
+    apiKey: '',
+    apiUrl: '',
+    cacheTtlDays: 30,
+  },
   featureFlags: { ...FEATURE_FLAGS },
 };
 

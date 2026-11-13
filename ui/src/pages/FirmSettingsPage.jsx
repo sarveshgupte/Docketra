@@ -50,6 +50,7 @@ const AUDIT_EXPORT_PAGE_SIZE = 100;
 
 const tabs = [
   { id: 'general', label: 'Defaults' },
+  { id: 'mca', label: 'MCA Gateway' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'sla', label: 'SLA Rules' },
   { id: 'import', label: 'Data Import' },
@@ -62,6 +63,10 @@ const tabMeta = {
   general: {
     title: 'Operational defaults',
     description: 'Base due dates, reminder lead time, escalation threshold, and workload guidance used across the workspace.',
+  },
+  mca: {
+    title: 'MCA Regulatory Gateway',
+    description: 'Configure corporate registry provider (Surepass, Karza, Signzy, or Sandbox), API credentials, and cache TTL.',
   },
   calendar: {
     title: 'Work calendar',
@@ -604,6 +609,19 @@ export const FirmSettingsPage = () => {
     setHasUnsavedChanges(true);
   };
 
+  const handleMcaGatewayChange = (event) => {
+    const { name, value } = event.target;
+    setSaveMessage({ type: '', text: '' });
+    setConfig((prev) => ({
+      ...prev,
+      mcaGateway: {
+        ...(prev.mcaGateway || {}),
+        [name]: name === 'cacheTtlDays' ? Number(value) : value,
+      },
+    }));
+    setHasUnsavedChanges(true);
+  };
+
   const handleToggleChange = (event) => {
     const { name, value } = event.target;
     setSaveMessage({ type: '', text: '' });
@@ -676,6 +694,12 @@ export const FirmSettingsPage = () => {
       brandLogoUrl: typeof config.brandLogoUrl === 'string' ? config.brandLogoUrl.trim() : '',
       strictFirmOwnedStorage: Boolean(config.strictFirmOwnedStorage),
       restrictTraineeDownloads: Boolean(config.restrictTraineeDownloads),
+      mcaGateway: {
+        provider: config.mcaGateway?.provider || 'sandbox',
+        apiKey: typeof config.mcaGateway?.apiKey === 'string' ? config.mcaGateway.apiKey.trim() : '',
+        apiUrl: typeof config.mcaGateway?.apiUrl === 'string' ? config.mcaGateway.apiUrl.trim() : '',
+        cacheTtlDays: Number(config.mcaGateway?.cacheTtlDays) || 30,
+      },
     };
 
     try {
@@ -964,6 +988,75 @@ export const FirmSettingsPage = () => {
                         onChange={handleTextChange}
                         helpText="A publicly reachable logo URL."
                       />
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {currentTab === 'mca' && (
+              <div className="grid gap-6 lg:grid-cols-[1.05fr_1.65fr]">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-slate-900">Corporate Registry & MCA21 Gateway</p>
+                  <div className="space-y-3 text-sm leading-6 text-slate-500">
+                    <p>Powers client master data auto-filling from CIN/PAN, live Directors Registry imports, past filing records, and index of charges.</p>
+                    <p>By default, Docketra runs in <strong>Regulatory Sandbox</strong> mode, providing complete deterministic mock registry fixtures for Indian corporate structures without third-party fees.</p>
+                    <p>To connect live MCA21 production records, select an upstream provider and enter your firm's API credentials.</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-6">
+                  <Card className="border border-slate-200 bg-white p-5 shadow-none">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="md:col-span-2">
+                        <Select
+                          label="Gateway Provider"
+                          name="provider"
+                          value={config.mcaGateway?.provider || 'sandbox'}
+                          onChange={handleMcaGatewayChange}
+                          options={[
+                            { value: 'sandbox', label: 'Regulatory Sandbox (Built-in deterministic test fixtures)' },
+                            { value: 'surepass', label: 'Surepass (Corporate MCA Gateway)' },
+                            { value: 'karza', label: 'Karza Technologies (Corporate Master Lookup)' },
+                            { value: 'signzy', label: 'Signzy Regulatory Intelligence' },
+                          ]}
+                          helpText="Select whether to use the built-in sandbox or an upstream commercial API gateway."
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Input
+                          label="Gateway API Key / Token"
+                          name="apiKey"
+                          type="password"
+                          value={config.mcaGateway?.apiKey || ''}
+                          onChange={handleMcaGatewayChange}
+                          placeholder={config.mcaGateway?.provider === 'sandbox' ? 'Not required for Regulatory Sandbox' : 'Enter API Key'}
+                          helpText="Stored securely and used strictly for authorized MCA compliance queries."
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Input
+                          label="API Endpoint URL (Optional override)"
+                          name="apiUrl"
+                          type="text"
+                          value={config.mcaGateway?.apiUrl || ''}
+                          onChange={handleMcaGatewayChange}
+                          placeholder={config.mcaGateway?.provider === 'surepass' ? 'https://sandbox.surepass.io/api/v1/corporate/mca' : 'https://...'}
+                          helpText="Leave blank to use the provider's default production gateway endpoint."
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          label="Cache Dossier TTL (Days)"
+                          name="cacheTtlDays"
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={config.mcaGateway?.cacheTtlDays || 30}
+                          onChange={handleMcaGatewayChange}
+                          helpText="Days before re-fetching updated filings and directors from the gateway."
+                        />
+                      </div>
                     </div>
                   </Card>
                 </div>

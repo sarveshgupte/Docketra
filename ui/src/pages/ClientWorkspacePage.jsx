@@ -49,6 +49,8 @@ export const ClientWorkspacePage = () => {
   const [syncingDeadlines, setSyncingDeadlines] = useState(false);
   const [deadlinesSyncFeedback, setDeadlinesSyncFeedback] = useState(null);
   const [copiedDin, setCopiedDin] = useState(null);
+  const [sendingAlarmFor, setSendingAlarmFor] = useState(null);
+  const [alarmFeedback, setAlarmFeedback] = useState(null);
   const [cfsForm, setCfsForm] = useState({ entity_type: '', cin_llpin: '', incorporation_date: '', registered_address: '', industry: '', contact_person: '', contact_email: '', contact_phone: '', compliance_notes: '' });
 
   const currentTab = useMemo(() => {
@@ -156,6 +158,32 @@ export const ClientWorkspacePage = () => {
       setSyncingDeadlines(false);
     }
   };
+
+  const handleSendAlarm = async (deadline) => {
+    if (!clientId || !deadline?.formName) return;
+    setSendingAlarmFor(deadline.formName);
+    setAlarmFeedback(null);
+    try {
+      const res = await clientApi.sendComplianceAlarm(clientId, {
+        formName: deadline.formName,
+        targetDirectors: deadline.targetDirectors || [],
+      });
+      if (!res?.success) throw new Error(res?.message || 'Failed to dispatch alarm');
+      setAlarmFeedback({
+        type: 'success',
+        message: res.message || `Statutory alert for ${deadline.formName} dispatched via WhatsApp & Email.`,
+      });
+      setTimeout(() => setAlarmFeedback(null), 5000);
+    } catch (err) {
+      setAlarmFeedback({
+        type: 'error',
+        message: err.message || 'Failed to dispatch compliance alarm',
+      });
+    } finally {
+      setSendingAlarmFor(null);
+    }
+  };
+
   const onSaveCfs = async () => {
     await clientApi.updateClientFactSheet(clientId, cfsForm.compliance_notes, cfsForm.compliance_notes, {
       clientName: client?.businessName,
@@ -421,6 +449,12 @@ export const ClientWorkspacePage = () => {
                   </span>
                 </div>
 
+                {alarmFeedback && (
+                  <div className={`p-3 mb-4 rounded-lg text-xs ${alarmFeedback.type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-rose-50 border border-rose-200 text-rose-800'}`}>
+                    {alarmFeedback.message}
+                  </div>
+                )}
+
                 {!(client?.mcaDossier?.complianceDeadlines || []).length ? (
                   <div className="text-center py-8 bg-slate-50/60 rounded-lg border border-slate-100 text-xs text-slate-500">
                     <p>No statutory compliance deadlines generated yet.</p>
@@ -437,6 +471,7 @@ export const ClientWorkspacePage = () => {
                           <th>Target FY</th>
                           <th>Governing Legal Section / Rule</th>
                           <th>Calendar Status</th>
+                          <th className="text-right">Statutory Alarm</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -457,6 +492,17 @@ export const ClientWorkspacePage = () => {
                               <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${item.isSyncedToCalendar ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
                                 {item.isSyncedToCalendar ? '✓ Synced to Calendar' : 'Pending Sync'}
                               </span>
+                            </td>
+                            <td className="text-right">
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors disabled:opacity-50"
+                                onClick={() => handleSendAlarm(item)}
+                                disabled={sendingAlarmFor === item.formName}
+                                title="Send statutory reminder alert to client via WhatsApp and Email"
+                              >
+                                {sendingAlarmFor === item.formName ? 'Sending…' : '🔔 Send Alert'}
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -590,6 +636,95 @@ export const ClientWorkspacePage = () => {
                   </div>
                 )}
               </Card>
+
+              {/* Index of Charges & Lending Registry Card */}
+              {(() => {
+                const charges = client?.mcaDossier?.charges || [];
+                const openCharges = charges.filter((c) => c.status === 'Open');
+                const totalOpenAmount = openCharges.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+                return (
+                  <Card>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          Index of Charges & Hypothecation Registry
+                        </h3>
+                        <p className="text-xs text-slate-500">Official registry of company borrowing charges and encumbrances registered with RoC (Sec 77 & 78).</p>
+                      </div>
+                      <span className="text-xs font-mono text-slate-400">
+                        {charges.length} charges registered ({openCharges.length} open)
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                      <div className="p-3 bg-amber-50/50 rounded-lg border border-amber-200/60">
+                        <span className="text-xs text-amber-800 block mb-0.5 font-medium">Total Open Debt Secured</span>
+                        <span className="text-base font-bold text-amber-950 font-mono">
+                          {totalOpenAmount ? `₹${totalOpenAmount.toLocaleString('en-IN')}` : '₹0'}
+                        </span>
+                      </div>
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <span className="text-xs text-slate-500 block mb-0.5 font-medium">Active Open Charges</span>
+                        <span className="text-base font-bold text-slate-900 font-mono">{openCharges.length}</span>
+                      </div>
+                      <div className="p-3 bg-emerald-50/50 rounded-lg border border-emerald-200/60">
+                        <span className="text-xs text-emerald-800 block mb-0.5 font-medium">Satisfied / Closed Charges</span>
+                        <span className="text-base font-bold text-emerald-950 font-mono">{charges.length - openCharges.length}</span>
+                      </div>
+                    </div>
+
+                    {!charges.length ? (
+                      <div className="text-center py-8 bg-slate-50/60 rounded-lg border border-slate-100 text-xs text-slate-500">
+                        <p>No registered charges or borrowings found for this company.</p>
+                      </div>
+                    ) : (
+                      <div className="case-detail-table-wrap">
+                        <table className="case-detail-table text-xs">
+                          <thead>
+                            <tr>
+                              <th>Charge ID</th>
+                              <th>Lender / Charge Holder</th>
+                              <th>Amount (₹)</th>
+                              <th>Creation Date</th>
+                              <th>Status</th>
+                              <th>Hypothecated Assets & Instrument</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {charges.map((charge, idx) => (
+                              <tr key={charge.chargeId || idx}>
+                                <td className="font-mono font-bold text-slate-800">
+                                  {charge.chargeId || '—'}
+                                </td>
+                                <td className="font-semibold text-slate-900">
+                                  {charge.chargeHolder}
+                                </td>
+                                <td className="font-mono font-bold text-slate-900">
+                                  {charge.amount ? `₹${Number(charge.amount).toLocaleString('en-IN')}` : '—'}
+                                </td>
+                                <td className="font-mono text-slate-600">
+                                  {charge.dateOfCreation ? formatDate(charge.dateOfCreation) : '—'}
+                                </td>
+                                <td>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${charge.status === 'Open' ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}`}>
+                                    {charge.status || 'Open'}
+                                  </span>
+                                </td>
+                                <td className="max-w-xs text-slate-600">
+                                  <div className="font-medium text-slate-800">{charge.instrumentType || 'Hypothecation'}</div>
+                                  <div className="text-[11px] text-slate-500 truncate" title={charge.assetHypothecated}>{charge.assetHypothecated || '—'}</div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })()}
             </div>
           )}
 

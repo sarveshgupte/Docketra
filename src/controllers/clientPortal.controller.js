@@ -136,7 +136,7 @@ const getClientStatusView = async (req, res) => {
 
     // 2. Resolve allowed client ObjectIds (for client users)
     let filteredAllowed = null;
-    if (req.user?.role === 'USER' && (req.user?.clientAccess?.length > 0 || req.user?.defaultClientId)) {
+    if (req.user?.role === 'USER') {
       const allowedIds = [];
       if (req.user.defaultClientId) {
         allowedIds.push(new mongoose.Types.ObjectId(req.user.defaultClientId));
@@ -240,7 +240,7 @@ const getClientStatusViewByCaseId = async (req, res) => {
     }
 
     // If client user, verify they have permission to access the docket's client
-    if (req.user?.role === 'USER' && (req.user?.clientAccess?.length > 0 || req.user?.defaultClientId)) {
+    if (req.user?.role === 'USER') {
       const allowedClientIds = [];
       if (req.user.defaultClientId) allowedClientIds.push(String(req.user.defaultClientId));
       if (Array.isArray(req.user.clientAccess)) {

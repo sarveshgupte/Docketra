@@ -29,6 +29,11 @@ export const clientApi = {
       (http) => http.post(`/clients/${clientId}/mca/sync-deadlines`),
       'Failed to sync compliance deadlines'
     ),
+  sendComplianceAlarm: (clientId, payload) =>
+    request(
+      (http) => http.post(`/clients/${clientId}/mca/send-alarm`, payload),
+      'Failed to send compliance alarm'
+    ),
   createClient: (clientData) => request((http) => http.post('/clients', clientData), 'Failed to create client'),
   updateClient: (clientId, clientData) => request((http) => http.put(`/clients/${clientId}`, clientData), 'Failed to update client'),
   sendClientStatusOtp: (clientId) => request((http) => http.post(`/clients/${clientId}/status/send-otp`, {}), 'Failed to send client status OTP'),

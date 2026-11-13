@@ -159,6 +159,21 @@ const getCrmClientById = async (req, res) => {
     });
     if (!client && !crmClient) return res.status(404).json({ success: false, message: 'Client not found' });
 
+    const memoryScope = resolveFirmMemoryScope(req);
+    if (memoryScope.errorStatus) return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
+
+    if (!memoryScope.hasFirmWideAccess) {
+      const canonicalId = client?._id ? String(client._id) : crmClient?.canonicalClientId ? String(crmClient.canonicalClientId) : String(clientId);
+      const isAllowed = Array.isArray(memoryScope.scopedClientIds) && memoryScope.scopedClientIds.some((id) => String(id) === canonicalId);
+      if (!isAllowed) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You do not have permission to access this client',
+          code: 'CLIENT_ACCESS_RESTRICTED',
+        });
+      }
+    }
+
     const resolvedCrmClientId = crmClient?._id || client?.legacyCrmClientId || null;
     const [deals, dockets, invoices] = await Promise.all([
       Deal.find(
@@ -231,6 +246,21 @@ const updateCrmClient = async (req, res) => {
       createdByXid: req.user?.xid || req.user?.xID || 'SYSTEM',
     });
     if (!client && !crmClient) return res.status(404).json({ success: false, message: 'Client not found' });
+
+    const memoryScope = resolveFirmMemoryScope(req);
+    if (memoryScope.errorStatus) return res.status(memoryScope.errorStatus).json({ success: false, message: memoryScope.errorMessage });
+
+    if (!memoryScope.hasFirmWideAccess) {
+      const canonicalId = client?._id ? String(client._id) : crmClient?.canonicalClientId ? String(crmClient.canonicalClientId) : String(clientId);
+      const isAllowed = Array.isArray(memoryScope.scopedClientIds) && memoryScope.scopedClientIds.some((id) => String(id) === canonicalId);
+      if (!isAllowed) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied: You do not have permission to access this client',
+          code: 'CLIENT_ACCESS_RESTRICTED',
+        });
+      }
+    }
 
     const normalized = normalizeClientPayload(req.body || {});
     if (Object.prototype.hasOwnProperty.call(req.body || {}, 'name') && !normalized.name) {

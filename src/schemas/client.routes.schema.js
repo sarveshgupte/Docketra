@@ -23,6 +23,17 @@ module.exports = {
     params: z.object({ clientId: clientIdString }),
     body: z.object({}).passthrough().optional(),
   },
+  'POST /:clientId/mca/send-alarm': {
+    params: z.object({ clientId: clientIdString }),
+    body: z.object({
+      formName: nonEmptyString,
+      channels: z.array(z.enum(['email', 'whatsapp'])).min(1).max(2).optional(),
+      recipientEmail: optionalEmail,
+      recipientPhone: optionalString,
+      customMessage: optionalString,
+      targetDirectors: z.array(z.string().trim().max(100)).max(50).optional(),
+    }).strict(),
+  },
   'POST /:clientId/status/send-otp': {
     params: z.object({ clientId: clientIdString }),
     body: z.object({}).strict(),

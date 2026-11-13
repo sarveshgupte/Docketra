@@ -16,6 +16,12 @@ const DEFAULT_FIRM_SETTINGS = {
   strictFirmOwnedStorage: false,
   restrictTraineeDownloads: false,
   weeklyAuditDigestEnabled: true,
+  mcaGateway: {
+    provider: 'sandbox',
+    apiKey: '',
+    apiUrl: '',
+    cacheTtlDays: 30,
+  },
 };
 
 const normalizeIsoDateList = (values = []) => {
@@ -94,6 +100,16 @@ const normalizeFirmSettings = (raw = {}) => ({
   strictFirmOwnedStorage: Boolean(raw.strictFirmOwnedStorage),
   restrictTraineeDownloads: Boolean(raw.restrictTraineeDownloads ?? raw.traineeLaptopShield),
   weeklyAuditDigestEnabled: raw.weeklyAuditDigestEnabled !== false,
+  mcaGateway: {
+    provider: ['sandbox', 'surepass', 'karza', 'signzy'].includes(raw?.mcaGateway?.provider)
+      ? raw.mcaGateway.provider
+      : (raw?.mcaGateway?.provider === '' ? 'sandbox' : DEFAULT_FIRM_SETTINGS.mcaGateway.provider),
+    apiKey: typeof raw?.mcaGateway?.apiKey === 'string' ? raw.mcaGateway.apiKey.trim() : DEFAULT_FIRM_SETTINGS.mcaGateway.apiKey,
+    apiUrl: typeof raw?.mcaGateway?.apiUrl === 'string' ? raw.mcaGateway.apiUrl.trim() : DEFAULT_FIRM_SETTINGS.mcaGateway.apiUrl,
+    cacheTtlDays: Number(raw?.mcaGateway?.cacheTtlDays) >= 1 && Number(raw?.mcaGateway?.cacheTtlDays) <= 365
+      ? Number(raw.mcaGateway.cacheTtlDays)
+      : DEFAULT_FIRM_SETTINGS.mcaGateway.cacheTtlDays,
+  },
 });
 
 const normalizeWorkSettings = (raw = {}) => ({

@@ -537,6 +537,17 @@ const clientSchema = new mongoose.Schema({
       isSyncedToCalendar: { type: Boolean, default: false },
       syncedTaskId: { type: String, trim: true },
     }],
+    charges: [{
+      chargeId: { type: String, trim: true },
+      chargeHolder: { type: String, trim: true },
+      amount: { type: Number, default: 0 },
+      dateOfCreation: { type: Date },
+      dateOfModification: { type: Date },
+      dateOfSatisfaction: { type: Date },
+      status: { type: String, trim: true, default: 'Open' },
+      assetHypothecated: { type: String, trim: true },
+      instrumentType: { type: String, trim: true },
+    }],
   },
   
   /**

@@ -20,6 +20,8 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
   const [copiedDin, setCopiedDin] = useState(null);
   const [syncingDeadlines, setSyncingDeadlines] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
+  const [sendingAlarmFor, setSendingAlarmFor] = useState(null);
+  const [alarmFeedback, setAlarmFeedback] = useState(null);
 
   if (!isOpen || !factSheet) return null;
 
@@ -54,6 +56,32 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
     }
   };
 
+  const handleSendAlarm = async (deadline) => {
+    const targetClientId = factSheet.clientId || client?.clientId;
+    if (!targetClientId || !deadline?.formName) return;
+    setSendingAlarmFor(deadline.formName);
+    setAlarmFeedback(null);
+    try {
+      const res = await clientApi.sendComplianceAlarm(targetClientId, {
+        formName: deadline.formName,
+        targetDirectors: deadline.targetDirectors || [],
+      });
+      if (!res?.success) throw new Error(res?.message || 'Failed to dispatch alarm');
+      setAlarmFeedback({
+        type: 'success',
+        message: res.message || `Statutory alert for ${deadline.formName} dispatched via WhatsApp & Email.`,
+      });
+      setTimeout(() => setAlarmFeedback(null), 5000);
+    } catch (err) {
+      setAlarmFeedback({
+        type: 'error',
+        message: err.message || 'Failed to dispatch compliance alarm',
+      });
+    } finally {
+      setSendingAlarmFor(null);
+    }
+  };
+
   const attachments = factSheet.attachments || factSheet.files || [];
   const hasContent = factSheet.description || (attachments && attachments.length > 0);
   const businessName = factSheet.businessName || client?.businessName;
@@ -63,6 +91,9 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
   const directors = mcaDossier?.directors || [];
   const pastFilings = mcaDossier?.pastFilings || [];
   const complianceDeadlines = mcaDossier?.complianceDeadlines || [];
+  const charges = mcaDossier?.charges || [];
+  const openCharges = charges.filter((c) => c.status === 'Open');
+  const totalOpenAmount = openCharges.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
 
   return (
     <Modal
@@ -112,6 +143,13 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
               onClick={() => setActiveTab('filings')}
             >
               Past Filings ({pastFilings.length})
+            </button>
+            <button
+              type="button"
+              className={`px-3 py-2 text-xs font-semibold border-b-2 transition-all ${activeTab === 'charges' ? 'border-indigo-600 text-indigo-700 font-bold' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+              onClick={() => setActiveTab('charges')}
+            >
+              Index of Charges ({charges.length})
             </button>
             <button
               type="button"
@@ -321,6 +359,12 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
               </div>
             )}
 
+            {alarmFeedback && (
+              <div className={`p-2.5 rounded-lg text-xs ${alarmFeedback.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'}`}>
+                {alarmFeedback.message}
+              </div>
+            )}
+
             {complianceDeadlines.length === 0 ? (
               <div className="text-center py-10 bg-slate-50 rounded-xl border border-slate-200">
                 <p className="text-sm text-slate-600 font-medium">No compliance deadlines calculated yet.</p>
@@ -337,6 +381,7 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
                       <th className="py-2.5 px-3">Target FY</th>
                       <th className="py-2.5 px-3">Legal Basis</th>
                       <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3 text-right">Statutory Alarm</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -357,6 +402,99 @@ export const ClientFactSheetModal = ({ isOpen, onClose, factSheet, caseId, clien
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${item.isSyncedToCalendar ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-slate-100 text-slate-600'}`}>
                             {item.isSyncedToCalendar ? '✓ Synced to Calendar' : 'Upcoming'}
                           </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-colors disabled:opacity-50"
+                            onClick={() => handleSendAlarm(item)}
+                            disabled={sendingAlarmFor === item.formName}
+                            title="Send statutory reminder alarm to client via WhatsApp and Email"
+                          >
+                            {sendingAlarmFor === item.formName ? 'Sending…' : '🔔 Send Alert'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 5: Index of Charges & Lending Registry */}
+        {activeTab === 'charges' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">Index of Charges & Hypothecation Registry</h4>
+                <p className="text-xs text-slate-500">Official registry of borrowing charges registered with RoC under Sec 77 & 78 of Companies Act, 2013.</p>
+              </div>
+              <span className="text-xs font-mono text-slate-500 font-medium">
+                {charges.length} registered charges ({openCharges.length} active open)
+              </span>
+            </div>
+
+            {/* Metrics cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 bg-amber-50/50 rounded-lg border border-amber-200/60">
+                <span className="text-xs text-amber-800 block mb-0.5 font-medium">Total Open Debt Secured</span>
+                <span className="text-base font-bold text-amber-950 font-mono">
+                  {totalOpenAmount ? `₹${totalOpenAmount.toLocaleString('en-IN')}` : '₹0'}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <span className="text-xs text-slate-500 block mb-0.5 font-medium">Active Open Charges</span>
+                <span className="text-base font-bold text-slate-900 font-mono">{openCharges.length}</span>
+              </div>
+              <div className="p-3 bg-emerald-50/50 rounded-lg border border-emerald-200/60">
+                <span className="text-xs text-emerald-800 block mb-0.5 font-medium">Satisfied / Closed Charges</span>
+                <span className="text-base font-bold text-emerald-950 font-mono">{charges.length - openCharges.length}</span>
+              </div>
+            </div>
+
+            {charges.length === 0 ? (
+              <div className="text-center py-10 bg-slate-50 rounded-xl border border-slate-200">
+                <p className="text-sm text-slate-600 font-medium">No registered charges found for this company.</p>
+                <p className="text-xs text-slate-400 mt-1">Free of encumbrances or no banking charges registered under Section 77.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="py-2.5 px-3">Charge ID</th>
+                      <th className="py-2.5 px-3">Lender / Charge Holder</th>
+                      <th className="py-2.5 px-3">Amount (₹)</th>
+                      <th className="py-2.5 px-3">Creation Date</th>
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Hypothecated Assets & Instrument</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {charges.map((charge, idx) => (
+                      <tr key={charge.chargeId || idx} className="hover:bg-slate-50/50">
+                        <td className="py-2.5 px-3 font-mono font-bold text-slate-800">
+                          {charge.chargeId || '—'}
+                        </td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-900">
+                          {charge.chargeHolder}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
+                          {charge.amount ? `₹${Number(charge.amount).toLocaleString('en-IN')}` : '—'}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600 font-mono">
+                          {charge.dateOfCreation ? formatDate(charge.dateOfCreation) : '—'}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${charge.status === 'Open' ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-200'}`}>
+                            {charge.status || 'Open'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 max-w-xs text-slate-600">
+                          <div className="text-[11px] font-medium text-slate-800">{charge.instrumentType || 'Hypothecation'}</div>
+                          <div className="text-[10px] text-slate-500 truncate" title={charge.assetHypothecated}>{charge.assetHypothecated || '—'}</div>
                         </td>
                       </tr>
                     ))}

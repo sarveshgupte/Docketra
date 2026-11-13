@@ -35,6 +35,7 @@ const {
   repairClientEncryptionKey,
   lookupMcaEntity,
   syncClientComplianceDeadlines,
+  sendClientComplianceAlarm,
 } = require('../controllers/client.controller');
 
 
@@ -60,6 +61,7 @@ router.get('/', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClie
 router.post('/encryption/repair', authorizeFirmPermission('CLIENT_MANAGE'), sensitiveLimiter, repairClientEncryptionKey);
 router.post('/mca/lookup', authorizeFirmPermission('CLIENT_MANAGE'), userReadLimiter, lookupMcaEntity);
 router.post('/:clientId/mca/sync-deadlines', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, syncClientComplianceDeadlines);
+router.post('/:clientId/mca/send-alarm', authorizeFirmPermission('CLIENT_MANAGE'), userWriteLimiter, sendClientComplianceAlarm);
 router.get('/:clientId/dockets', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientDockets);
 router.get('/:clientId', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, getClientById);
 router.get('/:clientId/activity', authorizeFirmPermission('CLIENT_VIEW'), userReadLimiter, listClientActivity);

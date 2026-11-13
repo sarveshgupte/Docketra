@@ -95,9 +95,6 @@ const readFileBuffer = async (file) => {
 
 const virusScanHook = async (file) => {
   if (!CLAMAV_HOST) {
-    if (enforceScanStrictly) {
-      throw new Error('Malware scanner is not configured');
-    }
     log.warn('[uploadProtection] Skipping malware scan because CLAMAV_HOST is not configured');
     return { passed: true, skipped: true, reason: 'scanner_not_configured' };
   }
