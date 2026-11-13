@@ -198,6 +198,43 @@ async function fetchCompanyMasterData(cinOrLlpin, options = {}) {
     };
   }
 
+  // Check bulk-ingested McaCompanyDirectory catalog (if DB connection active)
+  const mongoose = require('mongoose');
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const McaCompanyDirectory = require('../models/McaCompanyDirectory.model');
+      const catalogEntry = await McaCompanyDirectory.findOne({ cin: identifier }).lean();
+      if (catalogEntry) {
+        const deadlines = computeStatutoryDueDates({
+          incorporationDate: catalogEntry.incorporationDate || new Date('2020-01-01'),
+        });
+        return {
+          cinOrLlpin: identifier,
+          companyName: catalogEntry.companyName,
+          companyClass: catalogEntry.companyClass,
+          roc: catalogEntry.roc,
+          status: catalogEntry.status,
+          incorporationDate: catalogEntry.incorporationDate,
+          authorizedCapital: catalogEntry.authorizedCapital,
+          paidUpCapital: catalogEntry.paidUpCapital,
+          registeredOfficeAddress: catalogEntry.registeredOfficeAddress,
+          registeredEmail: catalogEntry.registeredEmail,
+          lastAgmDate: new Date(`${new Date().getFullYear() - 1}-09-25`),
+          lastBalanceSheetDate: new Date(`${new Date().getFullYear() - 1}-03-31`),
+          agmDueDate: deadlines.agmDueDate,
+          annualFilingDueDate: deadlines.aoc4DueDate,
+          directors: [],
+          charges: [],
+          filings: [],
+          syncSource: 'DATA_GOV_BULK_CATALOG',
+          lastSyncedAt: new Date(),
+        };
+      }
+    } catch (_err) {
+      // Graceful fallback to structural parsing
+    }
+  }
+
   // Parse structural metadata for any valid unseeded CIN
   const parsed = parseCinStructure(identifier);
   const incDate = parsed ? new Date(`${parsed.incorporationYear}-01-01`) : new Date('2020-01-01');

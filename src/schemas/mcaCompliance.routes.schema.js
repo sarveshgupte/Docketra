@@ -36,6 +36,17 @@ const statutorySignoffPayloadSchema = z.object({
 }).passthrough();
 
 module.exports = {
+  'GET /directory/search': {
+    query: z.object({
+      q: nonEmptyString,
+      limit: z.coerce.number().int().min(1).max(50).optional(),
+    }).passthrough(),
+  },
+  'GET /directory/:cin': {
+    params: z.object({
+      cin: nonEmptyString,
+    }),
+  },
   'POST /sync': {
     body: syncPayloadSchema,
   },

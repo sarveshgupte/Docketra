@@ -7,6 +7,24 @@ const compactParams = (params = {}) =>
 
 export const mcaComplianceApi = {
   /**
+   * Search public MCA corporate directory for instant auto-complete
+   */
+  searchDirectory: async (query, limit = 10) =>
+    request(
+      (api) => api.get('/compliance/mca/directory/search', { params: compactParams({ q: query, limit }) }),
+      'Failed to search corporate directory'
+    ),
+
+  /**
+   * Fetch company from public MCA corporate directory by CIN
+   */
+  getDirectoryCompany: async (cin) =>
+    request(
+      (api) => api.get(`/compliance/mca/directory/${encodeURIComponent(cin)}`),
+      'Failed to load company from directory'
+    ),
+
+  /**
    * Sync corporate master data by CIN or LLPIN
    */
   syncCompany: async (payload = {}) =>

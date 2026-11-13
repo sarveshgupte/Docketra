@@ -8,6 +8,7 @@ const { userReadLimiter, userWriteLimiter } = require('../middleware/rateLimiter
 const { corporateComplianceService } = require('../services/corporateCompliance.service');
 const { mcaFilingAutomationService } = require('../services/mcaFilingAutomation.service');
 const { statutoryDraftingService } = require('../services/statutoryDrafting.service');
+const { mcaBulkIngestionService } = require('../services/mcaBulkIngestion.service');
 const CorporateFilingDraft = require('../models/CorporateFilingDraft.model');
 const CorporateMasterRecord = require('../models/CorporateMasterRecord.model');
 const log = require('../utils/log');
@@ -16,6 +17,57 @@ const router = applyRouteValidation(express.Router(), routeSchemas);
 
 const getFirmId = (req) => req.firmId || req.firm?.id || req.user?.firmId;
 const getActorXID = (req) => req.user?.xID || 'SYSTEM';
+
+/**
+ * Rapid autocomplete search across MCA Public Corporate Directory
+ */
+router.get('/directory/search', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, async (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+    const results = await mcaBulkIngestionService.searchDirectory({
+      query: q,
+      limit: Number(limit),
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: results,
+    });
+  } catch (error) {
+    log.error('MCA_DIRECTORY_SEARCH_ERROR', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+/**
+ * Lookup single company in public directory by CIN
+ */
+router.get('/directory/:cin', authorizeFirmPermission('CASE_VIEW'), userReadLimiter, async (req, res) => {
+  try {
+    const record = await mcaBulkIngestionService.getCompanyByCin(req.params.cin);
+
+    if (!record) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found in public registry mirror',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: record,
+    });
+  } catch (error) {
+    log.error('MCA_DIRECTORY_GET_ERROR', { error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 
 /**
  * Trigger sync of MCA master data for a CIN/LLPIN
