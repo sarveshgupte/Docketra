@@ -353,9 +353,6 @@ export const ClientsPage = () => {
         PAN: d.pan || prev.PAN,
       }));
       setClientFormErrors({});
-    setMcaSearchTerm('');
-    setMcaFeedback(null);
-    setMcaDossier(null);
       setMcaFeedback({
         type: 'success',
         message: `Fetched from MCA: ${d.businessName}`,
@@ -374,6 +371,9 @@ export const ClientsPage = () => {
   const resetClientForm = useCallback(() => {
     setSelectedClient(null);
     setSelectedClientId('');
+    setMcaSearchTerm('');
+    setMcaFeedback(null);
+    setMcaDossier(null);
     setClientFormErrors({});
     setClientFormMessage({ type: '', text: '' });
     setClientForm({
@@ -568,6 +568,7 @@ export const ClientsPage = () => {
           ...(clientForm.CIN ? { CIN: clientForm.CIN } : {}),
           ...(clientForm.TAN ? { TAN: clientForm.TAN } : {}),
           ...(clientForm.GST ? { GST: clientForm.GST } : {}),
+          ...(mcaDossier ? { mcaDossier } : {}),
         });
         if (!response?.success) throw new Error(response?.message || 'Failed to create client');
         if (response?.data?.clientId) {
@@ -1172,7 +1173,7 @@ export const ClientsPage = () => {
                 onClick={() => handleMcaLookup()}
                 disabled={mcaLoading || !mcaSearchTerm.trim()}
               >
-                {mcaLoading ? 'Querying MCA…' : 'Fetch from MCA'}
+                {mcaLoading ? 'Querying MCA…' : 'Auto-fill from CIN'}
               </Button>
             </div>
             {mcaFeedback?.type === 'success' && (
@@ -1269,7 +1270,19 @@ export const ClientsPage = () => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input label="PAN (Optional)" value={clientForm.PAN} onChange={(event) => handleClientFieldChange('PAN', event.target.value)} error={clientFormErrors.PAN} />
-              <Input label="CIN (Optional)" value={clientForm.CIN} onChange={(event) => handleClientFieldChange('CIN', event.target.value)} error={clientFormErrors.CIN} />
+              <div className="flex flex-col gap-1">
+                <Input label="CIN (Optional)" value={clientForm.CIN} onChange={(event) => handleClientFieldChange('CIN', event.target.value)} error={clientFormErrors.CIN} />
+                {clientForm.CIN && clientForm.CIN.trim().length >= 10 && (
+                  <button
+                    type="button"
+                    onClick={() => handleMcaLookup(clientForm.CIN)}
+                    disabled={mcaLoading}
+                    className="self-start text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300"
+                  >
+                    Auto-fill from this CIN
+                  </button>
+                )}
+              </div>
               <Input label="TAN (Optional)" value={clientForm.TAN} onChange={(event) => handleClientFieldChange('TAN', event.target.value)} error={clientFormErrors.TAN} />
               <Input label="GST (Optional)" value={clientForm.GST} onChange={(event) => handleClientFieldChange('GST', event.target.value)} error={clientFormErrors.GST} />
             </div>
