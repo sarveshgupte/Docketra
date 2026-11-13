@@ -95,24 +95,44 @@ const MIGRATION_CARDS = [
     title: 'Client Master Importer',
     description: 'Upload CSV or Excel spreadsheets with client entities. Auto-validates 21-digit CIN, PAN, GSTIN, and TAN formats with pre-flight dry runs.',
     badge: '✓ Schema validation + Error CSV',
+    icon: (
+      <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+      </svg>
+    ),
   },
   {
     num: '02',
     title: 'Quick Bulk Paste',
     description: 'Copy tab-separated cells directly from Microsoft Excel or Google Sheets and paste them right into Docketra without exporting or downloading files.',
     badge: '✓ Direct clipboard copy-paste',
+    icon: (
+      <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+    ),
   },
   {
     num: '03',
     title: 'Historical Docket Importer',
     description: 'Download pre-formatted templates to bring multi-year filing histories, ongoing secretarial matters, and past annual compliance records into your firm brain.',
     badge: '✓ Multi-year history migration',
+    icon: (
+      <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
   },
   {
     num: '04',
     title: 'Team & Taxonomy Bulk Setup',
     description: 'One-click mapping for your partners, managers, and associates, plus customized compliance categories (ROC, GST, IT, FEMA, Trademark).',
     badge: '✓ Automated role provisioning',
+    icon: (
+      <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
   },
 ];
 
@@ -155,7 +175,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
       <PublicMarketingHeader />
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-slate-50/40 pt-16 pb-12 sm:pt-20 sm:pb-16 border-b border-slate-200">
+      <section className="relative overflow-hidden bg-slate-50/50 pt-14 pb-12 sm:pt-18 sm:pb-16 border-b border-slate-200">
         <Container size="7xl">
           <div className="mx-auto max-w-4xl text-center space-y-4">
             <div className="flex flex-wrap items-center justify-center gap-2">
@@ -163,13 +183,13 @@ export const DocketraVsExcelWhatsAppPage = () => {
                 Comparison Guide • Built for Indian Compliance Practitioners
               </div>
               <span className="text-slate-300">•</span>
-              <div className="inline-flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-mono font-medium text-emerald-800">
+              <div className="inline-flex items-center gap-1.5 border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-mono font-medium text-emerald-800 rounded">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
                 <span>Zero File Leakage • 100% Partner Review</span>
               </div>
             </div>
 
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl mx-auto max-w-3xl [text-wrap:balance]">
+            <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl mx-auto max-w-3xl [text-wrap:balance]">
               The Hidden Cost of Managing Indian Compliance on <span className="text-amber-600">Excel & WhatsApp</span>
             </h1>
 
@@ -181,14 +201,14 @@ export const DocketraVsExcelWhatsAppPage = () => {
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/signup"
-                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 bg-slate-950 px-5 text-xs font-semibold text-amber-400 transition-colors hover:bg-slate-800 rounded-md"
+                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 bg-slate-950 px-6 text-xs font-semibold text-amber-400 transition-colors hover:bg-slate-800 rounded-md shadow-xs"
               >
                 <span>Join Pilot (3 Months Free)</span>
                 <span>→</span>
               </Link>
               <a
                 href="#sandbox-preview"
-                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 border border-slate-200 bg-white px-4 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors rounded-md"
+                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 border border-slate-200 bg-white px-5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors rounded-md shadow-xs"
               >
                 <span>Explore Interactive Sandbox</span>
               </a>
@@ -213,59 +233,95 @@ export const DocketraVsExcelWhatsAppPage = () => {
             </div>
           </div>
 
-          {/* Visual Mockup Card */}
-          <div className="mx-auto mt-12 max-w-5xl rounded-lg border border-slate-200 bg-white p-4 sm:p-6 shadow-xs">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* The Old Way: Spreadsheets & WhatsApp */}
-              <div className="rounded-md border border-rose-200 bg-rose-50/40 p-4 sm:p-5">
-                <div className="flex items-center justify-between border-b border-rose-200/60 pb-3 mb-3">
+          {/* Visual Transformation Cockpit: The Fragile Stack vs The Modern Firm OS */}
+          <div className="mx-auto mt-12 max-w-5xl rounded-lg border border-slate-200 bg-white shadow-xs overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+              {/* Left Column: The Fragmented Way */}
+              <div className="p-5 sm:p-6 bg-rose-50/25">
+                <div className="flex items-center justify-between pb-3 border-b border-rose-200/80 mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-rose-700">The Fragmented Way</span>
+                    <span className="h-2 w-2 rounded-full bg-rose-500" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-rose-800">The Fragmented Way</span>
                   </div>
-                  <span className="text-[11px] font-medium text-slate-500">Excel + WhatsApp</span>
+                  <span className="text-[11px] font-mono font-medium text-slate-500">Excel + WhatsApp</span>
                 </div>
-                <div className="space-y-2.5 text-xs text-slate-600">
-                  <div className="rounded border border-rose-200/80 bg-white p-2.5 font-mono text-[11px]">
-                    <span className="text-rose-700 font-bold">Client Tracker_v14_final.xlsx:</span> Row 48 cell edited 12 days ago without alert.
+
+                <div className="space-y-3">
+                  {/* Mock Broken Spreadsheet Header */}
+                  <div className="rounded border border-rose-200 bg-white p-3 font-mono text-[11px] shadow-2xs">
+                    <div className="flex items-center justify-between text-slate-500 text-[10px] pb-1 border-b border-slate-100 mb-1.5">
+                      <span className="truncate font-semibold text-rose-900">Client_Master_Tracker_v14_final_FINAL2.xlsx</span>
+                      <span className="text-rose-600 font-bold">⚠️ Unsynced</span>
+                    </div>
+                    <div className="space-y-1 text-[10px]">
+                      <div className="flex justify-between text-slate-700">
+                        <span>Row 48: Acme FinTech Ltd</span>
+                        <span className="text-rose-600 font-bold">AOC-4 Due: 30-Oct (Missed)</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500">
+                        <span>Row 49: Bharat BioTech</span>
+                        <span className="text-rose-500 font-mono">#REF! Formula Error</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="rounded border border-rose-200/80 bg-white p-2.5">
-                    <p className="text-slate-500 text-[11px] font-semibold mb-1">WhatsApp Group "Acme Compliance":</p>
-                    <p className="italic text-slate-700">"Where is the DIN KYC OTP? Did we file AOC-4 yesterday? Who has DSC PIN?"</p>
+
+                  {/* Mock WhatsApp Group Noise */}
+                  <div className="rounded border border-rose-200 bg-white p-3 space-y-1.5 text-xs shadow-2xs">
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700 border-b border-slate-100 pb-1">
+                      <span>WhatsApp Group: "Acme Compliance Desk"</span>
+                      <span className="text-[10px] bg-rose-100 text-rose-800 px-1.5 rounded font-mono font-bold">84 unread</span>
+                    </div>
+                    <p className="italic text-slate-700 text-[11px] leading-relaxed">
+                      "Sir, did we file AOC-4 yesterday? Who has the DSC token PIN? Client is asking for acknowledgement receipt urgently!"
+                    </p>
                   </div>
-                  <div className="rounded border border-rose-200/80 bg-rose-100/60 p-2 text-rose-800 text-[11px] font-medium">
-                    Result: Partner spends 3 hours chasing files. Filing delayed. ROC late fees applied.
+
+                  {/* Impact Summary */}
+                  <div className="rounded border border-rose-200 bg-rose-100/60 p-2.5 text-rose-900 text-[11px] font-medium flex items-center gap-2">
+                    <span className="text-rose-600 font-bold">✕</span>
+                    <span>Result: Partner spends 3 hours chasing files. Filing delayed. ROC late fees applied.</span>
                   </div>
                 </div>
               </div>
 
-              {/* The Modern Way: Docketra */}
-              <div className="rounded-md border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
+              {/* Right Column: The Modern Operating System */}
+              <div className="p-5 sm:p-6 bg-slate-50/50">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-900">The Modern Operating System</span>
                   </div>
                   <span className="text-[11px] font-bold text-amber-700 font-mono">Docketra</span>
                 </div>
-                <div className="space-y-2.5 text-xs">
-                  <div className="rounded border border-slate-200 bg-white p-2.5">
+
+                <div className="space-y-3">
+                  {/* Mock Docket Card */}
+                  <div className="rounded border border-slate-200 bg-white p-3 shadow-2xs">
                     <div className="flex items-center justify-between text-[11px] font-bold">
                       <span className="text-slate-900 font-mono">DOCKET-2026-MCA-089</span>
-                      <span className="rounded bg-emerald-50 text-emerald-800 px-1.5 py-0.5 border border-emerald-200 text-[10px]">QC Approved</span>
+                      <span className="rounded bg-emerald-50 text-emerald-800 px-2 py-0.5 border border-emerald-200 text-[10px] font-semibold">
+                        QC Approved
+                      </span>
                     </div>
-                    <p className="text-slate-800 text-[11px] mt-1 font-medium">Acme FinTech Ltd • MCA Form AOC-4 Filing</p>
+                    <p className="text-slate-900 text-xs mt-1 font-semibold">Acme FinTech Ltd • MCA Form AOC-4 Filing</p>
                     <p className="text-slate-500 text-[10px] mt-0.5 font-mono">CIN: U72200MH2021PTC368291 • Due in 4 days • Auto-alert active</p>
                   </div>
-                  <div className="rounded border border-slate-200 bg-white p-2.5 flex items-center justify-between">
+
+                  {/* 4-Eye Review Verification */}
+                  <div className="rounded border border-slate-200 bg-white p-3 flex items-center justify-between shadow-2xs">
                     <div>
-                      <p className="text-slate-800 text-[11px] font-semibold">4-Eye Partner Gate Passed</p>
+                      <p className="text-slate-900 text-xs font-semibold">4-Eye Partner Gate Passed</p>
                       <p className="text-slate-500 text-[10px]">Signed off by Managing Partner (Audit log #3829)</p>
                     </div>
-                    <span className="text-xs font-mono text-emerald-700 font-bold">100% Ready</span>
+                    <span className="text-xs font-mono text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                      100% Ready
+                    </span>
                   </div>
-                  <div className="rounded border border-emerald-200 bg-emerald-50/70 p-2 text-emerald-900 text-[11px] font-medium">
-                    Result: Zero missed deadlines. Instant partner visibility. Audit trail preserved.
+
+                  {/* Impact Summary */}
+                  <div className="rounded border border-emerald-200 bg-emerald-50/70 p-2.5 text-emerald-950 text-[11px] font-medium flex items-center gap-2">
+                    <span className="text-emerald-700 font-bold">✓</span>
+                    <span>Result: Zero missed deadlines. Instant partner visibility. Audit trail preserved.</span>
                   </div>
                 </div>
               </div>
@@ -287,7 +343,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
             </p>
           </div>
 
-          {/* Desktop Table */}
+          {/* Desktop Responsive Table */}
           <div className="hidden md:block overflow-hidden rounded-md border border-slate-200 bg-white shadow-xs">
             <table className="w-full table-fixed text-left border-collapse">
               <thead>
@@ -307,10 +363,10 @@ export const DocketraVsExcelWhatsAppPage = () => {
                     <td className="py-3.5 px-5 font-bold text-slate-950 align-top">
                       {row.feature}
                     </td>
-                    <td className="py-3.5 px-5 align-top text-slate-600 bg-rose-50/20 border-r border-slate-200">
+                    <td className="py-3.5 px-5 align-top text-slate-600 bg-rose-50/15 border-r border-slate-200">
                       <div className="flex items-start gap-2.5">
                         <span
-                          className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-rose-50 text-rose-600 font-semibold shrink-0 mt-0.5 text-[10px] leading-none border border-rose-200/60"
+                          className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-rose-100 text-rose-700 font-bold shrink-0 mt-0.5 text-[10px] leading-none border border-rose-200"
                           aria-hidden="true"
                         >
                           ✕
@@ -321,7 +377,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                     <td className="py-3.5 px-5 align-top bg-emerald-50/15">
                       <div className="flex items-start gap-2.5">
                         <span
-                          className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-emerald-100 text-emerald-800 font-bold shrink-0 mt-0.5 text-[11px] leading-none"
+                          className="inline-flex items-center justify-center h-4 w-4 rounded-xs bg-emerald-100 text-emerald-800 font-bold shrink-0 mt-0.5 text-[11px] leading-none border border-emerald-200"
                           aria-hidden="true"
                         >
                           ✓
@@ -343,12 +399,16 @@ export const DocketraVsExcelWhatsAppPage = () => {
                   {row.feature}
                 </h3>
                 <div className="rounded border border-rose-200 bg-rose-50/50 p-3 text-xs text-rose-950">
-                  <p className="font-bold text-rose-800 mb-1">Excel & WhatsApp:</p>
+                  <p className="font-bold text-rose-800 mb-1 flex items-center gap-1.5">
+                    <span>✕</span> Excel & WhatsApp:
+                  </p>
                   <p className="leading-relaxed text-slate-600">{row.excel}</p>
                 </div>
                 <div className="rounded border border-emerald-200 bg-emerald-50/50 p-3 text-xs text-emerald-950">
-                  <p className="font-bold text-emerald-800 mb-1">Docketra:</p>
-                  <p className="leading-relaxed text-slate-800">{row.docketra}</p>
+                  <p className="font-bold text-emerald-800 mb-1 flex items-center gap-1.5">
+                    <span>✓</span> Docketra:
+                  </p>
+                  <p className="leading-relaxed text-slate-800 font-medium">{row.docketra}</p>
                 </div>
               </div>
             ))}
@@ -357,7 +417,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
       </section>
 
       {/* The 4 Breaking Points Deep Dive */}
-      <section className="py-16 bg-slate-50/40 border-b border-slate-200">
+      <section className="py-16 bg-slate-50/50 border-b border-slate-200">
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Root-Cause Analysis</div>
@@ -369,65 +429,147 @@ export const DocketraVsExcelWhatsAppPage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-md border border-slate-200 bg-white p-5 sm:p-6 hover:border-slate-400 transition-colors shadow-xs">
-              <div className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded mb-3">
-                Feature: Client Memory
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Breaking Point 1 */}
+            <div className="rounded-md border border-slate-200 bg-white p-5 sm:p-6 hover:border-slate-300 transition-colors shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                    Feature: Client Memory
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-400">01</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-950 mb-2">
+                  1. "The Senior Partner Becomes an Internal Search Engine"
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
+                  When entity knowledge lives in chat threads, partners spend 30% of their workday answering associate questions:
+                  <em className="text-slate-500 block mt-1">"Who is the authorized signatory for XYZ Corp? Did we file form DIR-12 last quarter? Where is the signed MOA?"</em>
+                </p>
+
+                {/* Visual Widget: Instant Search Preview */}
+                <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs mb-3 font-mono">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pb-1.5 border-b border-slate-200 mb-1.5">
+                    <span className="font-bold text-slate-800">Quick Entity Recall (Ctrl+K)</span>
+                    <span className="text-emerald-700 font-bold">0.18s query</span>
+                  </div>
+                  <div className="text-[11px] text-slate-700 font-sans space-y-1">
+                    <div className="font-semibold text-slate-950">Reliance Energy Infrastructure Ltd</div>
+                    <div className="text-slate-500 font-mono text-[10px]">CIN: L40100MH2000PLC123456 • 34 Filings • All MOA/AOA Indexed</div>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-950 mb-2">
-                1. "The Senior Partner Becomes an Internal Search Engine"
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
-                When entity knowledge lives in chat threads, partners spend 30% of their workday answering associate questions:
-                <em className="text-slate-500 block mt-1">"Who is the authorized signatory for XYZ Corp? Did we file form DIR-12 last quarter? Where is the signed MOA?"</em>
-              </p>
-              <div className="rounded border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
-                <span className="font-bold text-amber-700">The Docketra Fix:</span> Institutional Client Memory. Every entity’s master data (CIN, DIN, PAN, registered office, statutory records, past resolutions) is indexed and searchable across the entire firm in 1 click.
+
+              <div className="rounded border border-amber-100 bg-amber-50/60 p-3 text-xs text-slate-700">
+                <span className="font-bold text-amber-800">The Docketra Fix:</span> Institutional Client Memory. Every entity’s master data (CIN, DIN, PAN, registered office, statutory records, past resolutions) is indexed and searchable across the entire firm in 1 click.
               </div>
             </div>
 
-            <div className="rounded-md border border-slate-200 bg-white p-5 sm:p-6 hover:border-slate-400 transition-colors shadow-xs">
-              <div className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded mb-3">
-                Feature: Review Gates
+            {/* Breaking Point 2 */}
+            <div className="rounded-md border border-slate-200 bg-white p-5 sm:p-6 hover:border-slate-300 transition-colors shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                    Feature: Review Gates
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-400">02</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-950 mb-2">
+                  2. "QC Reviews Disappear into WhatsApp Noise"
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
+                  Draft forms, board resolutions, and tax returns are dropped into WhatsApp groups for review. Amid 80 other notifications, they get lost. Submissions occur without formal partner sign-off until an ROC defect notice or penalty letter arrives.
+                </p>
+
+                {/* Visual Widget: 4-Eye Approval Card */}
+                <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs mb-3 font-mono">
+                  <div className="flex items-center justify-between text-[11px] pb-1.5 border-b border-slate-200 mb-1.5">
+                    <span className="font-bold text-slate-800">QC Review Gate</span>
+                    <span className="bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded text-[10px] font-bold">Partner Sign-Off Required</span>
+                  </div>
+                  <div className="text-[11px] text-slate-700 font-sans flex items-center justify-between">
+                    <span>MGT-7 Annual Return Draft</span>
+                    <span className="text-emerald-700 font-mono font-bold text-[10px]">Hash Verified</span>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-950 mb-2">
-                2. "QC Reviews Disappear into WhatsApp Noise"
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
-                Draft forms, board resolutions, and tax returns are dropped into WhatsApp groups for review. Amid 80 other notifications, they get lost. Submissions occur without formal partner sign-off until an ROC defect notice or penalty letter arrives.
-              </p>
-              <div className="rounded border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
-                <span className="font-bold text-amber-700">The Docketra Fix:</span> 4-Eye Review Gates. Dockets cannot advance to filing until assigned managers or partners approve the work in dedicated QC Baskets with complete revision history.
+
+              <div className="rounded border border-amber-100 bg-amber-50/60 p-3 text-xs text-slate-700">
+                <span className="font-bold text-amber-800">The Docketra Fix:</span> 4-Eye Review Gates. Dockets cannot advance to filing until assigned managers or partners approve the work in dedicated QC Baskets with complete revision history.
               </div>
             </div>
 
-            <div className="rounded-md border border-slate-200 bg-white p-5 sm:p-6 hover:border-slate-400 transition-colors shadow-xs">
-              <div className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded mb-3">
-                Feature: Firm-Owned Worklists
+            {/* Breaking Point 3 */}
+            <div className="rounded-md border border-slate-200 bg-white p-5 sm:p-6 hover:border-slate-300 transition-colors shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                    Feature: Firm-Owned Worklists
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-400">03</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-950 mb-2">
+                  3. "Institutional Brain Drain on Staff Exit"
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
+                  Article assistants and junior associates rotate every 12 to 24 months. When an associate leaves, client draft files on their personal laptops, pending form checklists, and WhatsApp message context walk out the door with them.
+                </p>
+
+                {/* Visual Widget: Instant Handover */}
+                <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs mb-3 font-mono">
+                  <div className="flex items-center justify-between text-[11px] pb-1.5 border-b border-slate-200 mb-1.5">
+                    <span className="font-bold text-slate-800">Staff Transition Handler</span>
+                    <span className="text-emerald-700 font-bold">1-Click Handover</span>
+                  </div>
+                  <div className="text-[11px] text-slate-700 font-sans flex items-center justify-between">
+                    <span>48 active compliance dockets</span>
+                    <span className="text-slate-500 font-mono text-[10px]">Reassigned in 5s</span>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-950 mb-2">
-                3. "Institutional Brain Drain on Staff Exit"
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
-                Article assistants and junior associates rotate every 12 to 24 months. When an associate leaves, client draft files on their personal laptops, pending form checklists, and WhatsApp message context walk out the door with them.
-              </p>
-              <div className="rounded border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
-                <span className="font-bold text-amber-700">The Docketra Fix:</span> Firm-Owned Shared Queues. Work does not belong to individual inboxes. It lives in firm-controlled workbaskets. Reassigning 50 dockets to a new associate takes exactly 5 seconds.
+
+              <div className="rounded border border-amber-100 bg-amber-50/60 p-3 text-xs text-slate-700">
+                <span className="font-bold text-amber-800">The Docketra Fix:</span> Firm-Owned Shared Queues. Work does not belong to individual inboxes. It lives in firm-controlled workbaskets. Reassigning 50 dockets to a new associate takes exactly 5 seconds.
               </div>
             </div>
 
-            <div className="rounded-md border border-slate-200 bg-white p-5 sm:p-6 hover:border-slate-400 transition-colors shadow-xs">
-              <div className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded mb-3">
-                Feature: Fee-Earner Telemetry
+            {/* Breaking Point 4 */}
+            <div className="rounded-md border border-slate-200 bg-white p-5 sm:p-6 hover:border-slate-300 transition-colors shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                    Feature: Fee-Earner Telemetry
+                  </span>
+                  <span className="font-mono text-xs font-bold text-slate-400">04</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-950 mb-2">
+                  4. "Zero Real-Time Capacity Planning"
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
+                  During September and October annual filing crunches, partners have zero telemetry on who is overloaded and who has bandwidth. Spreadsheets show dates, but not work effort, queue bottlenecks, or SLA slip risk.
+                </p>
+
+                {/* Visual Widget: Team Workload Telemetry */}
+                <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs mb-3 font-mono">
+                  <div className="flex items-center justify-between text-[11px] pb-1.5 border-b border-slate-200 mb-1.5">
+                    <span className="font-bold text-slate-800">Fee-Earner Capacity Meter</span>
+                    <span className="text-slate-500 text-[10px]">Annual Crunch Telemetry</span>
+                  </div>
+                  <div className="space-y-1 text-[10px]">
+                    <div className="flex justify-between items-center text-slate-700">
+                      <span>Priya S. (Senior Associate)</span>
+                      <span className="text-emerald-700 font-bold">85% Capacity</span>
+                    </div>
+                    <div className="flex justify-between items-center text-slate-700">
+                      <span>Rahul V. (Associate)</span>
+                      <span className="text-amber-700 font-bold">94% Capacity (Near Max)</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-950 mb-2">
-                4. "Zero Real-Time Capacity Planning"
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-3">
-                During September and October annual filing crunches, partners have zero telemetry on who is overloaded and who has bandwidth. Spreadsheets show dates, but not work effort, queue bottlenecks, or SLA slip risk.
-              </p>
-              <div className="rounded border border-slate-100 bg-slate-50 p-3 text-xs text-slate-600">
-                <span className="font-bold text-amber-700">The Docketra Fix:</span> Live Partner Telemetry. Instant breakdown of open dockets by fee-earner, stage distribution, SLA countdown, and overdue risk metrics across your entire team.
+
+              <div className="rounded border border-amber-100 bg-amber-50/60 p-3 text-xs text-slate-700">
+                <span className="font-bold text-amber-800">The Docketra Fix:</span> Live Partner Telemetry. Instant breakdown of open dockets by fee-earner, stage distribution, SLA countdown, and overdue risk metrics across your entire team.
               </div>
             </div>
           </div>
@@ -447,16 +589,21 @@ export const DocketraVsExcelWhatsAppPage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {MIGRATION_CARDS.map((card, idx) => (
               <div
                 key={idx}
-                className="rounded-md border border-slate-200 bg-white p-5 flex flex-col justify-between hover:border-slate-400 transition-colors shadow-xs"
+                className="rounded-md border border-slate-200 bg-white p-5 flex flex-col justify-between hover:border-slate-300 transition-colors shadow-xs"
               >
                 <div>
-                  <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
-                    {card.num}
-                  </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="p-2 rounded bg-amber-50 border border-amber-200/80">
+                      {card.icon}
+                    </span>
+                    <span className="font-mono text-xs font-bold text-amber-700 tracking-wider">
+                      {card.num}
+                    </span>
+                  </div>
                   <h3 className="mt-2 text-sm font-bold text-slate-950">{card.title}</h3>
                   <p className="mt-1.5 text-xs text-slate-600 leading-relaxed mb-4">
                     {card.description}
@@ -472,10 +619,13 @@ export const DocketraVsExcelWhatsAppPage = () => {
       </section>
 
       {/* Interactive Sandbox Preview Anchor */}
-      <section id="sandbox-preview" className="py-16 bg-slate-50/40 border-b border-slate-200 scroll-mt-16">
+      <section id="sandbox-preview" className="py-16 bg-slate-50/50 border-b border-slate-200 scroll-mt-16">
         <Container size="7xl">
-          <div className="mx-auto max-w-5xl rounded-lg border border-slate-200 bg-white p-6 sm:p-8 shadow-xs">
+          <div className="mx-auto max-w-5xl rounded-lg border border-slate-200 bg-white p-5 sm:p-8 shadow-xs">
             <div className="text-center max-w-2xl mx-auto mb-8">
+              <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                Interactive Product Walkthrough
+              </div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-950">
                 Experience the Company Brain in Action
               </h2>
@@ -488,7 +638,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSandboxTab('memory')}
-                  className={`px-3 py-1.5 rounded font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded font-medium transition-colors cursor-pointer ${
                     activeSandboxTab === 'memory' ? 'bg-slate-950 text-white font-bold' : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
@@ -497,7 +647,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSandboxTab('qc')}
-                  className={`px-3 py-1.5 rounded font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded font-medium transition-colors cursor-pointer ${
                     activeSandboxTab === 'qc' ? 'bg-slate-950 text-white font-bold' : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
@@ -506,7 +656,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                 <button
                   type="button"
                   onClick={() => setActiveSandboxTab('importer')}
-                  className={`px-3 py-1.5 rounded font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded font-medium transition-colors cursor-pointer ${
                     activeSandboxTab === 'importer' ? 'bg-slate-950 text-white font-bold' : 'text-slate-600 hover:text-slate-950'
                   }`}
                 >
@@ -515,6 +665,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </div>
             </div>
 
+            {/* Sandbox Mockup Window */}
             <div className="rounded-md border border-slate-200 bg-white overflow-hidden shadow-xs">
               <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 bg-slate-50 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -539,17 +690,17 @@ export const DocketraVsExcelWhatsAppPage = () => {
                       <div className="rounded border border-slate-200 bg-slate-50/60 p-3">
                         <p className="text-[11px] text-slate-500 font-medium">Active Dockets</p>
                         <p className="text-lg font-bold text-slate-950 mt-0.5">48 Matters</p>
-                        <p className="text-[10px] text-emerald-700 mt-0.5">100% on schedule</p>
+                        <p className="text-[10px] text-emerald-700 mt-0.5 font-medium">100% on schedule</p>
                       </div>
                       <div className="rounded border border-slate-200 bg-slate-50/60 p-3">
                         <p className="text-[11px] text-slate-500 font-medium">Awaiting QC Sign-Off</p>
                         <p className="text-lg font-bold text-amber-700 mt-0.5">6 Draft Filings</p>
-                        <p className="text-[10px] text-amber-800 mt-0.5">Partner review gate active</p>
+                        <p className="text-[10px] text-amber-800 mt-0.5 font-medium">Partner review gate active</p>
                       </div>
                       <div className="rounded border border-slate-200 bg-slate-50/60 p-3">
                         <p className="text-[11px] text-slate-500 font-medium">Storage Posture</p>
                         <p className="text-lg font-bold text-slate-950 mt-0.5">BYOS Active</p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">Google Drive • Mumbai Tier-IV</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5 font-medium">Google Drive • Mumbai Tier-IV</p>
                       </div>
                     </div>
 
@@ -559,14 +710,14 @@ export const DocketraVsExcelWhatsAppPage = () => {
                         <span className="text-amber-700 font-mono text-[11px]">Instant Search (`Ctrl+K`)</span>
                       </div>
                       <div className="divide-y divide-slate-100 text-xs">
-                        <div className="py-2 flex items-center justify-between">
+                        <div className="py-2.5 flex items-center justify-between">
                           <div>
                             <span className="font-bold text-slate-900">Reliance Energy Infrastructure Ltd</span>
                             <span className="ml-2 font-mono text-[10px] text-slate-500">CIN: L40100MH2000PLC123456</span>
                           </div>
                           <span className="text-[11px] text-slate-500">8 dockets • 34 filings logged</span>
                         </div>
-                        <div className="py-2 flex items-center justify-between">
+                        <div className="py-2.5 flex items-center justify-between">
                           <div>
                             <span className="font-bold text-slate-900">Bharat BioTech Ventures LLP</span>
                             <span className="ml-2 font-mono text-[10px] text-slate-500">LLPIN: AAB-4921</span>
@@ -591,8 +742,8 @@ export const DocketraVsExcelWhatsAppPage = () => {
                       <p className="text-sm font-semibold text-slate-900 mt-2">MGT-7 Annual Return Draft Review for Acme Infotech Pvt Ltd</p>
                       <p className="text-xs text-slate-600 mt-1">Prepared by: Priya Sharma (Associate) • Attached files: Form_MGT7_Final.pdf (Signed)</p>
                       <div className="mt-3 flex items-center gap-2">
-                        <span className="rounded bg-slate-950 px-3 py-1 text-xs font-bold text-amber-400">Approve & Sign-off</span>
-                        <span className="rounded border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-700">Reject with Notes</span>
+                        <span className="rounded bg-slate-950 px-3 py-1.5 text-xs font-bold text-amber-400">Approve & Sign-off</span>
+                        <span className="rounded border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">Reject with Notes</span>
                       </div>
                     </div>
                     <div className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
@@ -669,8 +820,8 @@ export const DocketraVsExcelWhatsAppPage = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-400 transition-colors shadow-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
               <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
                 90d
               </span>
@@ -680,7 +831,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </p>
             </div>
 
-            <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-400 transition-colors shadow-xs">
+            <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
               <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
                 02
               </span>
@@ -690,7 +841,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </p>
             </div>
 
-            <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-400 transition-colors shadow-xs">
+            <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
               <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
                 03
               </span>
@@ -704,7 +855,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
       </section>
 
       {/* Interactive FAQ Accordion */}
-      <section className="py-16 bg-slate-50/40 border-b border-slate-200">
+      <section className="py-16 bg-slate-50/50 border-b border-slate-200">
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Frequently Asked Questions</div>
@@ -769,7 +920,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/signup"
-                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-colors hover:bg-slate-800 rounded-md"
+                className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-colors hover:bg-slate-800 rounded-md shadow-xs"
               >
                 <span>Start Your 3-Month Free Pilot →</span>
               </Link>
