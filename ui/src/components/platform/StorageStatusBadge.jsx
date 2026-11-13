@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import useStorageStatusSummary from '../../hooks/useStorageStatusSummary';
+import useStorageStatusSummary, { invalidateStorageStatusSummaryCache } from '../../hooks/useStorageStatusSummary';
+import { recoverStorageRoot } from '../../services/storageService';
 import { ROUTES, hasValidFirmSlug } from '../../constants/routes';
 import { useAuth } from '../../hooks/useAuth';
 import { hasFirmRoleAtLeast, isFirmAdminOrAbove, isPrimaryAdmin } from '../../utils/roleHierarchy';
@@ -17,10 +18,23 @@ export default function StorageStatusBadge() {
   const location = useLocation();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const containerRef = useRef(null);
   const canViewStorageStatus = hasFirmRoleAtLeast(user, 'MANAGER');
   const canReadOwnershipSummary = isFirmAdminOrAbove(user);
   const canReadRootHealth = isPrimaryAdmin(user) || Boolean(user?.isPrimaryAdmin);
+
+  const handleRecover = async () => {
+    try {
+      setRecovering(true);
+      await recoverStorageRoot();
+      invalidateStorageStatusSummaryCache();
+    } catch {
+      // navigation to settings will still allow explicit diagnostics
+    } finally {
+      setRecovering(false);
+    }
+  };
   const inferredFirmSlug = useMemo(() => {
     const match = String(location.pathname || '').match(/^\/app\/firm\/([^/]+)/i);
     return match?.[1] ? decodeURIComponent(match[1]) : '';
@@ -104,6 +118,19 @@ export default function StorageStatusBadge() {
               <dd>{formatDateTime(summary.lastCheckedAt)}</dd>
             </div>
           </dl>
+
+          {summary.needsAttention && canReadRootHealth && (
+            <div className="pt-2 pb-1">
+              <button
+                type="button"
+                className="w-full text-xs font-semibold py-1.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white transition flex items-center justify-center gap-1.5 shadow-sm"
+                onClick={handleRecover}
+                disabled={recovering}
+              >
+                {recovering ? 'Recovering Google Drive…' : '↻ Recover Storage Root'}
+              </button>
+            </div>
+          )}
 
           <div className="platform__storage-links">
             <Link className="platform__storage-link platform__storage-link--primary" to={storageSettingsPath} onClick={() => setOpen(false)}>Storage Settings</Link>

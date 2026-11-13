@@ -34,8 +34,10 @@ export async function getStorageFolderLink() {
   return response.data;
 }
 
-export async function getStorageRootHealth() {
-  const response = await api.get('/storage/root-health');
+export async function getStorageRootHealth(options = {}) {
+  const shouldAutoRecover = options.autoRecover !== false;
+  const params = shouldAutoRecover ? { autoRecover: 'true' } : {};
+  const response = await api.get('/storage/root-health', { params });
   return response.data;
 }
 

@@ -575,7 +575,17 @@ class GoogleDriveService {
     oauthClient.setCredentials({ refresh_token: refreshToken });
     const drive = google.drive({ version: 'v3', auth: oauthClient });
 
-    const rootHealth = await this.validateRootFolder({ drive, firm, rootFolderId: effectiveRootFolderId });
+    let rootHealth = await this.validateRootFolder({ drive, firm, rootFolderId: effectiveRootFolderId });
+    if (!rootHealth.valid) {
+      try {
+        const recovery = await this.recoverRootFolder({ firmId });
+        if (recovery?.success) {
+          rootHealth = { valid: true, folderName: recovery.rootFolderName };
+        }
+      } catch (_recErr) {
+        // preserve failure reporting below
+      }
+    }
 
     let externalFilesAccessible = 0;
     try {
