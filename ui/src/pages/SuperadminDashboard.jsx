@@ -10,6 +10,8 @@ import { useToast } from '../hooks/useToast';
 import { productUpdatesService } from '../services/productUpdatesService';
 import { APP_VERSION } from '../utils/constants';
 import { CreateFirmModal } from './admin/components/CreateFirmModal';
+import { LegalConsentCertificateModal } from '../components/superadmin/LegalConsentCertificateModal';
+import { PILOT_TERMS_VERSION } from '../components/marketing/PilotAgreementModal';
 
 const safeCount = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
 
@@ -107,10 +109,13 @@ export const SuperadminDashboard = () => {
   const [onboardingAlerts, setOnboardingAlerts] = useState([]);
 
   // UI Interactive States
-  const [activeTab, setActiveTab] = useState('vitals'); // 'vitals' | 'security' | 'performance' | 'launch' | 'flags'
+  const [activeTab, setActiveTab] = useState('vitals'); // 'vitals' | 'security' | 'performance' | 'launch' | 'flags' | 'legal'
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showOnboardModal, setShowOnboardModal] = useState(false);
+  const [firmsList, setFirmsList] = useState([]);
+  const [selectedCertFirm, setSelectedCertFirm] = useState(null);
+  const [legalSearchQuery, setLegalSearchQuery] = useState('');
 
   // Real-time HUD Clock ticks
   useEffect(() => {
@@ -149,6 +154,7 @@ export const SuperadminDashboard = () => {
       featureRes,
       auditRes,
       alertsRes,
+      firmsRes,
     ] = await Promise.allSettled([
       superadminService.getPlatformStats(),
       superadminService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }),
@@ -159,12 +165,16 @@ export const SuperadminDashboard = () => {
       superadminService.getFeatureFlags(),
       superadminService.getAuditLogs({ limit: 12 }),
       superadminService.getOnboardingAlerts({ status: 'open', limit: 8 }),
+      superadminService.listFirms(),
     ]);
 
     const statsData = statsRes.status === 'fulfilled' && statsRes.value?.success ? statsRes.value.data : null;
     const insightsData = insightsRes.status === 'fulfilled' && insightsRes.value?.success ? insightsRes.value.data : null;
     const diagnosticsData = diagnosticsRes.status === 'fulfilled' && diagnosticsRes.value?.success ? diagnosticsRes.value.data : null;
     const healthData = healthRes.status === 'fulfilled' && healthRes.value?.success ? healthRes.value.data : null;
+    const loadedFirms = firmsRes.status === 'fulfilled' && firmsRes.value?.success
+      ? (Array.isArray(firmsRes.value.data) ? firmsRes.value.data : [])
+      : [];
 
     setStats(statsData);
     setInsights(insightsData);
@@ -175,6 +185,7 @@ export const SuperadminDashboard = () => {
     setFeatureFlags(featureRes.status === 'fulfilled' && featureRes.value?.success ? featureRes.value.data : null);
     setAuditLogs(auditRes.status === 'fulfilled' && auditRes.value?.success ? (auditRes.value.data || []) : []);
     setOnboardingAlerts(alertsRes.status === 'fulfilled' && alertsRes.value?.success ? (alertsRes.value.data?.alerts || []) : []);
+    setFirmsList(loadedFirms);
 
     if (!statsData && !insightsData && !diagnosticsData) {
       setError('Platform command center is temporarily unavailable.');
@@ -231,6 +242,33 @@ export const SuperadminDashboard = () => {
     const score = Math.min(100, Math.max(0, pilotReadySummary.score));
     return radialGaugeCircumference - (radialGaugeCircumference * score) / 100;
   }, [pilotReadySummary.score]);
+
+  const consentStats = useMemo(() => {
+    const total = firmsList.length;
+    const acceptedFirms = firmsList.filter((f) => f.termsAccepted === true);
+    const acceptedCount = acceptedFirms.length;
+    const percentage = total > 0 ? Math.round((acceptedCount / total) * 100) : 100;
+    const pendingCount = total - acceptedCount;
+    return {
+      total,
+      acceptedCount,
+      percentage,
+      pendingCount,
+      activeVersion: PILOT_TERMS_VERSION || 'v1.0_pilot_2026',
+    };
+  }, [firmsList]);
+
+  const filteredLegalFirms = useMemo(() => {
+    if (!legalSearchQuery.trim()) return firmsList;
+    const q = legalSearchQuery.toLowerCase();
+    return firmsList.filter(
+      (f) =>
+        (f.name && f.name.toLowerCase().includes(q)) ||
+        (f.firmId && f.firmId.toLowerCase().includes(q)) ||
+        (f.slug && f.slug.toLowerCase().includes(q)) ||
+        (f.adminEmail && f.adminEmail.toLowerCase().includes(q))
+    );
+  }, [firmsList, legalSearchQuery]);
 
   // Product Updates Sentinel States & Handlers
   const MAX_UPDATE_BULLETS = 5;
@@ -369,6 +407,7 @@ export const SuperadminDashboard = () => {
             { id: 'performance', label: 'Performance Traces' },
             { id: 'launch', label: 'Launch Checklist' },
             { id: 'flags', label: 'Feature Flags' },
+            { id: 'legal', label: 'Legal & Consent' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1116,6 +1155,227 @@ export const SuperadminDashboard = () => {
             </div>
           )}
 
+          {/* ==================== TAB F: LEGAL & CONSENT REGISTRY ==================== */}
+          {activeTab === 'legal' && (
+            <div className="space-y-6">
+              {/* LEGAL & CONSENT KPI METRICS */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Total Registered Firms
+                  </span>
+                  <p className="mt-2 text-2xl font-bold font-mono text-slate-900">
+                    {consentStats.total}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">Onboarded tenant practices</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Signed Clickwrap Terms
+                  </span>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <p className="text-2xl font-bold font-mono text-emerald-600">
+                      {consentStats.acceptedCount}
+                    </p>
+                    <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
+                      {consentStats.percentage}% compliance
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">Verified electronic consent</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Pending / Legacy Accounts
+                  </span>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <p className={`text-2xl font-bold font-mono ${consentStats.pendingCount > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+                      {consentStats.pendingCount}
+                    </p>
+                    <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
+                      consentStats.pendingCount > 0
+                        ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {consentStats.pendingCount > 0 ? 'Requires Consent' : '100% Up to Date'}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">Pre-clickwrap migration accounts</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    Active System Terms Version
+                  </span>
+                  <p className="mt-2 text-xl font-bold font-mono text-indigo-600 truncate">
+                    {consentStats.activeVersion}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">Clickwrap pilot agreement</p>
+                </div>
+              </div>
+
+              {/* MASTER TERMS SUMMARY & LEGAL ARCHITECTURE */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Master Terms & Regulatory Architecture
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Enforced electronic agreement parameters for Indian CA, CS, and Legal practices.
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 border border-indigo-200/60">
+                    Active Version: {consentStats.activeVersion}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
+                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
+                    <span className="font-bold text-slate-900 block mb-1">1. Pre-incorporation Operator</span>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Executed with Sarvesh Gupte in individual founder capacity prior to formal corporate incorporation.
+                    </p>
+                  </div>
+                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
+                    <span className="font-bold text-slate-900 block mb-1">2. Pilot Evaluation License</span>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      3-month revocable evaluation license for internal operations, client tracking, and statutory compliance.
+                    </p>
+                  </div>
+                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
+                    <span className="font-bold text-slate-900 block mb-1">3. Zero Advisory Disclaimer</span>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Software workflow utility only. No legal, tax, chartered accounting, or company secretarial advice is rendered.
+                    </p>
+                  </div>
+                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
+                    <span className="font-bold text-slate-900 block mb-1">4. Explicit ₹0 Liability Cap</span>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Offered on an as-evaluated basis without monetary liability for pilot phase operational testing.
+                    </p>
+                  </div>
+                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
+                    <span className="font-bold text-slate-900 block mb-1">5. Sovereign Data Residency (BYOS)</span>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Working papers and client filings remain in practice-owned storage under Indian data jurisdiction.
+                    </p>
+                  </div>
+                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
+                    <span className="font-bold text-slate-900 block mb-1">6. Exclusive Jurisdiction</span>
+                    <p className="text-slate-600 text-[11px] leading-relaxed">
+                      Subject to Indian laws, with exclusive legal jurisdiction in the Courts of Mumbai / Thane, Maharashtra.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* FIRM LEGAL CONSENT AUDIT LEDGER */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Firm Legal Consent Audit Ledger
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Recorded clickwrap agreement timestamps, signatory emails, and audit certificates.
+                    </p>
+                  </div>
+                  <div className="w-full sm:w-72">
+                    <input
+                      type="text"
+                      placeholder="Search practice name, ID, or email…"
+                      value={legalSearchQuery}
+                      onChange={(e) => setLegalSearchQuery(e.target.value)}
+                      className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {filteredLegalFirms.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-slate-500">
+                    No practice consent records match the search filter.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs text-slate-600">
+                      <thead className="border-b border-slate-200 bg-slate-50/75 text-[11px] font-semibold text-slate-700 uppercase tracking-wider">
+                        <tr>
+                          <th className="py-2.5 px-3">Practice / Firm</th>
+                          <th className="py-2.5 px-3">Signatory Email</th>
+                          <th className="py-2.5 px-3">Agreement Type</th>
+                          <th className="py-2.5 px-3">Terms Version</th>
+                          <th className="py-2.5 px-3">Acceptance Date</th>
+                          <th className="py-2.5 px-3">Sign-Up IP</th>
+                          <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredLegalFirms.map((firm) => {
+                          const isAccepted = firm.termsAccepted === true;
+                          const firmKey = firm.firmId || firm.slug || firm._id || 'N/A';
+                          return (
+                            <tr key={firmKey} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="py-2.5 px-3">
+                                <span className="font-semibold text-slate-900 block">{firm.name || 'Unnamed Practice'}</span>
+                                <span className="text-[10px] font-mono text-slate-400">{firmKey}</span>
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-slate-700">
+                                {firm.adminEmail || '—'}
+                              </td>
+                              <td className="py-2.5 px-3 text-[11px]">
+                                {firm.agreementType || (isAccepted ? 'PILOT_CLICKWRAP' : 'PENDING')}
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-slate-700">
+                                {firm.termsVersion || (isAccepted ? 'v1.0_pilot_2026' : 'Legacy User')}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+                                {firm.termsAcceptedAt
+                                  ? new Date(firm.termsAcceptedAt).toLocaleDateString([], {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                    })
+                                  : 'Not Recorded'}
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-slate-500">
+                                {firm.signupIP || '127.0.0.1'}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                {isAccepted ? (
+                                  <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-600/20">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                    Accepted
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-600/20">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                    Pending
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-right">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedCertFirm(firm)}
+                                >
+                                  📄 View Certificate
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* 4. FOUNDER'S QUICK LAUNCH CONSOLE */}
@@ -1321,6 +1581,12 @@ export const SuperadminDashboard = () => {
           onSuccess={() => {
             loadDashboard();
           }}
+        />
+
+        <LegalConsentCertificateModal
+          isOpen={Boolean(selectedCertFirm)}
+          onClose={() => setSelectedCertFirm(null)}
+          firm={selectedCertFirm}
         />
 
       </div>

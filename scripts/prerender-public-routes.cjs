@@ -111,7 +111,7 @@ async function prerender() {
 
       try {
         await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await page.waitForSelector('#root > *', { timeout: 15000 });
+        await page.waitForSelector('#root > *', { timeout: 30000 });
 
         // Wait a brief moment for document.title & meta tags to flush
         await page.waitForTimeout(200);

@@ -21,6 +21,13 @@ Minimal repo-specific agent notes based on committed scripts and package workflo
 - Deploy-safety checks run through `scripts/run-deploy-safety-gate.js`, which supplies production-shaped placeholder env values without requiring real secrets.
 - For full local parity with the backend CI job, run `npm run ci:backend:deploy-safety` and `npm run security:secrets` in addition to `npm run ci:release-gate:pure`; those extra gates are enforced in `.github/workflows/ci.yml`.
 
+## Git Branching, Push & Promotion Policy (Strict)
+
+- **Push Default**: Push everything to `cug` (Closed User Group) by default.
+- **Mandatory User Confirmation Before Any Push**: ALWAYS ask the user for explicit confirmation before pushing anything to Git (whether `cug` or `main`). Never push autonomously without asking.
+- **Main vs CUG Invariant**: Everything on `main` must always be on `cug` (`cug` is continuously kept up to date with `main`).
+- **Promotion to Main**: Everything on `cug` must be reviewed and verified. Changes on `cug` are ONLY moved or merged to `main` when the user explicitly commands it ("move to main" / "push to main").
+
 ## TODO
 
 - Add more agent workflow notes only after they are established in committed repo scripts or docs.
