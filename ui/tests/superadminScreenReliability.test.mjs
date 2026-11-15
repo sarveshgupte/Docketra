@@ -89,8 +89,19 @@ assert.ok(
     && dashboardPage.includes('Needs attention today')
     && dashboardPage.includes('Firms Management')
     && dashboardPage.includes('Onboarding Insights')
-    && dashboardPage.includes('Support Diagnostics'),
-  'Platform dashboard should expose command center sections and quick links.',
+    && dashboardPage.includes('Support Diagnostics')
+    && dashboardPage.includes('+ Onboard Firm')
+    && dashboardPage.includes('CreateFirmModal'),
+  'Platform dashboard should expose command center sections, quick links, and quick onboard modal.',
+);
+
+const createFirmModalSource = read('pages/admin/components/CreateFirmModal.jsx');
+assert.ok(
+  createFirmModalSource.includes('superadminService.createFirm')
+    && createFirmModalSource.includes('Firm / Entity Name')
+    && createFirmModalSource.includes('Primary Administrator Name')
+    && createFirmModalSource.includes('Primary Administrator Corporate Email'),
+  'CreateFirmModal should integrate with superadminService and provide essential tenant fields.',
 );
 
 assert.ok(insightsPage.includes('Insights unavailable') && insightsPage.includes('Retry') && insightsPage.includes('loadInsights'), 'Insights page should provide a readable empty/error state.');

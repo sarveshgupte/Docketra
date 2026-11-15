@@ -106,6 +106,7 @@ async function prerender() {
 
     for (const route of PUBLIC_ROUTES) {
       const page = await context.newPage();
+      page.on('pageerror', (err) => console.error(`  [pageerror on ${route}]`, err.message));
       const targetUrl = `${baseUrl}${route}`;
 
       try {

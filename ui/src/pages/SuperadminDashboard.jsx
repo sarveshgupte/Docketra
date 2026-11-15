@@ -9,6 +9,7 @@ import { superadminService } from '../services/superadminService';
 import { useToast } from '../hooks/useToast';
 import { productUpdatesService } from '../services/productUpdatesService';
 import { APP_VERSION } from '../utils/constants';
+import { CreateFirmModal } from './admin/components/CreateFirmModal';
 
 const safeCount = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
 
@@ -109,6 +110,7 @@ export const SuperadminDashboard = () => {
   const [activeTab, setActiveTab] = useState('vitals'); // 'vitals' | 'security' | 'performance' | 'launch' | 'flags'
   const [expandedLogId, setExpandedLogId] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
 
   // Real-time HUD Clock ticks
   useEffect(() => {
@@ -308,63 +310,59 @@ export const SuperadminDashboard = () => {
     <SuperAdminLayout>
       <div className="mx-auto w-full max-w-7xl space-y-6 relative">
         
-        {/* Soft Background blur aura glows (White Glassmorphic lighting) */}
-        <div className="absolute top-0 -left-10 h-80 w-80 bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none z-0" />
-        <div className="absolute bottom-20 -right-10 h-80 w-80 bg-sky-500/5 blur-[120px] rounded-full pointer-events-none z-0" />
-
-        {/* 1. PERSONALIZED FOUNDER COMMAND HUD HEADER */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-white via-indigo-50/20 to-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] border border-indigo-100/80 z-10">
-          
-          {/* Laser Status Pulser */}
-          <div className="absolute right-6 top-6 flex items-center gap-2">
-            <span className="relative flex h-3.5 w-3.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Platform Active</span>
-          </div>
-
+        {/* 1. OPERATIONAL COMMAND HUD HEADER */}
+        <div className="relative overflow-hidden rounded-xl bg-white p-5 border border-slate-200 shadow-xs z-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="inline-flex items-center rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-xs font-semibold text-indigo-600 border border-indigo-500/20 shadow-sm">
-                  Owner & Founder Command Bridge
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 border border-slate-200/80">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  Platform Command Center
                 </span>
+                <span className="text-xs text-slate-400">·</span>
+                <span className="text-xs text-slate-500 font-medium">Multi-Tenant Oversight</span>
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Platform Command Center</h1>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900">Platform Command Center</h1>
+              <p className="text-xs text-slate-500 mt-0.5">Real-time health, risk sentinels, security telemetry, and firm diagnostics.</p>
             </div>
             
-            {/* Dynamic System HUD Clock */}
-            <div className="bg-white/80 backdrop-blur-md rounded-xl border border-slate-200 p-3.5 flex items-center gap-4 self-start md:self-auto shadow-sm">
+            {/* System HUD Clock & Actions */}
+            <div className="bg-slate-50 rounded-lg border border-slate-200/80 p-2.5 flex items-center gap-3 self-start md:self-auto">
               <div className="text-right">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{formattedClock.dateStr}</p>
-                <p className="text-xl font-mono font-black tracking-widest text-indigo-600">{formattedClock.timeStr}</p>
+                <p className="text-base font-mono font-bold tracking-wider text-slate-800">{formattedClock.timeStr}</p>
               </div>
-              <div className="h-9 w-px bg-slate-200" />
+              <div className="h-7 w-px bg-slate-200" />
               <Button 
-                variant="primary" 
+                variant="outline"
+                size="sm"
                 onClick={loadDashboard}
-                allowUnsafeClassName={true}
-                className="!min-h-9 !px-3.5 !py-1 text-xs border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-sm hover:shadow shadow-indigo-600/10"
               >
                 Reload Diagnostics
+              </Button>
+              <Button 
+                variant="primary"
+                size="sm"
+                onClick={() => setShowOnboardModal(true)}
+              >
+                + Onboard Firm
               </Button>
             </div>
           </div>
         </div>
 
         {error ? (
-          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm z-10 relative">
+          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs z-10 relative">
             <div>
               <h4 className="font-semibold text-rose-600 text-sm">Command center telemetry failure</h4>
               <p className="text-xs text-slate-500">{error}</p>
             </div>
-            <Button variant="secondary" onClick={loadDashboard}>Retry Diagnostics</Button>
+            <Button variant="secondary" size="sm" onClick={loadDashboard}>Retry Diagnostics</Button>
           </div>
         ) : null}
 
-        {/* 2. THE TELEMETRY VIEW CONTROLLER (HUD INTERACTIVE TAB SELECTORS) */}
-        <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 pb-1 z-10 relative">
+        {/* 2. TELEMETRY VIEW CONTROLLER (ENTERPRISE SEGMENTED CONTROL) */}
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-2 z-10 relative">
           {[
             { id: 'vitals', label: 'Ecosystem Vitals' },
             { id: 'security', label: 'Security Audits' },
@@ -375,10 +373,10 @@ export const SuperadminDashboard = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-lg px-4 py-2 text-sm font-bold tracking-wide transition-all duration-150 ${
+              className={`rounded-md px-3.5 py-1.5 text-xs font-semibold tracking-normal transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               {tab.label}
@@ -600,10 +598,8 @@ export const SuperadminDashboard = () => {
                       </div>
                       <Button 
                         variant="outline" 
-                        size="small" 
+                        size="sm" 
                         onClick={() => navigate('/app/superadmin/firm-health')}
-                        allowUnsafeClassName={true}
-                        className="!min-h-8 text-xs font-bold border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-600"
                       >
                         Risk Queue
                       </Button>
@@ -616,39 +612,52 @@ export const SuperadminDashboard = () => {
                         <p className="text-[10px] text-slate-500">Zero active firms currently trigger high-risk sentinel metrics.</p>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto my-2 border border-slate-100 rounded-lg shadow-sm">
+                      <div className="overflow-x-auto my-2 border border-slate-100 rounded-lg shadow-xs">
                         <table className="min-w-full text-xs">
                           <thead>
                             <tr className="bg-slate-50 text-left font-bold text-slate-500 border-b border-slate-100">
-                              <th className="py-2.5 px-3">Firm Name</th>
+                              <th className="py-2.5 px-3">Firm / Tenant</th>
                               <th className="py-2.5 px-2">Score</th>
-                              <th className="py-2.5 px-2">Risk</th>
-                              <th className="py-2.5 px-3">Top reasons</th>
+                              <th className="py-2.5 px-2">Risk Level</th>
+                              <th className="py-2.5 px-3">Next Step / Reasons</th>
+                              <th className="py-2.5 px-3 text-right">Firm Console</th>
                             </tr>
                           </thead>
                           <tbody>
                             {criticalFirms.map((firm) => (
-                              <tr key={firm.firmObjectId} className="border-t border-slate-100 hover:bg-slate-50/30 transition-colors align-middle">
-                                <td className="py-2.5 px-3 font-semibold">
-                                  <span 
-                                    onClick={() => navigate(`/app/superadmin/firms/${firm.firmObjectId}`)}
-                                    className="text-indigo-600 hover:text-indigo-500 cursor-pointer underline decoration-dotted"
-                                  >
-                                    {firm.name}
-                                  </span>
+                              <tr key={firm.firmObjectId} className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors align-middle">
+                                <td className="py-2.5 px-3">
+                                  <div className="font-semibold text-slate-900">{firm.name}</div>
+                                  <div className="text-[10px] font-mono text-slate-400">{firm.firmSlug || firm.firmId}</div>
                                 </td>
-                                <td className="py-2.5 px-2 font-mono font-medium text-slate-600">{firm.score}</td>
+                                <td className="py-2.5 px-2 font-mono font-semibold text-slate-700">{firm.score}</td>
                                 <td className="py-2.5 px-2">
                                   <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold border capitalize ${
                                     firm.riskLevel === 'critical' 
-                                      ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' 
-                                      : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
+                                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                                      : 'bg-amber-50 text-amber-700 border-amber-200'
                                   }`}>
-                                    {firm.riskLevel}
+                                    {firm.riskLevel === 'at_risk' ? 'At Risk' : firm.riskLevel}
                                   </span>
                                 </td>
-                                <td className="py-2.5 px-3 text-slate-500 truncate max-w-[130px]" title={firm.reasons?.join(', ')}>
-                                  {firm.reasons?.slice(0, 2).join(', ') || 'None'}
+                                <td className="py-2.5 px-3 max-w-[160px]">
+                                  <span className="font-medium text-slate-800 block truncate" title={firm.nextAction}>
+                                    {firm.nextAction || firm.reasons?.[0] || 'Review diagnostics'}
+                                  </span>
+                                  {firm.reasons?.length > 1 ? (
+                                    <span className="text-[10px] text-slate-400 block truncate" title={firm.reasons.join(', ')}>
+                                      {firm.reasons.slice(1).join(', ')}
+                                    </span>
+                                  ) : null}
+                                </td>
+                                <td className="py-2.5 px-3 text-right">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => navigate(`/app/superadmin/firms/${firm.firmObjectId}`)}
+                                  >
+                                    Manage Firm &rarr;
+                                  </Button>
                                 </td>
                               </tr>
                             ))}
@@ -659,12 +668,12 @@ export const SuperadminDashboard = () => {
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400 flex items-center justify-between">
                     <span>Platform: Critical ({firmHealth?.totals?.critical || 0}) · At risk ({firmHealth?.totals?.atRisk || 0})</span>
-                    <span>Safeguarded bounds</span>
+                    <span>Safeguarded tenant isolation</span>
                   </div>
                 </div>
 
                 {/* CAPACITY METERS PANEL */}
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div>
@@ -673,12 +682,10 @@ export const SuperadminDashboard = () => {
                       </div>
                       <Button 
                         variant="outline" 
-                        size="small" 
+                        size="sm" 
                         onClick={() => navigate('/app/superadmin/plans')}
-                        allowUnsafeClassName={true}
-                        className="!min-h-8 text-xs font-bold border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-600"
                       >
-                        Edit Plan Caps
+                        Manage Caps
                       </Button>
                     </div>
 
@@ -737,10 +744,8 @@ export const SuperadminDashboard = () => {
                 </div>
                 <Button 
                   variant="outline" 
-                  size="small" 
+                  size="sm" 
                   onClick={() => navigate('/app/superadmin/audit')}
-                  allowUnsafeClassName={true}
-                  className="!min-h-8 text-xs font-bold border-indigo-200 text-indigo-600"
                 >
                   Full Audit Logs
                 </Button>
@@ -880,10 +885,8 @@ export const SuperadminDashboard = () => {
                   </div>
                   <Button 
                     variant="outline" 
-                    size="small" 
+                    size="sm" 
                     onClick={() => navigate('/app/superadmin/diagnostics')}
-                    allowUnsafeClassName={true}
-                    className="!min-h-8 text-xs font-bold border-indigo-200 text-indigo-600"
                   >
                     Support Panel
                   </Button>
@@ -1010,10 +1013,8 @@ export const SuperadminDashboard = () => {
                   </div>
                   <Button 
                     variant="outline" 
-                    size="small" 
+                    size="sm" 
                     onClick={() => navigate('/app/superadmin/pilot-readiness')}
-                    allowUnsafeClassName={true}
-                    className="!min-h-8 text-xs font-bold border-indigo-200 text-indigo-600"
                   >
                     Full Checklist
                   </Button>
@@ -1044,12 +1045,10 @@ export const SuperadminDashboard = () => {
                         {item.href && (
                           <Button 
                             variant="outline" 
-                            size="small" 
+                            size="sm" 
                             onClick={() => navigate(item.href)}
-                            allowUnsafeClassName={true}
-                            className="!min-h-8 text-[11px] font-semibold text-slate-600 border-slate-200 bg-white"
                           >
-                            Open bounds
+                            Open Review
                           </Button>
                         )}
                       </div>
@@ -1071,10 +1070,8 @@ export const SuperadminDashboard = () => {
                 </div>
                 <Button 
                   variant="outline" 
-                  size="small" 
+                  size="sm" 
                   onClick={() => navigate('/app/superadmin/feature-flags')}
-                  allowUnsafeClassName={true}
-                  className="!min-h-8 text-xs font-bold border-indigo-200 text-indigo-600"
                 >
                   Manage Flags
                 </Button>
@@ -1284,10 +1281,9 @@ export const SuperadminDashboard = () => {
               <div className="flex items-center gap-2">
                 <Button 
                   type="button" 
-                  variant="secondary" 
+                  variant="outline"
+                  size="sm"
                   onClick={handleAddBullet}
-                  allowUnsafeClassName={true}
-                  className="!min-h-9 !px-3 !py-1 text-xs border-slate-200 text-slate-700 font-semibold"
                 >
                   + Add Release Bullet
                 </Button>
@@ -1309,9 +1305,8 @@ export const SuperadminDashboard = () => {
                 <Button 
                   type="submit" 
                   variant="primary" 
+                  size="sm"
                   disabled={publishingUpdate}
-                  allowUnsafeClassName={true}
-                  className="!min-h-9 !px-4 !py-1.5 text-xs font-bold border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-white"
                 >
                   {publishingUpdate ? 'Publishing…' : 'Publish update'}
                 </Button>
@@ -1319,6 +1314,14 @@ export const SuperadminDashboard = () => {
             </div>
           </form>
         </div>
+
+        <CreateFirmModal
+          isOpen={showOnboardModal}
+          onClose={() => setShowOnboardModal(false)}
+          onSuccess={() => {
+            loadDashboard();
+          }}
+        />
 
       </div>
     </SuperAdminLayout>

@@ -327,6 +327,9 @@ export const caseApi = {
     window.open(`${API_BASE_URL}/dockets/${caseId}/attachments/${attachmentId}/view`, '_blank');
   },
 
+  getAttachmentBlob: (caseId, attachmentId) =>
+    api.get(`/dockets/${caseId}/attachments/${attachmentId}/view`, { responseType: 'blob' }),
+
   downloadAttachment: async (caseId, attachmentId, filename) => {
     try {
       const response = await api.get(`/dockets/${caseId}/attachments/${attachmentId}/download`, { responseType: 'blob' });
