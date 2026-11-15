@@ -10,6 +10,19 @@ const log = require('../src/utils/log');
 
 const SAMPLE_MCA_SEED_DATA = [
   {
+    cin: 'L65920MH1994PLC080618',
+    companyName: 'HDFC BANK LIMITED',
+    companyClass: 'PUBLIC',
+    roc: 'RoC-Mumbai',
+    status: 'ACTIVE',
+    incorporationDate: new Date('1994-08-30'),
+    authorizedCapital: 11900000000,
+    paidUpCapital: 7596000000,
+    registeredOfficeAddress: 'HDFC Bank House, Senapati Bapat Marg, Lower Parel, Mumbai, Maharashtra 400013',
+    registeredEmail: 'shareholder.grievances@hdfcbank.com',
+    state: 'Maharashtra',
+  },
+  {
     cin: 'L72900MH1995PLC084781',
     companyName: 'TATA CONSULTANCY SERVICES LIMITED',
     companyClass: 'PUBLIC',

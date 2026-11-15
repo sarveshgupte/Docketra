@@ -335,22 +335,23 @@ export const ClientsPage = () => {
 
   const handleMcaLookup = async (overrideTerm) => {
     const rawTerm = typeof overrideTerm === 'string' ? overrideTerm : (mcaSearchTerm || clientForm.CIN || clientForm.PAN || '');
-    const term = rawTerm.trim().toUpperCase();
-    if (!term) {
+    const cleanTerm = rawTerm.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!cleanTerm) {
       setMcaFeedback({ type: 'error', message: 'Please enter a valid CIN (21 characters) or PAN (10 characters).' });
       return;
     }
     setMcaLoading(true);
     setMcaFeedback(null);
     try {
-      const isCin = term.length === 21 || /^[LU][0-9]{5}/i.test(term);
-      const payload = isCin ? { cin: term } : { pan: term };
+      const isCin = cleanTerm.length === 21 || /^[LU][0-9]{5}/i.test(cleanTerm);
+      const payload = isCin ? { cin: cleanTerm } : { pan: cleanTerm };
       const res = await clientApi.lookupMca(payload);
       if (!res?.success || !res?.data) {
         throw new Error(res?.message || 'No company details found for the provided identifier.');
       }
       const d = res.data;
       setMcaDossier(d);
+      setMcaSearchTerm(d.cin || cleanTerm);
       setClientForm((prev) => ({
         ...prev,
         businessName: d.businessName || prev.businessName,
