@@ -1,22 +1,19 @@
 # Product lens
 Score: 7/10 | Vote: FUND IF
 
-> **The One-Sentence Reality**: Docketra is a sovereign practice workspace for Indian accounting firms that eliminates client data custody paranoia on Google Drive, stops trainees from leaking financial records to personal laptops, and turns chaotic compliance handoffs into verified, peer-review-proof sign-offs.
-
----
-
 ## What is strong
 
-- **The Sovereign BYOS Core (`drive.file` Restricted Scope)**:
-  Starting from the customer's deepest emotional barrier and working backwards is the hallmark of thoughtful product design. Indian CAs and CSs have intense professional liability paranoia regarding multi-tenant cloud software holding sensitive client financial data, PAN cards, and tax returns. Implementing Bring-Your-Own-Storage (BYOS) strictly within the firm's existing Google Workspace under the restricted `drive.file` OAuth scope solves this at the architectural layer: Docketra literally cannot read or access existing private Drive documents, only the folders and files it explicitly provisions. The in-app cryptographic audit and 1-click root manifest restoration provide visible, unshakeable proof of custody. This eliminates data hostage anxiety for the buyer while driving variable hosting and storage costs to zero.
+- **The Sovereign BYOS Core (`drive.file` Restricted Scope) — Starting from Customer Paranoia and Working Backwards**:
+  Starting from the customer's deepest emotional barrier and working backwards is the hallmark of genuine product craftsmanship. Indian CAs and CSs have acute professional liability paranoia regarding multi-tenant cloud software holding sensitive client financial data, PAN cards, and tax returns. Implementing Bring-Your-Own-Storage (BYOS) strictly within the firm's existing Google Workspace under the restricted `drive.file` OAuth scope solves this at the architectural layer: Docketra literally cannot read or access existing private Drive documents, only the folders and files it explicitly provisions. The in-app cryptographic audit and 1-click root manifest restoration provide visible, unshakeable proof of custody. This eliminates data hostage anxiety for the buyer while driving variable hosting and storage costs to zero.
 
-- **The Maker-Checker Statutory Execution Primitive**:
+- **The Maker-Checker Statutory Execution Primitive — Domain Craft over Generic Toolkits**:
   Most B2B SaaS falls into the trap of building generic boards, Kanban swimlanes, and customizable status columns that force the customer to design their own operating system. Docketra elevates the true operational bottleneck of Indian compliance practices—the acute friction between junior articled clerks who churn every two years and senior partners who carry personal statutory liability under ICAI SQC-1 and NFRA—into its core execution primitive. Pre-loading 15+ turnkey statutory blueprints (MCA AOC-4, MGT-7, ROC Director KYC, GSTR-3B, and all 44 clauses of Tax Audit Form 3CD) directly into a structured maker-checker sign-off flow turns an informal, anxiety-ridden WhatsApp/Excel scramble into a defensible operational routine out of the box.
 
-- **Frictionless Zero-Auth Client Ingestion**:
+- **Frictionless Zero-Auth Client Ingestion — Owning the Experience Without Forcing Behavior Change**:
   A product that demands behavior change from external third parties will inevitably fail. Docketra recognizes that SME business clients will never log into a proprietary client portal, manage passwords, or install a mobile app to send annual compliance documents. Providing 1-click tokenized mobile upload links (`/upload/:token`) and assistant dropzones meets clients where they already live (WhatsApp and mobile browsers) without exposing the firm to unorganized chat history or lost attachments.
 
----
+- **Taste and Craftsmanship in Architecture Nobody Sees**:
+  Great software reflects care in the places nobody looks. Docketra's unseen architecture—root manifest telemetry that automatically detects and heals moved or trashed folders in Google Drive, SHA-256 cryptographic document hashing, and tamper-evident audit logs—demonstrates genuine respect for user data integrity. On the glass, the interface adopts high-density, restrained B2B design principles (inspired by Linear and Mercury) rather than generic consumer bloat: responsive sheet drawers, clean backdrop dismissal, scroll-locking, and crisp keyboard navigation.
 
 ## What would kill it (the top 3, most dangerous first)
 
@@ -33,8 +30,6 @@ Score: 7/10 | Vote: FUND IF
    - *Where the experience breaks*: The roadmap includes Meta Cloud API automated webhooks, multi-branch department routing, and DSC (Digital Signature Certificate) hardware token routing. Digital Signature hardware tokens in India (ePass2003, mToken, ProxKey) are a notorious swamp of local Windows drivers, Java runtime conflicts, USB hardware daemons, and browser security sandboxes. Similarly, managing Meta Cloud API Business verification, WhatsApp message template approvals, 24-hour customer service session windows, and webhook delivery failures introduces immense operational fragility for a lean team.
    - *The failure mode*: Chasing these complex peripheral integrations drains engineering energy away from the single interaction where the entire product value is realized: **the partner review screen**. If the senior partner finds the review screen slow, if documents take four seconds to load over Google Drive API, or if side-by-side comparison between the clerk's checklist notes and the source PDF is clunky, the partner will refuse to review work inside Docketra and will revert to signing off on paper or Excel.
 
----
-
 ## The questions I would ask the founder
 
 1. *On the Trainee Shield and Quantitative Work*: "Article clerks spend over half their working hours cross-referencing multi-tab client Excel workbooks and running Tally reconciliations. If the Trainee Laptop Shield blocks raw file downloads to personal laptops, how does a trainee actually perform a GSTR-2B or Form 3CD depreciation reconciliation on Docketra without finding a workaround to leak the file?"
@@ -42,8 +37,6 @@ Score: 7/10 | Vote: FUND IF
 3. *On Saying No & Ruthless Focus*: "Why are Meta Cloud API webhooks and DSC hardware token routing in your active scope today? If cutting both allows you to make the partner's 30-second review screen feel as fast and effortless as Linear or Mercury, why haven't you cut them already?"
 4. *On the Mobile Partner Experience*: "A senior partner is traveling between client meetings and needs to clear ten pending statutory dockets on their phone before the 6:00 PM ROC deadline. Can they inspect the clerk's notes, review attached PDF annexures without awkward pinch-and-zoom lag, and execute a legally binding SQC-1 sign-off in under 30 seconds on a mobile browser?"
 5. *On The WhatsApp Reality*: "When an important client inevitably ignores the `/upload/:token` link and dumps six unorganized photos of GST challans directly into the partner's personal WhatsApp chat, what is the exact physical motion the partner or clerk takes to ingest those files into the docket without double data entry?"
-
----
 
 ## If FUND IF: the conditions
 
