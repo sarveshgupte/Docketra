@@ -60,6 +60,18 @@ const isClientActive = (client) => {
   return String(client?.status || '').trim().toUpperCase() === 'ACTIVE';
 };
 
+const downloadBulkTemplate = (type) => {
+  const blob = new Blob([buildTemplateCsv(type)], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `${type}-bulk-template.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PINCODE_REGEX = /^[1-9][0-9]{5}$/;
 const TENANT_KEY_MISSING_COPY = 'Client encryption setup needs repair before clients can be loaded.';
@@ -405,6 +417,7 @@ export const ClientsPage = () => {
     setSelectedClientId(resolvedClientId);
     setMcaDossier(client.mcaDossier || null);
     setMcaFeedback(null);
+    setMcaSearchTerm(client.CIN || client.PAN || '');
     setClientForm({
       businessName: normalizeClientField(client.businessName || client.legalName || client.name || ''),
       businessEmail: normalizeClientField(client.businessEmail || ''),
@@ -791,24 +804,14 @@ export const ClientsPage = () => {
       title="Clients"
       subtitle="View and manage registered client workspaces, compliance notes, and attachments."
       actions={canManageClients ? (
-          <div className="clients-page-actions flex items-center gap-2">
+          <div className="clients-page-actions">
             {(user?.role === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin)) && (
               <>
-                <Button variant="default" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
-                <Button variant="default" onClick={() => {
-                  const blob = new Blob([buildTemplateCsv('clients')], { type: 'text/csv;charset=utf-8;' });
-                  const url = window.URL.createObjectURL(blob);
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.setAttribute('download', 'clients-bulk-template.csv');
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  window.URL.revokeObjectURL(url);
-                }}>Download Template</Button>
+                <Button variant="outline" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
+                <Button variant="outline" onClick={() => downloadBulkTemplate('clients')}>Download Template</Button>
               </>
             )}
-            <Button onClick={openCreateClientModal}>+ Add Client</Button>
+            <Button variant="primary" onClick={openCreateClientModal}>+ Add Client</Button>
           </div>
         ) : null}
     >
@@ -1138,7 +1141,7 @@ export const ClientsPage = () => {
         onClose={closeClientModal}
         onRequestClose={requestCloseClientModal}
         title={selectedClient ? `Edit Client • ${selectedClient.businessName || selectedClient.legalName || selectedClient.name || selectedClientId || 'Client'}` : 'Add New Client'}
-        maxWidth="2xl"
+        maxWidth="lg"
       >
         <form onSubmit={handleSaveClient} className="client-form-grid">
           {clientFormMessage.text ? (
@@ -1146,62 +1149,77 @@ export const ClientsPage = () => {
           ) : null}
           
           {/* MCA Quick Intake Fast-Track */}
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 rounded-xl border border-indigo-900/40 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
+          <div className="rounded-lg border border-slate-200/90 bg-slate-50/75 p-3.5">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-200">MCA21 Regulatory Quick-Fill</h3>
+                <span className="inline-flex items-center justify-center rounded bg-slate-900 px-1.5 py-0.5 text-[10px] font-bold text-white tracking-wide">
+                  MCA21
+                </span>
+                <h3 className="text-xs font-semibold text-slate-800">
+                  MCA21 Regulatory Quick-Fill
+                </h3>
               </div>
-              <span className="text-[11px] text-slate-400">Pre-fills Master Data & Filings</span>
+              <span className="text-[11px] text-slate-500">Pre-fills Master Data & Filings</span>
             </div>
-            <p className="text-xs text-slate-300 mb-3 leading-relaxed">
+            <p className="text-xs text-slate-600 mb-2.5 leading-normal">
               Enter a 21-digit Corporate Identification Number (CIN) or 10-digit PAN to automatically pull company profile, ROC jurisdiction, active directors (with DINs), and past filing history (AOC-4, MGT-7).
             </p>
             <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="e.g. U72900MH2021PTC368291 or AABCA1234F"
-                value={mcaSearchTerm}
-                onChange={(e) => setMcaSearchTerm(e.target.value.toUpperCase())}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleMcaLookup(); } }}
-                className="flex-1 px-3 py-1.5 text-xs font-mono bg-slate-800/90 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400 uppercase"
-              />
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="e.g. U72900MH2021PTC368291 or AABCA1234F"
+                  value={mcaSearchTerm}
+                  onChange={(e) => setMcaSearchTerm(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleMcaLookup(); } }}
+                  aria-label="CIN or PAN for MCA auto-fill"
+                  className="w-full h-8 px-3 text-xs font-mono bg-white border border-slate-300 rounded-md text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-900 uppercase transition-colors"
+                />
+              </div>
               <Button
                 type="button"
                 size="sm"
-                variant="secondary"
+                variant="primary"
                 onClick={() => handleMcaLookup()}
                 disabled={mcaLoading || !mcaSearchTerm.trim()}
+                className="h-8 shrink-0 font-medium cursor-pointer"
               >
                 {mcaLoading ? 'Querying MCA…' : 'Auto-fill from CIN'}
               </Button>
             </div>
             {mcaFeedback?.type === 'success' && (
-              <div className="mt-3 p-2.5 bg-emerald-950/80 border border-emerald-700/50 rounded-lg text-xs text-emerald-200 flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 font-semibold text-emerald-100">
-                  <span>✓</span>
-                  <span>{mcaFeedback.data?.businessName} ({mcaFeedback.data?.roc || 'ROC'})</span>
-                  <span className="ml-auto px-1.5 py-0.5 text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded">{mcaFeedback.data?.companyStatus || 'Active'}</span>
+              <div className="mt-2.5 p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-md text-xs text-emerald-950 flex flex-col gap-1">
+                <div className="flex items-center gap-1.5 font-semibold text-emerald-900">
+                  <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="truncate">{mcaFeedback.data?.businessName}</span>
+                  <span className="text-emerald-700 font-normal">({mcaFeedback.data?.roc || 'ROC'})</span>
+                  <span className="ml-auto px-1.5 py-0.5 text-[10px] uppercase font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 rounded">{mcaFeedback.data?.companyStatus || 'Active'}</span>
                 </div>
-                <div className="text-[11px] text-emerald-300/80">
+                <div className="text-[11px] text-emerald-800/90 pl-5">
                   {mcaFeedback.data?.directors?.length || 0} Directors with DINs • {mcaFeedback.data?.pastFilings?.length || 0} Past Filings (AOC-4, MGT-7, DIR-12) linked to compliance memory
                 </div>
               </div>
             )}
             {mcaFeedback?.type === 'error' && (
-              <div className="mt-3 p-2.5 bg-rose-950/80 border border-rose-700/50 rounded-lg text-xs text-rose-200">
-                {mcaFeedback.message}
+              <div className="mt-2.5 p-2.5 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-800 flex items-start gap-2">
+                <svg className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span>{mcaFeedback.message}</span>
               </div>
             )}
           </div>
-          <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-              Basic Organization Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Section 1: Basic Organization Details */}
+          <div className="space-y-3">
+            <div className="border-b border-slate-100 pb-1">
+              <h4 className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider">
+                Basic Organization Details
+              </h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               <div className="md:col-span-2">
                 <Input
                   label="Business Name"
@@ -1220,23 +1238,22 @@ export const ClientsPage = () => {
                   error={clientFormErrors.businessAddress}
                 />
               </div>
-              <Input label="City" value={clientForm.city} onChange={(event) => handleClientFieldChange('city', event.target.value)} error={clientFormErrors.city} />
-              <Input label="State" value={clientForm.state} onChange={(event) => handleClientFieldChange('state', event.target.value)} error={clientFormErrors.state} />
-              <Input label="Pincode" value={clientForm.pincode} onChange={(event) => handleClientFieldChange('pincode', event.target.value)} error={clientFormErrors.pincode} />
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Input label="City" value={clientForm.city} onChange={(event) => handleClientFieldChange('city', event.target.value)} error={clientFormErrors.city} />
+                <Input label="State" value={clientForm.state} onChange={(event) => handleClientFieldChange('state', event.target.value)} error={clientFormErrors.state} />
+                <Input label="Pincode" value={clientForm.pincode} onChange={(event) => handleClientFieldChange('pincode', event.target.value)} error={clientFormErrors.pincode} />
+              </div>
             </div>
           </div>
 
-          <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-              <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-              Contact Person & Channels
-            </h3>
-            <p className="mb-3 text-xs text-slate-500">
-              Business and contact person details can match, but we keep both sets so future intake automation can plug in later without changing the client record shape.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Section 2: Contact Person & Channels */}
+          <div className="space-y-3 pt-1">
+            <div className="border-b border-slate-100 pb-1">
+              <h4 className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider">
+                Contact Person & Channels
+              </h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               <Input
                 label="Business Contact Number"
                 value={clientForm.primaryContactNumber}
@@ -1261,28 +1278,32 @@ export const ClientsPage = () => {
             </div>
           </div>
 
-          <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-              <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Statutory & Registration Identification
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="PAN (Optional)" value={clientForm.PAN} onChange={(event) => handleClientFieldChange('PAN', event.target.value)} error={clientFormErrors.PAN} />
-              <div className="flex flex-col gap-1">
-                <Input label="CIN (Optional)" value={clientForm.CIN} onChange={(event) => handleClientFieldChange('CIN', event.target.value)} error={clientFormErrors.CIN} />
-                {clientForm.CIN && clientForm.CIN.trim().length >= 10 && (
-                  <button
-                    type="button"
-                    onClick={() => handleMcaLookup(clientForm.CIN)}
-                    disabled={mcaLoading}
-                    className="self-start text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300"
-                  >
-                    Auto-fill from this CIN
-                  </button>
-                )}
-              </div>
+          {/* Section 3: Statutory & Registration Identification */}
+          <div className="space-y-3 pt-1">
+            <div className="border-b border-slate-100 pb-1">
+              <h4 className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider">
+                Statutory & Registration Identification
+              </h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <Input
+                label="CIN (Optional)"
+                value={clientForm.CIN}
+                onChange={(event) => {
+                  handleClientFieldChange('CIN', event.target.value);
+                  if (!mcaSearchTerm) setMcaSearchTerm(event.target.value.toUpperCase());
+                }}
+                error={clientFormErrors.CIN}
+              />
+              <Input
+                label="PAN (Optional)"
+                value={clientForm.PAN}
+                onChange={(event) => {
+                  handleClientFieldChange('PAN', event.target.value);
+                  if (!mcaSearchTerm && !clientForm.CIN) setMcaSearchTerm(event.target.value.toUpperCase());
+                }}
+                error={clientFormErrors.PAN}
+              />
               <Input label="TAN (Optional)" value={clientForm.TAN} onChange={(event) => handleClientFieldChange('TAN', event.target.value)} error={clientFormErrors.TAN} />
               <Input label="GST (Optional)" value={clientForm.GST} onChange={(event) => handleClientFieldChange('GST', event.target.value)} error={clientFormErrors.GST} />
             </div>
@@ -1290,7 +1311,7 @@ export const ClientsPage = () => {
 
           <div className="client-modal-actions">
             <Button type="button" variant="outline" onClick={() => requestCloseClientModal() && closeClientModal()}>Cancel</Button>
-            <Button type="submit" disabled={savingClient || !isClientFormDirty}>{savingClient ? 'Saving…' : 'Save Client'}</Button>
+            <Button type="submit" variant="primary" disabled={savingClient || !isClientFormDirty}>{savingClient ? 'Saving…' : 'Save Client'}</Button>
           </div>
         </form>
       </Modal>
@@ -1315,7 +1336,7 @@ export const ClientsPage = () => {
           </>
         )}
       >
-        <div className="client-fact-sheet-grid overflow-hidden">
+        <div className="client-fact-sheet-grid">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-7 space-y-4">
               <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">

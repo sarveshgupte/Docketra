@@ -241,7 +241,7 @@ export const ClientWorkspacePage = () => {
       title={client?.businessName || "Client workspace"}
       subtitle="Client profile, relationship context, linked work, documents, and firm-specific notes in one place."
       actions={(
-        <Button onClick={() => navigate(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(clientId)}`)}>
+        <Button variant="primary" onClick={() => navigate(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(clientId)}`)}>
           + Create Docket for Client
         </Button>
       )}

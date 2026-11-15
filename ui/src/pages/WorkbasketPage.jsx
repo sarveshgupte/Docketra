@@ -46,6 +46,19 @@ const WORKBASKET_FILTER_DEFAULTS = {
   limit: 20,
 };
 
+// Stable module-level constant — no component deps
+const QUERY_DEFAULTS = {
+  category: '',
+  status: '',
+  recency: '',
+  createdAtFrom: '',
+  createdAtTo: '',
+  slaStatus: '',
+  sortBy: WORKBASKET_FILTER_DEFAULTS.sortBy,
+  sortOrder: WORKBASKET_FILTER_DEFAULTS.sortOrder,
+  page: String(WORKBASKET_FILTER_DEFAULTS.page),
+};
+
 const FILTER_KEY_BY_LABEL = {
   Category: 'category',
   Status: 'status',
@@ -100,19 +113,7 @@ export const WorkbasketPage = () => {
   const [confirmModal, setConfirmModal] = useState(null);
   const queryClient = useQueryClient();
 
-  const queryDefaults = useMemo(() => ({
-    category: '',
-    status: '',
-    recency: '',
-    createdAtFrom: '',
-    createdAtTo: '',
-    slaStatus: '',
-    sortBy: WORKBASKET_FILTER_DEFAULTS.sortBy,
-    sortOrder: WORKBASKET_FILTER_DEFAULTS.sortOrder,
-    page: String(WORKBASKET_FILTER_DEFAULTS.page),
-  }), []);
-
-  const { query, setQuery } = useQueryState(queryDefaults);
+  const { query, setQuery } = useQueryState(QUERY_DEFAULTS);
 
   const accessibleWorkbaskets = useMemo(() => {
     const explicitWorkbaskets = Array.isArray(user?.workbaskets) ? user.workbaskets : [];

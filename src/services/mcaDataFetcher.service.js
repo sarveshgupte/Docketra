@@ -91,6 +91,75 @@ function computeStatutoryDueDates({ incorporationDate, referenceYear = new Date(
  * In-memory deterministic fixture dataset for known testing CINs
  */
 const SEED_FIXTURES = {
+  'L65920MH1994PLC080618': {
+    companyName: 'HDFC BANK LIMITED',
+    companyClass: 'PUBLIC',
+    status: 'ACTIVE',
+    roc: 'RoC-Mumbai',
+    incorporationDate: new Date('1994-08-30'),
+    authorizedCapital: 11900000000,
+    paidUpCapital: 7596000000,
+    registeredOfficeAddress: 'HDFC Bank House, Senapati Bapat Marg, Lower Parel, Mumbai, Maharashtra 400013',
+    registeredEmail: 'shareholder.grievances@hdfcbank.com',
+    directors: [
+      {
+        din: '08614399',
+        fullName: 'Sashidhar Jagdishan',
+        designation: 'MANAGING_DIRECTOR',
+        appointmentDate: new Date('2020-10-27'),
+        dir3KycStatus: 'FILED',
+        dir3KycDueDate: new Date(`${new Date().getFullYear()}-09-30`),
+        dscToken: {
+          tokenId: 'DSC-SAS-01',
+          holderName: 'Sashidhar Jagdishan',
+          certClass: 'CLASS_3',
+          validUntil: new Date(`${new Date().getFullYear() + 1}-12-31`),
+          physicalLocation: 'Safe-Box-A1',
+        },
+      },
+      {
+        din: '01469375',
+        fullName: 'Atanu Chakraborty',
+        designation: 'DIRECTOR',
+        appointmentDate: new Date('2021-05-05'),
+        dir3KycStatus: 'FILED',
+        dir3KycDueDate: new Date(`${new Date().getFullYear()}-09-30`),
+        dscToken: {
+          tokenId: 'DSC-ATA-02',
+          holderName: 'Atanu Chakraborty',
+          certClass: 'CLASS_3',
+          validUntil: new Date(`${new Date().getFullYear() + 1}-06-30`),
+          physicalLocation: 'Safe-Box-A1',
+        },
+      },
+    ],
+    charges: [
+      {
+        chargeId: 'CHG10084920',
+        holderName: 'STATE BANK OF INDIA',
+        amount: 50000000,
+        creationDate: new Date('2021-04-12'),
+        status: 'OPEN',
+        propertyDetails: 'Floating charge on book debts, receivables and movable assets',
+      },
+    ],
+    filings: [
+      {
+        srn: 'F94829101',
+        formName: 'AOC-4',
+        filingDate: new Date('2025-10-28'),
+        status: 'APPROVED',
+        amount: 600,
+      },
+      {
+        srn: 'F94829102',
+        formName: 'MGT-7',
+        filingDate: new Date('2025-11-25'),
+        status: 'APPROVED',
+        amount: 600,
+      },
+    ],
+  },
   'U74140RJ2013FTC042564': {
     companyName: '1-0 ADVISORS INDIA PRIVATE LIMITED',
     companyClass: 'FOREIGN',

@@ -56,10 +56,13 @@ export const Button = ({
   fullWidth = false,
   className = '',
   allowUnsafeClassName = false,
+  'data-primary': dataPrimaryProp,
   ...props
 }) => {
   const normalizedSize = normalizeButtonSize(size);
   const normalizedVariant = normalizeVariant(variant);
+  const isPrimary = normalizedVariant === 'primary';
+  const dataPrimary = dataPrimaryProp ?? (isPrimary ? 'true' : undefined);
 
   const baseClassesBySize = {
     xs: 'inline-flex min-h-6 items-center justify-center rounded-[var(--dt-radius-control)] font-medium leading-4 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 text-[11px] px-2 py-0.5',
@@ -69,7 +72,8 @@ export const Button = ({
   };
 
   const variantClasses = {
-    primary: 'border-0 bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 focus-visible:ring-slate-900 shadow-none',
+    primary:
+      'action-primary btn-primary border-0 bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 focus-visible:ring-slate-900 shadow-none',
     secondary:
       'border-0 bg-transparent text-slate-600 hover:text-slate-900 underline-offset-4 hover:underline focus-visible:ring-slate-900 shadow-none',
     outline:
@@ -87,6 +91,7 @@ export const Button = ({
       onClick={onClick}
       disabled={isDisabled}
       aria-busy={loading || undefined}
+      data-primary={dataPrimary}
       className={`${baseClassesBySize[normalizedSize]} ${fullWidth ? 'w-full' : ''} ${variantClasses[normalizedVariant] || variantClasses.secondary} ${layoutClassName}`}
       {...props}
     >

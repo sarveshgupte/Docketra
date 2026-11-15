@@ -280,7 +280,7 @@ export const CrmClientsPage = () => {
       moduleLabel="CRM"
       title="Client Management"
       subtitle="Manage client records, ownership, and conversion readiness in one consistent workspace."
-      actions={isAdmin ? <Button onClick={() => { setFormErrors({}); setEditingClient(null); resetForm(); setShowModal(true); }}>New Client</Button> : null}
+      actions={isAdmin ? <Button variant="primary" onClick={() => { setFormErrors({}); setEditingClient(null); resetForm(); setShowModal(true); }}>New Client</Button> : null}
     >
       <StatusMessageStack messages={[
         { tone: 'info', message: refreshing ? 'Refreshing client records in the background…' : '' },
