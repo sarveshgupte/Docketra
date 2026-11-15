@@ -62,6 +62,7 @@ export default function PublicMarketingHeader() {
       useFixedPosition={true}
       menuBg="#ffffff"
       menuContentColor="#0f172a"
+      items={NAV_LINKS}
     />
   );
 
