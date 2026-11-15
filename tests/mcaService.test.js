@@ -79,5 +79,29 @@ const { lookupCompany, generateDeterministicCompany, ROC_MAP, COMPANY_TYPE_MAP }
     /API Key is required/
   );
 
+  // Test 9: Resolve authentic CIN for HDFC Bank Limited
+  const hdfcResult = await lookupCompany({ cin: 'L65920MH1994PLC080618' });
+  assert.strictEqual(hdfcResult.cin, 'L65920MH1994PLC080618');
+  assert.strictEqual(hdfcResult.businessName, 'HDFC Bank Limited');
+  assert.strictEqual(hdfcResult.roc, 'ROC Mumbai');
+  assert.strictEqual(hdfcResult.state, 'Maharashtra');
+  assert.strictEqual(hdfcResult.city, 'Mumbai');
+  assert.strictEqual(hdfcResult.pincode, '400013');
+  assert.strictEqual(hdfcResult.entityType, 'Public Limited Company');
+  assert.strictEqual(hdfcResult.class, 'Public');
+  assert.strictEqual(hdfcResult.companyStatus, 'Active');
+  assert.ok(hdfcResult.directors.some((d) => d.name === 'Sashidhar Jagdishan'), 'Should include Sashidhar Jagdishan in directors');
+  assert.notStrictEqual(hdfcResult.businessName, 'Zenith Corporate Solutions Limited', 'Must NOT generate synthetic Zenith name');
+
+  // Test 10: Handle CIN with trailing hyphen or whitespace
+  const sanitizedHdfc = await lookupCompany({ cin: 'L65920MH1994PLC080618- ' });
+  assert.strictEqual(sanitizedHdfc.businessName, 'HDFC Bank Limited');
+  assert.strictEqual(sanitizedHdfc.cin, 'L65920MH1994PLC080618');
+
+  // Test 11: Lookup HDFC Bank by PAN
+  const hdfcPanResult = await lookupCompany({ pan: 'AAACH2702H' });
+  assert.strictEqual(hdfcPanResult.businessName, 'HDFC Bank Limited');
+  assert.strictEqual(hdfcPanResult.cin, 'L65920MH1994PLC080618');
+
   console.log('✓ All MCA Service tests passed successfully!');
 })();
