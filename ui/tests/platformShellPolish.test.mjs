@@ -5,7 +5,7 @@ import path from 'node:path';
 const workspaceRoot = fs.existsSync(path.resolve(process.cwd(), 'ui', 'src'))
   ? path.resolve(process.cwd(), 'ui')
   : process.cwd();
-const read = (relativePath) => fs.readFileSync(path.resolve(workspaceRoot, relativePath), 'utf8');
+const read = (relativePath) => fs.readFileSync(path.resolve(workspaceRoot, relativePath), 'utf8').replace(/\r\n/g, '\n');
 
 const shellSource = read('src/components/platform/PlatformShell.jsx');
 const navSource = read('src/constants/platformNavigation.js');

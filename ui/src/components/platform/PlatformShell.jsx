@@ -509,7 +509,15 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
       <aside className={`platform__sidebar ${collapsed ? 'platform__sidebar--collapsed' : ''}`} aria-label="Primary navigation">
         {/* Firm brand */}
         <div className="platform__brand">
-          <div className="platform__firm-badge" aria-hidden="true" title={firmLabel}>
+          <div
+            className={`platform__firm-badge ${collapsed ? 'platform__firm-badge--clickable' : ''}`}
+            aria-hidden={!collapsed}
+            title={collapsed ? `Expand sidebar (${firmLabel})` : firmLabel}
+            onClick={collapsed ? () => setCollapsed(false) : undefined}
+            role={collapsed ? 'button' : undefined}
+            tabIndex={collapsed ? 0 : undefined}
+            onKeyDown={collapsed ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCollapsed(false); } } : undefined}
+          >
             {firmInitials}
           </div>
           {!collapsed && (
@@ -565,6 +573,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                               {NAV_ICONS[child.id] || child.icon || null}
                             </span>
                             {!collapsed && <span className="platform__nav-link-label">{child.label}</span>}
+                            {collapsed && <span className="platform__nav-tooltip" role="tooltip">{child.label}</span>}
                           </Link>
                         );
                       })}
@@ -584,12 +593,33 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                       {NAV_ICONS[item.id] || item.icon || null}
                     </span>
                     {!collapsed && <span className="platform__nav-link-label">{item.label}</span>}
+                    {collapsed && <span className="platform__nav-tooltip" role="tooltip">{item.label}</span>}
                   </Link>
                 );
               })}
             </div>
           ))}
         </nav>
+
+        <div className="platform__sidebar-footer">
+          <button
+            type="button"
+            className="platform__collapse-footer-btn"
+            onClick={() => setCollapsed((value) => !value)}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <span className="platform__collapse-footer-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                {collapsed
+                  ? <polyline points="9 18 15 12 9 6" />
+                  : <polyline points="15 18 9 12 15 6" />}
+              </svg>
+            </span>
+            {!collapsed && <span className="platform__collapse-footer-label">Collapse sidebar</span>}
+            {collapsed && <span className="platform__nav-tooltip" role="tooltip">Expand sidebar</span>}
+          </button>
+        </div>
       </aside>
 
       <div className="platform__main">
