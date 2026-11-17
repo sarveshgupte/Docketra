@@ -96,7 +96,7 @@ export const AdminCategoriesSection = ({
       <div className="bg-white rounded-2xl border border-slate-100 p-6 md:p-8 shadow-sm hover:shadow-md transition duration-300 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <span className="text-xs uppercase font-bold tracking-wider text-indigo-500">Taxonomy Configuration</span>
-          <h1 className="text-2xl font-black text-slate-800 mt-1">Category & Subcategory Management</h1>
+          <h1 className="text-2xl font-black text-slate-800 mt-1">Category Management</h1>
           <p className="text-slate-500 text-sm mt-1 leading-relaxed max-w-2xl">
             Maintain category and subcategory taxonomy used by dockets and workbaskets. Align categories, SLA targets, and queue assignments to your workflow.
           </p>
@@ -178,14 +178,6 @@ export const AdminCategoriesSection = ({
                 <div className="flex flex-wrap items-center gap-2 sm:self-center">
                   <button
                     type="button"
-                    onClick={() => onAddSubcategory(category)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 rounded-lg transition duration-200"
-                  >
-                    <PlusIcon />
-                    Add Subcategory
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => onEditCategory(category)}
                     className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition duration-200"
                   >
@@ -215,10 +207,10 @@ export const AdminCategoriesSection = ({
                     <button
                       type="button"
                       onClick={() => onAddSubcategory(category)}
-                      className="mt-3 inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-bold text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 rounded-lg transition duration-200"
+                      className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 rounded-lg transition duration-200"
                     >
                       <PlusIcon />
-                      Create Subcategory
+                      Add Subcategory
                     </button>
                   </div>
                 ) : (
@@ -228,6 +220,14 @@ export const AdminCategoriesSection = ({
                         <SubcategoryIcon />
                         Subcategories ({category.subcategories.length})
                       </h4>
+                      <button
+                        type="button"
+                        onClick={() => onAddSubcategory(category)}
+                        className="inline-flex items-center gap-1 px-3 py-1 text-xs font-bold text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 rounded-lg transition duration-200"
+                      >
+                        <PlusIcon />
+                        Add Subcategory
+                      </button>
                     </div>
 
                     <div className="overflow-x-auto border border-slate-100 rounded-xl">

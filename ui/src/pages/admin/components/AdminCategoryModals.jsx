@@ -35,7 +35,7 @@ export const AdminCategoryModals = ({
   workbaskets,
 }) => {
   const selectableWorkbaskets = (Array.isArray(workbaskets) ? workbaskets : []).filter(
-    (workbasket) => workbasket && workbasket.isActive !== false && workbasket.type === 'PRIMARY'
+    (workbasket) => workbasket && workbasket.isActive !== false && (workbasket.type === 'PRIMARY' || !workbasket.type)
   );
 
   const createEmptyKnowledgeLink = () => ({

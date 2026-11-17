@@ -6,12 +6,41 @@ const validateCategoryMappedWorkbasket = async ({ workbasketId, firmId }) => {
     return { valid: false, message: 'Valid active primary workbasket is required' };
   }
 
-  const workbasket = await Team.findOne({
+  const query = {
     _id: workbasketId,
-    firmId,
     isActive: true,
     type: 'PRIMARY',
-  }).select('_id type isActive firmId');
+  };
+  if (firmId) {
+    query.firmId = firmId;
+  }
+
+  let workbasket = await Team.findOne(query).select('_id type isActive firmId');
+
+  // Resilient fallback for unmigrated / legacy workbaskets where type may be null or undefined
+  if (!workbasket) {
+    const fallbackQuery = {
+      _id: workbasketId,
+      isActive: { $ne: false },
+      $or: [
+        { type: 'PRIMARY' },
+        { type: { $ne: 'QC' } },
+        { type: { $exists: false } },
+        { type: null },
+      ],
+    };
+    if (firmId) {
+      fallbackQuery.firmId = firmId;
+    }
+
+    const fallbackWorkbasket = await Team.findOne(fallbackQuery).select('_id type isActive firmId');
+    if (fallbackWorkbasket) {
+      if (fallbackWorkbasket.type !== 'PRIMARY') {
+        await Team.updateOne({ _id: fallbackWorkbasket._id }, { $set: { type: 'PRIMARY' } }).catch(() => {});
+      }
+      workbasket = fallbackWorkbasket;
+    }
+  }
 
   if (!workbasket) {
     return { valid: false, message: 'Valid active primary workbasket is required' };

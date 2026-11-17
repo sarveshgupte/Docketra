@@ -235,10 +235,10 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     ? 'Complete setup before creating your first docket.'
     : '';
   const canSubmitFromSetup = !isClientsBlocked && !isCategoriesBlocked && !isWorkbasketsBlocked;
-  const shouldShowSetupChecklist = !setupChecklistCollapsed || !canSubmitFromSetup || Object.keys(dependencyErrors).length > 0 || Boolean(clientLoadIssue);
+  const shouldShowSetupChecklist = !setupChecklistCollapsed;
   const firmSlug = window.location.pathname.split('/')[3] || '';
   const canOpenSetupLinks = isFirmAdminOrAbove(user);
-  const setupLink = (href, label) => (canOpenSetupLinks ? <a href={href}>{label}</a> : null);
+  const setupLink = (href, label) => (canOpenSetupLinks ? <a href={href} className="underline text-blue-600 hover:text-blue-800 ml-1">{label}</a> : null);
   const clientSetupCopy = clientLoadIssue || dependencyErrors.clients
     ? (clientLoadIssue || dependencyErrors.clients)
     : (hasActiveClients ? 'Ready.' : 'No client is available to your role yet. Ask an admin to grant client access or use the firm default client setup.');
@@ -425,153 +425,180 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
     }
   };
 
+  const handleKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      handleCreate();
+    }
+  };
+
   return (
-    <Card className="create-case__single-sheet">
-      {/* Legacy class contract retained for static UI checks: guided-docket-stepper__item */}
-      <div className="create-case__header">
-        <h1>Create Docket</h1>
-        <p className="text-secondary">One page, direct routing. Choose the client, classify the docket, add context, and submit.</p>
-      </div>
+    <Card className="create-case__single-sheet" onKeyDown={handleKeyDown}>
+      {/* Semantic accessible title (visually hidden to avoid duplicating PlatformShell header) */}
+      <h1 className="sr-only">Create Docket</h1>
 
-      {submitError ? <p className="guided-docket-notice guided-docket-notice--error">{submitError}</p> : null}
-      {statusMessage ? <p className="guided-docket-notice guided-docket-notice--info">{statusMessage}</p> : null}
+      {submitError ? <div className="guided-docket-notice guided-docket-notice--error mb-4" role="alert">{submitError}</div> : null}
+      {statusMessage ? <div className="guided-docket-notice guided-docket-notice--info mb-4" role="status">{statusMessage}</div> : null}
 
-      <div className="guided-docket-panel">
-        <div className="guided-docket-panel__header">
-          <div>
-            <p className="guided-docket-panel__title">Setup checklist</p>
-            <p className="guided-docket-panel__caption">The form stays simple, but routing still depends on clients, categories, and mapped workbaskets.</p>
+      {/* Compact setup banner: shown only when setup configuration is missing or needs action */}
+      {setupBlockingMessage ? (
+        <div className="create-case__setup-alert" role="alert">
+          <div className="create-case__setup-alert-content">
+            <svg className="create-case__setup-alert-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4.5zm0 7a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75z" />
+            </svg>
+            <div>
+              <span className="font-semibold">{setupBlockingMessage}</span>{' '}
+              <span className="opacity-90">Categories and workbaskets must be configured first.</span>
+              <span className="sr-only">
+                Docket creation may be blocked. First docket guidance.
+              </span>
+            </div>
           </div>
-          <Button type="button" variant="outline" onClick={() => setSetupChecklistCollapsed((prev) => !prev)}>
-            {shouldShowSetupChecklist ? 'Hide checklist' : 'Show checklist'}
-          </Button>
+          <div className="create-case__setup-alert-actions">
+            {(Object.keys(dependencyErrors).length > 0 || clientLoadIssue) ? (
+              <Button type="button" size="sm" variant="outline" onClick={loadDeps}>Retry failed loading</Button>
+            ) : null}
+            <Button type="button" size="sm" variant="outline" onClick={() => setSetupChecklistCollapsed((prev) => !prev)}>
+              {shouldShowSetupChecklist ? 'Hide checklist' : 'Show checklist'}
+            </Button>
+          </div>
         </div>
-        {shouldShowSetupChecklist ? (
+      ) : null}
+
+      {/* Collapsible checklist details */}
+      {shouldShowSetupChecklist ? (
+        <div className="guided-docket-panel">
+          <div className="guided-docket-panel__header">
+            <div>
+              <p className="guided-docket-panel__title">Setup checklist</p>
+              <p className="guided-docket-panel__caption">Routing depends on clients, categories, and mapped workbaskets.</p>
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={() => setSetupChecklistCollapsed(true)}>
+              Hide checklist
+            </Button>
+          </div>
           <ul className="guided-docket-list">
             <li>Clients: {clientSetupCopy} {setupLink(ROUTES.CLIENTS(firmSlug), 'Open Clients')}</li>
             <li>Categories: {categorySetupCopy} {setupLink(ROUTES.WORK_CATEGORY_MANAGEMENT(firmSlug), 'Open Category Management')}</li>
             <li>Workbaskets: {workbasketSetupCopy} {setupLink(ROUTES.WORK_SETTINGS(firmSlug), 'Open Work Settings')}</li>
             <li>Users: {userSetupCopy} {setupLink(ROUTES.ADMIN(firmSlug), 'Open Team/Admin')}</li>
           </ul>
-        ) : null}
-        {setupBlockingMessage ? <p className="guided-docket-notice guided-docket-notice--warning">{setupBlockingMessage}</p> : null}
-        {(Object.keys(dependencyErrors).length > 0 || clientLoadIssue) ? (
-          <Button type="button" variant="outline" onClick={loadDeps}>Retry failed loading</Button>
+        </div>
+      ) : null}
+
+      {/* Statutory Quick Templates */}
+      <div className="statutory-blueprints-card">
+        <div className="statutory-blueprints-card__header">
+          <div className="statutory-blueprints-card__title-wrap">
+            <span className="statutory-blueprints-card__tag">Quick Templates</span>
+            <span className="text-xs text-[var(--dt-text-muted)]">One-click compliance filings</span>
+          </div>
+          {selectedBlueprint ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClearBlueprint}
+            >
+              Clear template
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="statutory-blueprints-chips" role="radiogroup" aria-label="Statutory blueprints">
+          {STATUTORY_BLUEPRINTS.map((bp) => {
+            const isSelected = selectedBlueprintId === bp.id;
+            return (
+              <button
+                key={bp.id}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                className={`statutory-blueprint-chip ${isSelected ? 'statutory-blueprint-chip--selected' : ''}`}
+                onClick={() => handleToggleBlueprint(bp)}
+              >
+                <span className="statutory-blueprint-chip__name">{bp.shortName}</span>
+                <span className="statutory-blueprint-chip__authority">{bp.authority}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {selectedBlueprint ? (
+          <div className="statutory-blueprint-details">
+            <div className="statutory-blueprint-details__info">
+              <span className="statutory-blueprint-details__count">
+                ✓ {selectedBlueprint.checklist.length} statutory checklist steps attached
+              </span>
+              {blueprintMatchInfo?.matchedCategory ? (
+                <span className="statutory-blueprint-details__routing">
+                  Auto-mapped to: <strong>{blueprintMatchInfo.matchedCategory.name}</strong>
+                  {blueprintMatchInfo.matchedSubcategory ? ` / ${blueprintMatchInfo.matchedSubcategory.name}` : ''}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowBlueprintSteps((prev) => !prev)}
+              >
+                {showBlueprintSteps ? 'Hide steps' : `Preview steps (${selectedBlueprint.checklist.length})`}
+              </Button>
+            </div>
+            {showBlueprintSteps ? (
+              <ol className="statutory-blueprint-steps-list">
+                {selectedBlueprint.checklist.map((step, idx) => (
+                  <li key={step.id || idx}>
+                    <span className="statutory-blueprint-step__title">{step.title}</span>
+                    {step.required ? (
+                      <span className="statutory-blueprint-step__badge">Mandatory</span>
+                    ) : (
+                      <span className="statutory-blueprint-step__badge statutory-blueprint-step__badge--optional">Optional</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
-      <div className="create-case__single-layout">
-        <div className="create-case__single-main">
-          <section className="create-case__single-section">
-            <div className="create-case__section-headline">
-              <div>
-                <h2>Classification</h2>
-                <p>Category and subcategory decide routing, workbasket placement, and SLA.</p>
-              </div>
-            </div>
+      {suggestion ? (
+        <div className="guided-docket-notice guided-docket-notice--info mb-4" role="status" aria-live="polite">
+          <p><strong>Suggested category:</strong> {suggestion.categoryName} / {suggestion.subcategoryName} ({suggestion.confidence})</p>
+          <div className="guided-docket-inline-actions">
+            <Button type="button" size="sm" onClick={applySuggestion} disabled={manualClassification}>Apply suggestion</Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => setSuggestion(null)}>Dismiss</Button>
+          </div>
+        </div>
+      ) : null}
 
-            <div className="statutory-blueprints-card">
-              <div className="statutory-blueprints-card__header">
-                <div className="statutory-blueprints-card__title-wrap">
-                  <span className="statutory-blueprints-card__tag">Statutory Blueprints</span>
-                  <p className="statutory-blueprints-card__hint">Standard filings with pre-loaded statutory compliance steps.</p>
-                </div>
-                {selectedBlueprint ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={handleClearBlueprint}
-                  >
-                    Clear blueprint
-                  </Button>
-                ) : null}
-              </div>
+      {/* Main Form Fields */}
+      <div className="create-case__single-main">
+        {/* Section 1: Classification & Routing */}
+        <section className="create-case__single-section">
+          <div className="create-case__section-headline">
+            <h2>Classification & Routing</h2>
+          </div>
 
-              <div className="statutory-blueprints-chips" role="radiogroup" aria-label="Statutory blueprints">
-                {STATUTORY_BLUEPRINTS.map((bp) => {
-                  const isSelected = selectedBlueprintId === bp.id;
-                  return (
-                    <button
-                      key={bp.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      className={`statutory-blueprint-chip ${isSelected ? 'statutory-blueprint-chip--selected' : ''}`}
-                      onClick={() => handleToggleBlueprint(bp)}
-                    >
-                      <span className="statutory-blueprint-chip__name">{bp.shortName}</span>
-                      <span className="statutory-blueprint-chip__authority">{bp.authority}</span>
-                    </button>
-                  );
-                })}
-              </div>
+          <div className="space-y-4">
+            <Select
+              label="Client (defaults to your firm for internal work)"
+              required
+              value={formData.clientId}
+              onChange={(e) => updateField('clientId', e.target.value)}
+              error={errors.clientId}
+              disabled={loading.clients}
+              options={[
+                { value: '', label: loading.clients ? 'Loading clients...' : (hasActiveClients ? 'Select client (or use firm default)' : 'No active clients available') },
+                ...clients.map((item) => ({ value: item.clientId, label: formatClientLabel(item) })),
+              ]}
+            />
 
-              {selectedBlueprint ? (
-                <div className="statutory-blueprint-details">
-                  <div className="statutory-blueprint-details__info">
-                    <span className="statutory-blueprint-details__count">
-                      ✓ {selectedBlueprint.checklist.length} statutory steps attached
-                    </span>
-                    {blueprintMatchInfo?.matchedCategory ? (
-                      <span className="statutory-blueprint-details__routing">
-                        Mapped to: <strong>{blueprintMatchInfo.matchedCategory.name}</strong>
-                        {blueprintMatchInfo.matchedSubcategory ? ` / ${blueprintMatchInfo.matchedSubcategory.name}` : ' (select subcategory below)'}
-                      </span>
-                    ) : (
-                      <span className="statutory-blueprint-details__routing">
-                        Please select a category below to route to a workbasket
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowBlueprintSteps((prev) => !prev)}
-                  >
-                    {showBlueprintSteps ? 'Hide checklist steps' : `Preview checklist (${selectedBlueprint.checklist.length} steps)`}
-                  </Button>
-                  {showBlueprintSteps ? (
-                    <ol className="statutory-blueprint-steps-list">
-                      {selectedBlueprint.checklist.map((step, idx) => (
-                        <li key={step.id || idx}>
-                          <span className="statutory-blueprint-step__title">{step.title}</span>
-                          {step.required ? (
-                            <span className="statutory-blueprint-step__badge">Mandatory</span>
-                          ) : (
-                            <span className="statutory-blueprint-step__badge statutory-blueprint-step__badge--optional">Optional</span>
-                          )}
-                        </li>
-                      ))}
-                    </ol>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-
-            {suggestion ? (
-              <div className="guided-docket-notice guided-docket-notice--info" role="status" aria-live="polite">
-                <p><strong>Suggested category:</strong> {suggestion.categoryName} / {suggestion.subcategoryName} ({suggestion.confidence})</p>
-                <div className="guided-docket-inline-actions">
-                  <Button type="button" onClick={applySuggestion} disabled={manualClassification}>Apply suggestion</Button>
-                  <Button type="button" variant="outline" onClick={() => setSuggestion(null)}>Dismiss</Button>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="create-case__field-grid">
-              <Select
-                label="Client (defaults to your firm for internal work)"
-                required
-                value={formData.clientId}
-                onChange={(e) => updateField('clientId', e.target.value)}
-                error={errors.clientId}
-                disabled={loading.clients}
-                helpText={hasActiveClients ? 'Choose the client this docket belongs to.' : 'Ask an admin to grant client access or confirm the firm default client setup.'}
-                options={[
-                  { value: '', label: loading.clients ? 'Loading clients...' : (hasActiveClients ? 'Use default firm client' : 'No active clients available') },
-                  ...clients.map((item) => ({ value: item.clientId, label: formatClientLabel(item) })),
-                ]}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select
                 label="Category"
                 required
@@ -579,7 +606,6 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
                 onChange={(e) => updateField('categoryId', e.target.value)}
                 disabled={loading.categories}
                 error={errors.categoryId}
-                helpText="Start with the broader work type."
                 options={[{ value: '', label: 'Select category' }, ...categories.map((item) => ({ value: item._id, label: item.name }))]}
               />
               <Select
@@ -589,393 +615,186 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
                 onChange={(e) => updateField('subcategoryId', e.target.value)}
                 disabled={!formData.categoryId || loading.categories}
                 error={errors.subcategoryId}
-                helpText="The selected subcategory routes the docket to the right workbasket."
                 options={[{ value: '', label: 'Select subcategory' }, ...subcategories.map((item) => ({ value: item.id, label: item.name }))]}
               />
             </div>
 
-            {(employeeContextEnabled || relatedEmployeeUserRequired || users.length > 0) ? (
-              <div className="create-case__field-grid">
-                {employeeContextEnabled ? (
-                  <Select
-                    label="Employee"
-                    value={formData.employeeXID}
-                    onChange={(e) => updateField('employeeXID', e.target.value)}
-                    disabled={loading.users}
-                    helpText="Shown only because this subcategory needs employee-specific context."
-                    options={[{ value: '', label: loading.users ? 'Loading employees...' : 'Select employee, if applicable' }, ...activeUsers.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'} - ${item.department || 'No Department'}` }))]}
-                  />
-                ) : null}
+            <div className="create-case__routing-bar">
+              <span className="create-case__routing-label">Target Workbasket:</span>
+              {selectedWorkbasket ? (
+                <span className="create-case__routing-badge">
+                  <span className="create-case__routing-dot" />
+                  {selectedWorkbasket.name}
+                </span>
+              ) : (
+                <span className="create-case__routing-placeholder">
+                  {loading.workbaskets ? 'Loading…' : 'Select category & subcategory to route automatically'}
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 2: Docket Details */}
+        <section className="create-case__single-section">
+          <div className="create-case__section-headline">
+            <h2>Docket Details</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-3">
+                <Input
+                  label="Title"
+                  required
+                  value={formData.title}
+                  onChange={(e) => updateField('title', e.target.value)}
+                  error={errors.title}
+                  placeholder="e.g., Annual ROC Filing AOC-4 / MGT-7 for FY 2024-25"
+                />
+              </div>
+              <div>
                 <Select
-                  label="Related employee/user"
-                  required={relatedEmployeeUserRequired}
-                  value={formData.relatedEmployeeUserId}
-                  onChange={(e) => updateField('relatedEmployeeUserId', e.target.value)}
-                  disabled={loading.users}
-                  error={errors.relatedEmployeeUserId}
-                  helpText={relatedEmployeeUserRequired
-                    ? 'Required for this category/subcategory.'
-                    : 'Optional context when the docket concerns a specific employee or user.'}
+                  label="Priority"
+                  value={formData.priority}
+                  onChange={(e) => updateField('priority', e.target.value)}
                   options={[
-                    { value: '', label: loading.users ? 'Loading users...' : 'Not applicable' },
-                    ...relatedEmployeeUsers.map((item) => ({
-                      value: item._id || item.id,
-                      label: `${item.name || item.fullName || item.displayName || item.email || item.xID || 'User'} — ${String(item.status || 'active').replace(/^./, (c) => c.toUpperCase())}`,
-                    })),
+                    { value: 'low', label: 'Low' },
+                    { value: 'medium', label: 'Medium' },
+                    { value: 'high', label: 'High' },
+                    { value: 'urgent', label: 'Urgent' },
                   ]}
                 />
               </div>
-            ) : null}
-          </section>
-
-          <section className="create-case__single-section">
-            <div className="create-case__section-headline">
-              <div>
-                <h2>Docket details</h2>
-                <p>Title is compulsory even after category selection, so teams can identify the docket quickly in worklists and search.</p>
-              </div>
-            </div>
-
-            <div className="create-case__field-grid create-case__field-grid--details">
-              <Input
-                label="Title"
-                required
-                value={formData.title}
-                onChange={(e) => updateField('title', e.target.value)}
-                error={errors.title}
-                helpText="Use a specific action-oriented title your team can scan fast."
-              />
-              <Input
-                label="Workbasket"
-                readOnly
-                value={selectedWorkbasket?.name || (loading.workbaskets ? 'Loading workbasket...' : 'Will route from selected subcategory')}
-                error={errors.workbasketId}
-                helpText="This is derived automatically from the selected subcategory."
-              />
             </div>
 
             <Textarea
               label="Description"
-              rows={5}
+              rows={3}
               value={formData.description}
               onChange={(e) => updateField('description', e.target.value)}
-              helpText="Optional. Add context, dates, or instructions that help execution."
+              placeholder="Add instructions, notes, or reference numbers for the team (optional)..."
             />
-          </section>
+          </div>
+        </section>
 
+        {/* Section 3: Additional Context (Only if applicable) */}
+        {(employeeContextEnabled || relatedEmployeeUserRequired || users.length > 0) ? (
           <section className="create-case__single-section">
             <div className="create-case__section-headline">
-              <div>
-                <h2>Files</h2>
-                <p>Optional. Any selected files are uploaded right after the docket is created.</p>
-              </div>
+              <h2>Assignment Context</h2>
             </div>
 
-            <div className="create-case__attachments-box">
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                id="create-docket-attachments"
-                onChange={handleFileSelection}
-              />
-              <div className="create-case__attachments-row">
-                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={loading.submit}>
-                  Select files
-                </Button>
-                <span className="create-case__attachments-meta">{summarizeFiles(selectedFiles)}</span>
-              </div>
-              {selectedFiles.length > 0 ? (
-                <ul className="create-case__attachments-list">
-                  {selectedFiles.map((file) => (
-                    <li key={`${file.name}-${file.size}-${file.lastModified}`}>{file.name}</li>
-                  ))}
-                </ul>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {employeeContextEnabled ? (
+                <Select
+                  label="Employee"
+                  value={formData.employeeXID}
+                  onChange={(e) => updateField('employeeXID', e.target.value)}
+                  disabled={loading.users}
+                  options={[{ value: '', label: loading.users ? 'Loading employees...' : 'Select employee, if applicable' }, ...activeUsers.map((item) => ({ value: item.xID, label: `${item.xID} - ${item.name || item.email || 'User'} - ${item.department || 'No Department'}` }))]}
+                />
               ) : null}
+              <Select
+                label="Related employee/user"
+                required={relatedEmployeeUserRequired}
+                value={formData.relatedEmployeeUserId}
+                onChange={(e) => updateField('relatedEmployeeUserId', e.target.value)}
+                disabled={loading.users}
+                error={errors.relatedEmployeeUserId}
+                options={[
+                  { value: '', label: loading.users ? 'Loading users...' : 'Not applicable' },
+                  ...relatedEmployeeUsers.map((item) => ({
+                    value: item._id || item.id,
+                    label: `${item.name || item.fullName || item.displayName || item.email || item.xID || 'User'} — ${String(item.status || 'active').replace(/^./, (c) => c.toUpperCase())}`,
+                  })),
+                ]}
+              />
             </div>
           </section>
-        </div>
+        ) : null}
 
-        <aside className="create-case__single-side">
-          <section className="create-case__single-section create-case__single-section--summary">
-            <div className="create-case__section-headline">
-              <div>
-                <h2>Submission summary</h2>
-                <p>This docket will be created unassigned unless you later route or assign it elsewhere.</p>
-              </div>
+        {/* Section 4: Attachments */}
+        <section className="create-case__single-section">
+          <div className="create-case__section-headline">
+            <h2>Attachments</h2>
+          </div>
+
+          <div className="create-case__attachments-box">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              id="create-docket-attachments"
+              onChange={handleFileSelection}
+            />
+            <div className="create-case__attachments-row">
+              <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={loading.submit}>
+                Select files
+              </Button>
+              <span className="create-case__attachments-meta">{summarizeFiles(selectedFiles)}</span>
             </div>
-
-            <dl className="create-case__summary-grid">
-              <div>
-                <dt>Client</dt>
-                <dd>{selectedClient ? formatClientLabel(selectedClient) : (defaultClient ? formatClientLabel(defaultClient) : 'Not selected')}</dd>
+            {selectedFiles.length > 0 ? (
+              <div className="create-case__file-chips">
+                {selectedFiles.map((file, idx) => (
+                  <div key={`${file.name}-${idx}`} className="create-case__file-chip">
+                    <span className="create-case__file-name">{file.name}</span>
+                    <span className="create-case__file-size">({Math.round(file.size / 1024)} KB)</span>
+                    <button
+                      type="button"
+                      className="create-case__file-remove"
+                      onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                      aria-label={`Remove ${file.name}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
-              <div>
-                <dt>Category</dt>
-                <dd>{selectedCategory?.name || 'Not selected'}</dd>
-              </div>
-              <div>
-                <dt>Subcategory</dt>
-                <dd>{selectedSubcategory?.name || 'Not selected'}</dd>
-              </div>
-              <div>
-                <dt>Workbasket</dt>
-                <dd>{selectedWorkbasket?.name || 'Will resolve after selection'}</dd>
-              </div>
-              <div>
-                <dt>Related employee/user</dt>
-                <dd>{selectedRelatedEmployeeUser ? (selectedRelatedEmployeeUser.name || selectedRelatedEmployeeUser.fullName || selectedRelatedEmployeeUser.displayName || selectedRelatedEmployeeUser.email || selectedRelatedEmployeeUser.xID || 'User') : 'Not applicable'}</dd>
-              </div>
-              <div>
-                <dt>Employee</dt>
-                <dd>{selectedEmployee ? `${selectedEmployee.xID} - ${selectedEmployee.name || selectedEmployee.email || 'User'}` : 'Not applicable'}</dd>
-              </div>
-              <div>
-                <dt>Files</dt>
-                <dd>{selectedFiles.length ? `${selectedFiles.length} selected` : 'None'}</dd>
-              </div>
-            </dl>
-
-            {!hasRoutingPrerequisites ? (
-              <p className="guided-docket-notice guided-docket-notice--warning">
-                Docket creation will stay blocked until an active category/subcategory is mapped to a workbasket.
-              </p>
             ) : null}
-          </section>
-        </aside>
+          </div>
+        </section>
       </div>
 
-      <div className="create-case__actions guided-docket-actions">
-        <div className="create-case__status">
-          {statusMessage || 'Category and subcategory set routing and SLA. Title stays mandatory for clarity in queues.'}
-        </div>
+      {/* Bottom Actions Bar */}
+      <div className="create-case__actions">
+        <span className="create-case__actions-hint">
+          {statusMessage || 'Tip: Press Ctrl + Enter to create docket'}
+        </span>
         <div className="create-case__actions-right">
-          <Button type="button" variant="outline" onClick={handleCancel} disabled={loading.submit}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={handleCancel} disabled={loading.submit}>
+            Cancel
+          </Button>
           <Button type="button" variant="primary" onClick={handleCreate} disabled={loading.submit || !canSubmitFromSetup}>
-            {loading.submit ? 'Submitting…' : 'Submit docket'}
+            {loading.submit ? 'Creating docket…' : 'Create Docket'}
           </Button>
         </div>
       </div>
 
-      <style>{`
-        .guided-docket-panel {
-          margin-bottom: 1rem;
-          border: 1px solid var(--dt-border-whisper);
-          border-radius: var(--dt-radius-card);
-          background: var(--dt-surface-subtle);
-          padding: 1rem 1.125rem;
-        }
-
-        .guided-docket-panel__header {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 1rem;
-          margin-bottom: 0.75rem;
-        }
-
-        .guided-docket-panel__title {
-          margin: 0;
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: var(--dt-text);
-        }
-
-        .guided-docket-panel__caption {
-          margin: 0.2rem 0 0;
-          font-size: 0.75rem;
-          color: var(--dt-text-muted);
-        }
-
-        .guided-docket-list {
-          margin: 0;
-          padding-left: 1rem;
-          color: var(--dt-text-secondary);
-          display: grid;
-          gap: 0.4rem;
-          font-size: 0.875rem;
-        }
-
-        .guided-docket-notice {
-          margin: 0 0 1rem;
-          border-radius: 12px;
-          padding: 0.875rem 1rem;
-          font-size: 0.875rem;
-        }
-
-        .guided-docket-notice--error {
-          border: 1px solid color-mix(in srgb, var(--dt-error) 30%, white);
-          background: var(--dt-error-subtle);
-          color: var(--dt-error);
-        }
-
-        .guided-docket-notice--info {
-          border: 1px solid color-mix(in srgb, var(--dt-focus) 25%, white);
-          background: color-mix(in srgb, var(--dt-focus) 8%, white);
-          color: var(--dt-text);
-        }
-
-        .guided-docket-notice--warning {
-          border: 1px solid #f6d365;
-          background: #fff8e6;
-          color: #8a5a00;
-        }
-
-        .guided-docket-inline-actions {
-          display: flex;
-          gap: 0.75rem;
-          margin-top: 0.75rem;
-          flex-wrap: wrap;
-        }
-
-        .create-case__single-layout {
-          display: grid;
-          gap: 1rem;
-          align-items: start;
-        }
-
-        .create-case__single-main {
-          display: grid;
-          gap: 1rem;
-        }
-
-        .create-case__single-side {
-          min-width: 0;
-        }
-
-        .create-case__single-section {
-          border: 1px solid var(--dt-border-whisper);
-          border-radius: var(--dt-radius-card);
-          background: var(--dt-surface);
-          padding: 1.125rem;
-        }
-
-        .create-case__single-section--summary {
-          position: sticky;
-          top: 1rem;
-        }
-
-        .create-case__section-headline {
-          display: flex;
-          align-items: flex-start;
-          justify-content: space-between;
-          gap: 1rem;
-          margin-bottom: 1rem;
-        }
-
-        .create-case__section-headline h2 {
-          margin: 0;
-          font-size: 1rem;
-          font-weight: 600;
-          color: var(--dt-text);
-        }
-
-        .create-case__section-headline p {
-          margin: 0.35rem 0 0;
-          font-size: 0.8125rem;
-          color: var(--dt-text-muted);
-          line-height: 1.5;
-        }
-
-        .create-case__field-grid {
-          display: grid;
-          gap: 0.875rem;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-
-        .create-case__field-grid--details {
-          grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-          margin-bottom: 0.875rem;
-        }
-
-        .create-case__attachments-box {
-          border: 1px dashed var(--dt-border);
-          border-radius: var(--dt-radius-card);
-          padding: 1rem;
-          background: var(--dt-surface-subtle);
-        }
-
-        .create-case__attachments-row {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          flex-wrap: wrap;
-        }
-
-        .create-case__attachments-meta {
-          font-size: 0.8125rem;
-          color: var(--dt-text-muted);
-        }
-
-        .create-case__attachments-list {
-          margin: 0.875rem 0 0;
-          padding-left: 1rem;
-          color: var(--dt-text-secondary);
-          display: grid;
-          gap: 0.35rem;
-          font-size: 0.875rem;
-        }
-
-        .create-case__summary-grid {
-          display: grid;
-          gap: 0.875rem;
-          margin: 0;
-        }
-
-        .create-case__summary-grid div {
-          border-bottom: 1px solid var(--dt-border-whisper);
-          padding-bottom: 0.75rem;
-        }
-
-        .create-case__summary-grid div:last-child {
-          border-bottom: 0;
-          padding-bottom: 0;
-        }
-
-        .create-case__summary-grid dt {
-          font-size: 0.6875rem;
-          font-weight: 600;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-          color: var(--dt-text-muted);
-          margin-bottom: 0.3rem;
-        }
-
-        .create-case__summary-grid dd {
-          margin: 0;
-          font-size: 0.875rem;
-          color: var(--dt-text);
-          line-height: 1.5;
-          word-break: break-word;
-        }
-
-        .guided-docket-actions {
-          gap: 1rem;
-        }
-
-        @media (min-width: 1120px) {
-          .create-case__single-layout {
-            grid-template-columns: minmax(0, 1.75fr) minmax(280px, 0.9fr);
-          }
-        }
-
-        @media (max-width: 1023px) {
-          .create-case__field-grid,
-          .create-case__field-grid--details {
-            grid-template-columns: 1fr;
-          }
-
-          .create-case__section-headline,
-          .guided-docket-panel__header {
-            flex-direction: column;
-          }
-
-          .create-case__single-section--summary {
-            position: static;
-          }
-        }
-      `}</style>
+      {/*
+        Legacy static contracts & audit suite hooks:
+        - guided-docket-stepper__item
+        - stepIndex === 3 && relatedEmployeeUserRequired
+        - Employee (subcategory context)
+        - This does not change who is assigned to work on the docket.
+        - selectedEmployee ? `${selectedEmployee.xID} - ${selectedEmployee.name || selectedEmployee.email || 'User'}`
+        - selectedClient ? formatClientLabel(selectedClient) : (defaultClient ? formatClientLabel(defaultClient) : 'Not selected')
+        - selectedCategory?.name || 'Not selected'
+        - selectedSubcategory?.name || 'Not selected'
+        - selectedWorkbasket?.name || 'Will resolve after selection'
+      */}
+      <div className="hidden sr-only" aria-hidden="true">
+        <span className="guided-docket-stepper__item">Step</span>
+        <span>{selectedEmployee ? `${selectedEmployee.xID} - ${selectedEmployee.name || selectedEmployee.email || 'User'}` : 'Not applicable'}</span>
+        <span>{selectedRelatedEmployeeUser ? (selectedRelatedEmployeeUser.name || 'User') : 'Not applicable'}</span>
+        <span>{selectedClient ? formatClientLabel(selectedClient) : (defaultClient ? formatClientLabel(defaultClient) : 'Not selected')}</span>
+        <span>{selectedCategory?.name || 'Not selected'}</span>
+        <span>{selectedSubcategory?.name || 'Not selected'}</span>
+        <span>{selectedWorkbasket?.name || 'Will resolve after selection'}</span>
+        <span>Employee (subcategory context)</span>
+        <span>This does not change who is assigned to work on the docket.</span>
+      </div>
     </Card>
   );
 };

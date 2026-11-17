@@ -470,9 +470,11 @@ const addSubcategory = async (req, res) => {
       });
     }
 
+    const resolvedFirmId = category.firmId || firmScope.firmId || req.user?.firmId;
+
     const workbasketValidation = await validateCategoryMappedWorkbasket({
       workbasketId,
-      firmId: firmScope.firmId,
+      firmId: resolvedFirmId,
     });
     if (!workbasketValidation.valid) {
       return res.status(400).json({
@@ -587,6 +589,7 @@ const updateSubcategory = async (req, res) => {
     }
     
     subcategory.name = name.trim();
+    const resolvedFirmId = category.firmId || firmScope.firmId || req.user?.firmId;
     if (typeof workbasketId !== 'undefined') {
       if (!workbasketId) {
         return res.status(400).json({
@@ -596,7 +599,7 @@ const updateSubcategory = async (req, res) => {
       }
       const workbasketValidation = await validateCategoryMappedWorkbasket({
         workbasketId,
-        firmId: firmScope.firmId,
+        firmId: resolvedFirmId,
       });
       if (!workbasketValidation.valid) {
         return res.status(400).json({
@@ -610,7 +613,7 @@ const updateSubcategory = async (req, res) => {
 
       if (previousWorkbasketId && previousWorkbasketId !== String(workbasket._id)) {
         const moveResult = await Case.updateMany({
-          firmId: firmScope.firmId,
+          firmId: resolvedFirmId,
           categoryId: category._id,
           subcategoryId: subcategory.id,
           ownerTeamId: previousWorkbasketId,
