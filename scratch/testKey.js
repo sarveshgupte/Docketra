@@ -5,7 +5,7 @@ const geminiProvider = require('../src/services/ai/providers/gemini.provider');
 
 (async () => {
   const apiKey = process.env.GEMINI_API_KEY;
-  const model = 'gemini-3.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
   console.log('--- GEMINI API KEY DIAGNOSTICS ---');
   if (!apiKey) {

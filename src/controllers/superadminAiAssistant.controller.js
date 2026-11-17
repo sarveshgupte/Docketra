@@ -103,9 +103,10 @@ const getSuperadminAiAssistantChat = async (req, res) => {
       details: error.details ? String(error.details).slice(0, 150) : null,
     });
 
-    return res.status(500).json({
+    const statusCode = error.status && error.status >= 400 && error.status < 500 ? error.status : 500;
+    return res.status(statusCode).json({
       success: false,
-      message: 'Failed to generate advice. Please verify your GEMINI_API_KEY environment variable is set up correctly.',
+      message: error.message || 'Failed to generate advice. Please verify your GEMINI_API_KEY environment variable is set up correctly.',
     });
   }
 };

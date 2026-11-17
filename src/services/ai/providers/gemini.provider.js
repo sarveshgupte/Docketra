@@ -45,6 +45,22 @@ function buildGenerateContentUrl(model) {
   return `${GEMINI_API_BASE_URL}/${modelPath}:generateContent`;
 }
 
+function getGeminiErrorMessage(status, model) {
+  if (status === 401 || status === 403) {
+    return `Invalid or unauthorized Gemini API key (HTTP ${status}). Please verify your GEMINI_API_KEY.`;
+  }
+  if (status === 402) {
+    return 'Google Gemini prepayment credits are depleted (HTTP 402 Payment Required). Please top up credits or use a free-tier API key at https://aistudio.google.com/.';
+  }
+  if (status === 404) {
+    return `Gemini model "${model}" was not found (HTTP 404). Please verify your GEMINI_MODEL setting (e.g. gemini-1.5-flash).`;
+  }
+  if (status === 429) {
+    return 'Google Gemini API rate limit or quota exceeded (HTTP 429). Please wait a moment before retrying.';
+  }
+  return `Gemini request failed with status ${status}`;
+}
+
 function notImplementedError() {
   const error = new Error('Gemini provider is not implemented');
   error.code = 'AI_PROVIDER_NOT_CONFIGURED';
@@ -73,7 +89,7 @@ async function generateChatResponse(message, systemInstruction, options = {}) {
     throw new Error('GEMINI_API_KEY is not configured');
   }
 
-  const model = options.model || process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+  const model = options.model || process.env.GEMINI_MODEL || 'gemini-1.5-flash';
   const url = buildGenerateContentUrl(model);
 
   const requestBody = {
@@ -114,11 +130,14 @@ async function generateChatResponse(message, systemInstruction, options = {}) {
 
   if (!response.ok) {
     const body = await response.text();
-    const error = new Error(`Gemini request failed with status ${response.status}`);
+    const errorMsg = getGeminiErrorMessage(response.status, model);
+    const error = new Error(errorMsg);
     error.status = response.status;
     error.provider = 'gemini';
     error.code = response.status === 401 || response.status === 403
       ? 'AI_INVALID_API_KEY'
+      : response.status === 402
+      ? 'AI_BILLING_DEPLETED'
       : 'AI_PROVIDER_REQUEST_FAILED';
     error.details = redactProviderErrorBody(body, {
       apiKey,

@@ -14,8 +14,8 @@ const mockedGeminiProvider = {
   generateDocketFields: async () => { throw new Error('Not implemented'); },
   generateChatResponse: async (message, systemInstruction, options) => {
     return {
-      text: `Mocked advice for ${options.model || 'gemini-3.5-flash'}: you queried "${message}" with system instruction containing: "${systemInstruction.slice(0, 100)}..."`,
-      model: options.model || 'gemini-3.5-flash',
+      text: `Mocked advice for ${options.model || 'gemini-1.5-flash'}: you queried "${message}" with system instruction containing: "${systemInstruction.slice(0, 100)}..."`,
+      model: options.model || 'gemini-1.5-flash',
     };
   },
 };
