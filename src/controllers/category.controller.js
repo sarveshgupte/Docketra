@@ -475,6 +475,7 @@ const addSubcategory = async (req, res) => {
     const workbasketValidation = await validateCategoryMappedWorkbasket({
       workbasketId,
       firmId: resolvedFirmId,
+      req,
     });
     if (!workbasketValidation.valid) {
       return res.status(400).json({
@@ -600,6 +601,7 @@ const updateSubcategory = async (req, res) => {
       const workbasketValidation = await validateCategoryMappedWorkbasket({
         workbasketId,
         firmId: resolvedFirmId,
+        req,
       });
       if (!workbasketValidation.valid) {
         return res.status(400).json({

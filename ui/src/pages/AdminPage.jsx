@@ -1789,7 +1789,14 @@ export const AdminPage = () => {
             onCreateCategory={() => setShowCategoryModal(true)}
             onAddSubcategory={(category) => {
               setSelectedCategory(category);
-              setSubcategoryForm(createEmptySubcategoryForm());
+              const emptyForm = createEmptySubcategoryForm();
+              const primaryWbs = (Array.isArray(workbaskets) ? workbaskets : []).filter(
+                (w) => w && w.isActive !== false && (w.type === 'PRIMARY' || !w.type)
+              );
+              if (primaryWbs.length === 1) {
+                emptyForm.workbasketId = String(primaryWbs[0]._id);
+              }
+              setSubcategoryForm(emptyForm);
               setShowSubcategoryModal(true);
             }}
             onToggleCategoryStatus={handleToggleCategoryStatus}

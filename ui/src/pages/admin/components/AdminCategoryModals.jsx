@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Modal } from '../../../components/common/Modal';
 import { Input } from '../../../components/common/Input';
 import { Select } from '../../../components/common/Select';
@@ -37,6 +38,18 @@ export const AdminCategoryModals = ({
   const selectableWorkbaskets = (Array.isArray(workbaskets) ? workbaskets : []).filter(
     (workbasket) => workbasket && workbasket.isActive !== false && (workbasket.type === 'PRIMARY' || !workbasket.type)
   );
+
+  useEffect(() => {
+    if (showSubcategoryModal && selectableWorkbaskets.length === 1 && !subcategoryForm.workbasketId) {
+      setSubcategoryForm((prev) => ({ ...prev, workbasketId: String(selectableWorkbaskets[0]._id) }));
+    }
+  }, [showSubcategoryModal, selectableWorkbaskets, subcategoryForm.workbasketId, setSubcategoryForm]);
+
+  useEffect(() => {
+    if (showEditSubcategoryModal && selectableWorkbaskets.length === 1 && !editSubcategoryForm.workbasketId) {
+      setEditSubcategoryForm((prev) => ({ ...prev, workbasketId: String(selectableWorkbaskets[0]._id) }));
+    }
+  }, [showEditSubcategoryModal, selectableWorkbaskets, editSubcategoryForm.workbasketId, setEditSubcategoryForm]);
 
   const createEmptyKnowledgeLink = () => ({
     draftKey: `${Date.now()}-${generateSecureRandomString(6)}`,
@@ -205,11 +218,22 @@ export const AdminCategoryModals = ({
           value={subcategoryForm.workbasketId}
           onChange={(e) => setSubcategoryForm({ ...subcategoryForm, workbasketId: e.target.value })}
           options={[
-            { value: '', label: 'Select workbasket', disabled: true },
+            {
+              value: '',
+              label: selectableWorkbaskets.length === 0
+                ? 'No active primary workbaskets available'
+                : 'Select workbasket',
+              disabled: true,
+            },
             ...selectableWorkbaskets.map((workbasket) => ({ value: String(workbasket._id), label: workbasket.name })),
           ]}
           required
         />
+        {selectableWorkbaskets.length === 0 && (
+          <p className="text-xs text-amber-600 -mt-2">
+            No active primary workbaskets found. Please create one in Work Settings first.
+          </p>
+        )}
         <Input
           label="SLA working days"
           name="defaultSlaDays"
@@ -377,9 +401,23 @@ export const AdminCategoryModals = ({
           label="Workbasket"
           value={editSubcategoryForm.workbasketId}
           onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, workbasketId: e.target.value })}
-          options={[{ value: '', label: 'Select workbasket', disabled: true }, ...selectableWorkbaskets.map((w) => ({ value: String(w._id), label: w.name }))]}
+          options={[
+            {
+              value: '',
+              label: selectableWorkbaskets.length === 0
+                ? 'No active primary workbaskets available'
+                : 'Select workbasket',
+              disabled: true,
+            },
+            ...selectableWorkbaskets.map((w) => ({ value: String(w._id), label: w.name })),
+          ]}
           required
         />
+        {selectableWorkbaskets.length === 0 && (
+          <p className="text-xs text-amber-600 -mt-2">
+            No active primary workbaskets found. Please create one in Work Settings first.
+          </p>
+        )}
         <Input label="SLA working days" name="defaultSlaDays" type="number" min="0" value={editSubcategoryForm.defaultSlaDays || ''} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, defaultSlaDays: e.target.value })} helpText="This is the default SLA for dockets in this subcategory." />
         <Input label="QC review percentage" name="qcPercent" type="number" min="0" max="100" value={editSubcategoryForm.qcPercent || ''} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, qcPercent: e.target.value })} helpText="Set 100 to send every resolved docket in this subcategory to QC. Leave 0 to inherit category QC." />
         <label className="admin__checkbox-field">

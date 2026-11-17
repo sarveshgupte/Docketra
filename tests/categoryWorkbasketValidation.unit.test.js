@@ -72,6 +72,29 @@ async function run() {
     const crossFirmRes = await validateCategoryMappedWorkbasket({ workbasketId: validId, firmId: 'different-firm' });
     assert.strictEqual(crossFirmRes.valid, false);
 
+    // 6. Multi-tenant candidate resolution (e.g. ownershipFirmId in Team vs tenantId in req)
+    const ownershipFirmId = new mongoose.Types.ObjectId().toString();
+    const tenantId = new mongoose.Types.ObjectId().toString();
+    Team.findOne = (query) => ({
+      select: async () => {
+        // Direct query fails because query.firmId is tenantId
+        if (query.firmId === tenantId) return null;
+        // Candidate query with $in succeeds
+        if (query.firmId && query.firmId.$in && query.firmId.$in.map(String).includes(ownershipFirmId)) {
+          return { _id: validId, type: 'PRIMARY', isActive: true, firmId: ownershipFirmId };
+        }
+        return null;
+      },
+    });
+
+    const multiTenantRes = await validateCategoryMappedWorkbasket({
+      workbasketId: validId,
+      firmId: tenantId,
+      req: { ownershipFirmId, tenant: { id: tenantId } },
+    });
+    assert.strictEqual(multiTenantRes.valid, true);
+    assert.strictEqual(multiTenantRes.workbasket._id, validId);
+
     console.log('categoryWorkbasketValidation.unit.test.js passed');
   } finally {
     Team.findOne = origFindOne;
