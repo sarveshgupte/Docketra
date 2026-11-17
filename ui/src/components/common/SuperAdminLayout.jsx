@@ -10,7 +10,7 @@ import { useToast } from '../../hooks/useToast';
 import { Loading } from './Loading';
 import { USER_ROLES } from '../../utils/constants';
 import { superadminService } from '../../services/superadminService';
-import { SUPERADMIN_PILOT_SURFACE, TASK_MANAGER_MVP_ENABLED } from '../../constants/pilotSurface';
+import { SUPERADMIN_PILOT_SURFACE } from '../../constants/pilotSurface';
 
 const navItemClass = (isActive) =>
   `rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -44,7 +44,7 @@ export const SuperAdminLayout = ({ children }) => {
     }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
-  const showSuperadminNavItem = (path) => !TASK_MANAGER_MVP_ENABLED || SUPERADMIN_PILOT_SURFACE.visibleNavPaths.has(path);
+  const showSuperadminNavItem = (path) => Boolean(SUPERADMIN_PILOT_SURFACE.visibleNavPaths?.has(path));
   const runSearch = async (rawQuery = searchQuery) => {
     const q = String(rawQuery || '').trim();
     setSearchOpen(true);
