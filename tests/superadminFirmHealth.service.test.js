@@ -14,7 +14,18 @@ Module._load = function patched(request, parent, isMain) {
     return { find: () => ({ select: () => ({ sort: () => ({ lean: async () => firms }) }) }) };
   }
   if (request === '../models/User.model') {
-    return { aggregate: async () => [{ _id: '1', total: 1, verified: 1 }, { _id: '2', total: 0, verified: 0 }, { _id: '3', total: 1, verified: 0 }] };
+    return {
+      find: () => ({
+        select: () => ({
+          lean: async () => [
+            { _id: 'u1', firmId: '1', role: 'PRIMARY_ADMIN', emailVerified: true, status: 'active' },
+            { _id: 'u2', firmId: '2', role: 'ADMIN', emailVerified: false, status: 'pending' },
+            { _id: 'u3', firmId: '3', role: 'ADMIN', emailVerified: false, status: 'active' },
+          ],
+        }),
+      }),
+      aggregate: async () => [{ _id: '1', total: 1, verified: 1 }, { _id: '2', total: 0, verified: 0 }, { _id: '3', total: 1, verified: 0 }],
+    };
   }
   if (request === '../models/TenantStorageHealth.model') {
     return { find: () => ({ select: () => ({ lean: async () => [{ tenantId: '1', status: 'HEALTHY' }, { tenantId: '2', status: 'DEGRADED' }, { tenantId: '3', status: 'UNKNOWN' }] }) }) };

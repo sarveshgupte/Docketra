@@ -74,11 +74,11 @@ router.get('/onboarding-insights/details', authorize(SuperAdminPolicy.canViewPla
 router.get('/onboarding-alerts', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingAlerts);
 router.get('/health', getOperationalHealth);
 router.get('/diagnostics', getSupportDiagnostics);
-router.get('/firm-health', authorize(SuperAdminPolicy.canViewPlatformStats), getFirmHealth);
+router.get('/firm-health', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getFirmHealth);
 router.get('/audit-logs', authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminAuditLogs);
 router.get('/search', authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminGlobalSearch);
 router.get('/plans', authorize(SuperAdminPolicy.canViewPlatformStats), getPlansCapacity);
-router.get('/pilot-readiness', authorize(SuperAdminPolicy.canViewPlatformStats), getPilotReadiness);
+router.get('/pilot-readiness', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getPilotReadiness);
 router.get('/feature-flags', authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminFeatureFlags);
 router.patch('/feature-flags/:key', authorize(SuperAdminPolicy.canManageFirms), superadminAdminManagementLimiter, updateSuperadminFeatureFlag);
 

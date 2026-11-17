@@ -15,35 +15,62 @@ const PRIMARY_ADMIN_ROUTE_CONTRACT = [
 ];
 
 const getPlansCapacityTotals = async () => {
-  const firms = await Firm.find({ status: { $ne: 'deleted' } })
-    .select('_id plan maxUsers status')
-    .lean();
-  const firmIds = firms.map((row) => row._id);
-  const userCounts = firmIds.length
-    ? await User.aggregate([{ $match: { firmId: { $in: firmIds }, status: { $ne: 'deleted' } } }, { $group: { _id: '$firmId', count: { $sum: 1 } } }])
-    : [];
-  const userCountMap = new Map(userCounts.map((entry) => [String(entry._id), Number(entry.count) || 0]));
-  return firms.reduce((acc, firm) => {
-    const maxUsers = Number(firm?.maxUsers) || 0;
-    const used = userCountMap.get(String(firm._id)) || 0;
-    const usedPct = maxUsers > 0 ? Math.round((used / maxUsers) * 100) : 0;
-    acc.firms += 1;
-    if (String(firm.plan || '').toLowerCase() === 'pilot') acc.pilot += 1;
-    if (maxUsers > 0 && used > maxUsers) acc.overCapacity += 1;
-    else if (maxUsers > 0 && usedPct >= 85) acc.nearCapacity += 1;
-    return acc;
-  }, { firms: 0, pilot: 0, nearCapacity: 0, overCapacity: 0 });
+  try {
+    const firms = await Firm.find({ status: { $ne: 'deleted' } })
+      .select('_id plan maxUsers status')
+      .lean();
+    const firmIds = (firms || []).map((row) => row._id).filter(Boolean);
+    const userCounts = firmIds.length
+      ? await User.aggregate([
+          { $match: { firmId: { $in: firmIds }, status: { $ne: 'deleted' } } },
+          { $group: { _id: '$firmId', count: { $sum: 1 } } },
+        ])
+      : [];
+    const userCountMap = new Map((userCounts || []).map((entry) => [String(entry._id), Number(entry.count) || 0]));
+    return (firms || []).reduce((acc, firm) => {
+      const maxUsers = Number(firm?.maxUsers) || 0;
+      const used = userCountMap.get(String(firm._id)) || 0;
+      const usedPct = maxUsers > 0 ? Math.round((used / maxUsers) * 100) : 0;
+      acc.firms += 1;
+      if (String(firm?.plan || '').toLowerCase() === 'pilot') acc.pilot += 1;
+      if (maxUsers > 0 && used > maxUsers) acc.overCapacity += 1;
+      else if (maxUsers > 0 && usedPct >= 85) acc.nearCapacity += 1;
+      return acc;
+    }, { firms: 0, pilot: 0, nearCapacity: 0, overCapacity: 0 });
+  } catch {
+    return { firms: 0, pilot: 0, nearCapacity: 0, overCapacity: 0 };
+  }
 };
 
 const buildPilotReadinessSnapshot = async () => {
-  const [firmHealth, diagnostics, onboarding, planTotals, recentAuditCount, featureFlags] = await Promise.all([
-    getFirmHealthSnapshot({ limit: 100 }),
-    getSupportDiagnosticsSnapshot({ limit: 20 }),
-    onboardingAnalyticsService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }),
+  const fourteenDaysAgo = new Date(Date.now() - (14 * 24 * 60 * 60 * 1000));
+
+  const [
+    firmHealthResult,
+    diagnosticsResult,
+    onboardingResult,
+    planTotalsResult,
+    recentAuditCountResult,
+    featureFlagsResult,
+  ] = await Promise.allSettled([
+    getFirmHealthSnapshot({ limit: 100 }).catch(() => null),
+    getSupportDiagnosticsSnapshot({ limit: 20 }).catch(() => null),
+    onboardingAnalyticsService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }).catch(() => null),
     getPlansCapacityTotals(),
-    SuperadminAudit.countDocuments({ createdAt: { $gte: new Date(Date.now() - (14 * 24 * 60 * 60 * 1000)) } }),
-    getFeatureFlagsSnapshot(),
+    SuperadminAudit.countDocuments({
+      $or: [{ timestamp: { $gte: fourteenDaysAgo } }, { createdAt: { $gte: fourteenDaysAgo } }],
+    }).catch(() => 0),
+    getFeatureFlagsSnapshot().catch(() => null),
   ]);
+
+  const firmHealth = firmHealthResult.status === 'fulfilled' ? firmHealthResult.value : null;
+  const diagnostics = diagnosticsResult.status === 'fulfilled' ? diagnosticsResult.value : null;
+  const onboarding = onboardingResult.status === 'fulfilled' ? onboardingResult.value : null;
+  const planTotals = planTotalsResult.status === 'fulfilled' && planTotalsResult.value
+    ? planTotalsResult.value
+    : { firms: 0, pilot: 0, nearCapacity: 0, overCapacity: 0 };
+  const recentAuditCount = recentAuditCountResult.status === 'fulfilled' ? Number(recentAuditCountResult.value || 0) : 0;
+  const featureFlags = featureFlagsResult.status === 'fulfilled' ? featureFlagsResult.value : null;
 
   const failedHealth = Number(firmHealth?.totals?.critical || 0);
   const warnedHealth = Number(firmHealth?.totals?.atRisk || 0);

@@ -459,66 +459,127 @@ export const FirmLoginPage = () => {
   };
 
   if (firmLoading) return (
-    <div className="auth-wrapper find-workspace-page auth-public-page find-workspace-page--centered min-h-[calc(100vh-64px)] flex items-center justify-center">
-      <div className="find-workspace-page__shell find-workspace-page__shell--centered flex justify-center items-center">
-        <Card className="auth-card find-workspace-page__card auth-public-page__card max-w-md w-full mx-auto text-center">
-          <Loading message="Loading firm information..." />
-        </Card>
-      </div>
+    <div className="min-h-screen flex flex-col bg-slate-50/70">
+      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2.5 text-slate-900 group">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white font-bold text-sm tracking-tight group-hover:bg-indigo-600 transition-colors">
+            D
+          </span>
+          <span className="font-bold text-base tracking-tight text-slate-900">Docketra</span>
+        </Link>
+      </header>
+      <main className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200/80 p-8 shadow-xl shadow-slate-900/[0.03] text-center">
+          <Loading message="Loading firm workspace..." />
+        </div>
+      </main>
     </div>
   );
 
   if (!firmData) {
     return (
-      <div className="auth-wrapper find-workspace-page auth-public-page find-workspace-page--centered min-h-[calc(100vh-64px)] flex items-center justify-center">
-        <div className="find-workspace-page__shell find-workspace-page__shell--centered flex justify-center items-center">
-          <Card className="auth-card find-workspace-page__card auth-public-page__card max-w-md w-full mx-auto">
-            <div className="auth-header find-workspace-page__card-header">
-              <p className="auth-kicker">Workspace lookup</p>
-              <h2>Workspace needs a second look</h2>
-              <p>We could not open this firm login page yet.</p>
+      <div className="min-h-screen flex flex-col bg-slate-50/70">
+        <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2.5 text-slate-900 group">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white font-bold text-sm tracking-tight group-hover:bg-indigo-600 transition-colors">
+              D
+            </span>
+            <span className="font-bold text-base tracking-tight text-slate-900">Docketra</span>
+          </Link>
+        </header>
+        <main className="flex-1 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200/80 p-8 shadow-xl shadow-slate-900/[0.03] text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 border border-rose-100 text-rose-600">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
             </div>
-            <div className="auth-public-page__error">{error}</div>
-            <div className="mt-4 space-y-3">
-              <Button type="button" variant="primary" fullWidth onClick={() => window.location.reload()}>
+            <h2 className="text-xl font-bold text-slate-900">Workspace needs a second look</h2>
+            <p className="mt-2 text-xs text-slate-500">
+              We could not open this firm login page yet.
+            </p>
+            {error && (
+              <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700" role="alert">
+                {error}
+              </div>
+            )}
+            <div className="mt-6 space-y-2.5">
+              <Button type="button" variant="primary" fullWidth onClick={() => window.location.reload()} className="h-10 rounded-xl">
                 Retry Workspace Lookup
               </Button>
-              <Link to="/" className="auth-public-page__link auth-public-page__link--center">Back to home</Link>
+              <Link to="/find-workspace" className="block text-xs font-semibold text-indigo-600 hover:text-indigo-800 py-1 transition-colors">
+                Find another workspace
+              </Link>
+              <Link to="/" className="block text-xs text-slate-400 hover:text-slate-600 py-1 transition-colors">
+                Back to home
+              </Link>
             </div>
-          </Card>
-        </div>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="auth-wrapper find-workspace-page auth-public-page">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50/80 via-white to-slate-50/80 text-slate-900 selection:bg-indigo-500/20">
       <SeoHead
         title={`${firmData.name || 'Firm'} • Sign In • Docketra`}
         description={`Secure sign-in for ${firmData.name || 'your firm'} workspace on Docketra.`}
       />
-      <div className="find-workspace-page__shell">
-        <section className="find-workspace-page__context" aria-label="Firm login context">
-          <h1 className="find-workspace-page__heading">{firmData.name}</h1>
-          <p className="find-workspace-page__intro">
-            {step === 'credentials' ? 'Sign in to your firm workspace and get back to execution.' : 'Enter the 6-digit verification code sent to your email.'}
-          </p>
-        </section>
 
-        <Card className="auth-card find-workspace-page__card auth-public-page__card">
-          <div className="auth-header find-workspace-page__card-header">
-            <h2>{step === 'credentials' ? 'Enter your credentials' : 'Verify your email OTP'}</h2>
-            <p>{step === 'credentials' ? 'Use your xID and password.' : 'Use the latest code from your email.'}</p>
+      {/* Top Navbar Header */}
+      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between border-b border-slate-100/80 sm:border-none">
+        <Link to="/" className="flex items-center gap-2.5 text-slate-900 group">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white font-bold text-sm tracking-tight group-hover:bg-indigo-600 transition-colors shadow-xs">
+            D
+          </span>
+          <span className="font-bold text-base tracking-tight text-slate-900">Docketra</span>
+        </Link>
+        <div className="flex items-center gap-3 text-xs">
+          <span className="hidden sm:inline text-slate-500">Need a workspace?</span>
+          <Link
+            to="/signup"
+            className="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+          >
+            Start free pilot →
+          </Link>
+        </div>
+      </header>
+
+      {/* Main Centered Sign-In Content */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:py-12 w-full max-w-md mx-auto">
+        {/* Workspace Identity Monogram & Headline */}
+        <div className="text-center mb-6">
+          <div className="mx-auto mb-3.5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-50 to-slate-100 border border-indigo-200/70 text-indigo-700 font-extrabold text-xl shadow-xs ring-4 ring-white">
+            {firmData.name ? firmData.name.charAt(0).toUpperCase() : 'W'}
           </div>
+          <h1 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-slate-900">
+            {step === 'credentials' ? `Sign in to ${firmData.name}` : 'Verify your email OTP'}
+          </h1>
+          <div className="mt-2 flex items-center justify-center">
+            {step === 'credentials' ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Verified Enclave • docketra.in/{firmSlug}
+              </span>
+            ) : (
+              <span className="text-xs text-slate-500">
+                {otpHint || 'Enter the 6-digit code sent to your registered email.'}
+              </span>
+            )}
+          </div>
+        </div>
 
+        {/* The Card */}
+        <div className="w-full rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-xl shadow-slate-900/[0.04]">
           {successMessage && step === 'credentials' && (
             <div
-              className={`auth-public-page__status ${
+              className={`mb-4 rounded-xl p-3 text-xs font-medium border ${
                 messageType === 'warning'
-                  ? 'auth-public-page__status--warning'
+                  ? 'bg-amber-50 border-amber-200 text-amber-800'
                   : messageType === 'info'
-                    ? 'auth-public-page__status--info'
-                    : 'auth-public-page__status--success'
+                    ? 'bg-blue-50 border-blue-200 text-blue-800'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-800'
               }`}
               role={messageType === 'warning' ? 'alert' : 'status'}
               aria-live="polite"
@@ -527,95 +588,212 @@ export const FirmLoginPage = () => {
             </div>
           )}
 
-          {error && <div className="auth-public-page__error" role="alert">{error}</div>}
+          {error && (
+            <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700 flex items-start gap-2" role="alert">
+              <svg className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
 
           {step === 'credentials' ? (
             <>
-              <div className="google-container mt-2">
+              {/* Google SSO Button */}
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleGoogleLogin}
+                className="w-full h-11 flex items-center justify-center gap-3 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-semibold text-sm transition-all shadow-xs active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 cursor-pointer disabled:opacity-60"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+
+              {/* Hairline Divider */}
+              <div className="relative flex items-center justify-center my-5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200/90" />
+                </div>
+                <span className="relative bg-white px-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                  or sign in with xID
+                </span>
+              </div>
+
+              {/* Credential Form */}
+              <form onSubmit={handleCredentialSubmit} noValidate className="space-y-4">
+                <Input
+                  label="Firm xID"
+                  type="text"
+                  value={xid}
+                  onChange={(e) => {
+                    const value = e.target.value.toUpperCase();
+                    setXid(value);
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      xid: value.trim() === '' || validateXID(value.trim()) ? '' : 'Enter a valid xID (example: X123456).',
+                    }));
+                  }}
+                  error={fieldErrors.xid}
+                  required
+                  placeholder="X123456"
+                  autoComplete="username"
+                  disabled={loading}
+                  autoFocus
+                />
+
+                <Input
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPassword(value);
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      password: value.length === 0 || validatePassword(value) ? '' : 'Password must be at least 8 characters.',
+                    }));
+                  }}
+                  error={fieldErrors.password}
+                  required
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  disabled={loading}
+                />
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  loading={loading}
+                  disabled={loading || !credentialFormValid}
+                  className="h-11 rounded-xl text-sm font-semibold shadow-sm bg-slate-900 hover:bg-slate-800 text-white transition-all mt-2"
+                >
+                  {loading ? 'Sending OTP...' : 'Next: Verify OTP'}
+                </Button>
+              </form>
+            </>
+          ) : (
+            <form onSubmit={handleOtpSubmit} noValidate className="space-y-4">
+              <Input
+                ref={otpInputRef}
+                label="6-Digit Verification Code"
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                  if (pasted.length === 6) {
+                    e.preventDefault();
+                    setOtp(pasted);
+                  }
+                }}
+                error={fieldErrors.otp}
+                required
+                placeholder="6-digit code"
+                disabled={loading}
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                pattern="[0-9]*"
+              />
+
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-3 text-center space-y-1">
+                {otpHint && <p className="text-xs text-slate-600 font-medium">{otpHint}</p>}
+                <p className="text-[11px] text-slate-400">Tip: You can paste the full OTP directly.</p>
+              </div>
+
+              {isTurnstileConfigured && <div ref={turnstileContainerRef} style={{ display: 'none' }} />}
+
+              <Button
+                type="submit"
+                variant="primary"
+                fullWidth
+                loading={loading}
+                disabled={loading || !otpFormValid}
+                className="h-11 rounded-xl text-sm font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+              >
+                {loading ? 'Verifying...' : 'Submit & Sign in'}
+              </Button>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  fullWidth
+                  disabled={loading || cooldown > 0}
+                  onClick={handleResendOtp}
+                  className="text-xs h-9 rounded-lg"
+                >
+                  {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
+                </Button>
+
                 <Button
                   type="button"
                   variant="outline"
                   fullWidth
                   disabled={loading}
-                  onClick={handleGoogleLogin}
-                  className="flex items-center justify-center gap-2 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 shadow-sm"
+                  onClick={() => {
+                    clearPendingLoginState();
+                    setLoginToken('');
+                    clearRecoveryAndOtpState();
+                  }}
+                  className="text-xs h-9 rounded-lg text-slate-600"
                 >
-                  <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
-                    <g transform="matrix(1, 0, 0, 1, 0, 0)">
-                      <path d="M21.35,11.1H12v2.7h5.38c-0.24,1.28 -0.96,2.37 -2.04,3.1v2.6h3.3c1.93,-1.78 3.04,-4.4 3.04,-7.4c0,-0.74 -0.07,-1.4 -0.33,-2z" fill="#4285F4" />
-                      <path d="M12,20.6c2.43,0 4.47,-0.8 5.96,-2.2l-3.3,-2.6c-0.9,0.6 -2.07,0.98 -3.3,0.98 -2.34,0 -4.33,-1.58 -5.04,-3.7H3v2.6c1.5,3 4.5,4.92 8,4.92z" fill="#34A853" />
-                      <path d="M6.96,13.08a5.1,5.1 0 0,1 0,-2.16V8.32H3a8.6,8.6 0 0,0 0,7.36l3.96,-2.6z" fill="#FBBC05" />
-                      <path d="M12,7.2c1.32,0 2.5,0.45 3.44,1.35l2.58,-2.58C16.46,4.4 14.43,3.6 12,3.6c-3.5,0 -6.5,1.92 -8,4.92l3.96,3.08c0.71,-2.12 2.7,-3.7 5.04,-3.7z" fill="#EA4335" />
-                    </g>
-                  </svg>
-                  Continue with Google
+                  Back
                 </Button>
               </div>
-              
-              <div className="flex items-center gap-3 my-4">
-                <div className="h-px flex-1 bg-slate-200" />
-                <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase">or</span>
-                <div className="h-px flex-1 bg-slate-200" />
-              </div>
-
-              <form onSubmit={handleCredentialSubmit} noValidate className={`find-workspace-page__form ${spacingClasses.formFieldSpacing}`}>
-                <Input label="xID" type="text" value={xid} onChange={(e) => { const value = e.target.value.toUpperCase(); setXid(value); setFieldErrors((prev) => ({ ...prev, xid: value.trim() === '' || validateXID(value.trim()) ? '' : 'Enter a valid xID (example: X123456).' })); }} error={fieldErrors.xid} required placeholder="X123456" autoComplete="username" disabled={loading} autoFocus />
-                <Input label="Password" type="password" value={password} onChange={(e) => { const value = e.target.value; setPassword(value); setFieldErrors((prev) => ({ ...prev, password: value.length === 0 || validatePassword(value) ? '' : 'Password must be at least 8 characters.' })); }} error={fieldErrors.password} required placeholder="Enter your password" autoComplete="current-password" disabled={loading} />
-                <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !credentialFormValid}>{loading ? 'Sending OTP...' : 'Next: Verify OTP'}</Button>
-              </form>
-            </>
-          ) : (
-            <form onSubmit={handleOtpSubmit} noValidate className={`find-workspace-page__form ${spacingClasses.formFieldSpacing}`}>
-            <Input
-              ref={otpInputRef}
-              label="Email OTP"
-              type="text"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              onPaste={(e) => {
-                const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-                if (pasted.length === 6) {
-                  e.preventDefault();
-                  setOtp(pasted);
-                }
-              }}
-              error={fieldErrors.otp}
-              required
-              placeholder="6-digit code"
-              disabled={loading}
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              pattern="[0-9]*"
-            />
-            {otpHint && <p className="find-workspace-page__security-note">{otpHint}</p>}
-            <p className="find-workspace-page__security-note">Tip: You can paste the full OTP directly.</p>
-            {isTurnstileConfigured && <div ref={turnstileContainerRef} style={{ display: 'none' }} />}
-            <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading || !otpFormValid}>{loading ? 'Verifying...' : 'Submit & Sign in'}</Button>
-            <Button type="button" variant="outline" fullWidth disabled={loading || cooldown > 0} onClick={handleResendOtp}>
-              {cooldown > 0 ? `Resend OTP in ${cooldown}s` : 'Resend OTP'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              fullWidth
-              disabled={loading}
-              onClick={() => {
-                clearPendingLoginState();
-                setLoginToken('');
-                clearRecoveryAndOtpState();
-              }}
-            >
-              Back
-            </Button>
             </form>
           )}
 
-          <div className={`auth-footer-links ${spacingClasses.formFieldSpacing}`}>
-            <Link to={`/app/${firmSlug}/forgot-password`} className="auth-public-page__link">Forgot Password?</Link>
-            <Link to="/signup" className="auth-public-page__link">Need a workspace? Create one here.</Link>
+          {/* Links Row */}
+          <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs">
+            <Link
+              to={`/app/${firmSlug}/forgot-password`}
+              className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+            >
+              Forgot Password?
+            </Link>
+            <Link
+              to="/find-workspace"
+              className="text-slate-500 hover:text-slate-800 font-medium transition-colors"
+            >
+              Switch Workspace
+            </Link>
           </div>
-        </Card>
-      </div>
+        </div>
+
+        {/* HubSpot-style Trust Callout Banner */}
+        <div className="w-full mt-4 rounded-xl border border-slate-200/70 bg-white/70 backdrop-blur-xs px-4 py-3 text-center shadow-xs">
+          <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-800">
+            <svg className="h-4 w-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            <span>Sovereign Storage Enclave</span>
+          </div>
+          <p className="mt-0.5 text-[11px] text-slate-500">
+            Client files stream 100% through your firm&apos;s Google Drive under Google Restricted Scope.
+          </p>
+        </div>
+      </main>
+
+      {/* Slack / HubSpot Style Footer */}
+      <footer className="w-full py-6 text-center text-xs text-slate-400 border-t border-slate-200/60 mt-auto">
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mb-1.5 text-[11px]">
+          <Link to="/security" className="hover:text-slate-600 transition-colors">Security Overview</Link>
+          <span>•</span>
+          <Link to="/privacy" className="hover:text-slate-600 transition-colors">Privacy Policy</Link>
+          <span>•</span>
+          <Link to="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
+          <span>•</span>
+          <a href="mailto:support@docketra.in" className="hover:text-slate-600 transition-colors">Contact Support</a>
+        </div>
+        <p className="text-[11px]">© {new Date().getFullYear()} Docketra. The Company Brain for Professional Practices.</p>
+      </footer>
     </div>
   );
 };
