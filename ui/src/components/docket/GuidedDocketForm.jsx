@@ -255,7 +255,11 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   const updateField = (name, value) => {
     if (name === 'categoryId' || name === 'subcategoryId') setManualClassification(true);
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: '' }));
+    setErrors((prev) => ({
+      ...prev,
+      [name]: '',
+      ...(name === 'categoryId' || name === 'subcategoryId' ? { relatedEmployeeUserId: '' } : {}),
+    }));
     setSubmitError('');
   };
 
@@ -268,7 +272,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       categoryId: suggestion.categoryId,
       subcategoryId: isValidSubcategory ? suggestion.subcategoryId : '',
     }));
-    setErrors((prev) => ({ ...prev, categoryId: '', subcategoryId: '' }));
+    setErrors((prev) => ({ ...prev, categoryId: '', subcategoryId: '', relatedEmployeeUserId: '' }));
     setSuggestion(null);
     setSubmitError('');
   };

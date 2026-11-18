@@ -77,6 +77,7 @@ function testCategoryRouteRequiresAuthenticatedFirmContext() {
         updateSubcategory: () => {},
         toggleSubcategoryStatus: () => {},
         deleteSubcategory: () => {},
+        suggestCategory: () => {},
       };
     }
     return originalLoad.apply(this, arguments);

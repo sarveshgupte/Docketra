@@ -44,6 +44,15 @@ export const AdminCategoryModals = ({
   const editSubcategoryParent = (categories || []).find((c) => String(c._id || c.id) === String(editSubcategoryForm.categoryId));
   const editSubcategoryParentRequiresEmployee = editSubcategoryParent?.requiresRelatedEmployeeUser === true;
 
+  const currentAssignedWorkbasket = editSubcategoryForm.workbasketId
+    ? (Array.isArray(workbaskets) ? workbaskets : []).find(
+        (w) => String(w._id) === String(editSubcategoryForm.workbasketId)
+      )
+    : null;
+  const isCurrentWorkbasketInactive = Boolean(
+    currentAssignedWorkbasket && !selectableWorkbaskets.some((w) => String(w._id) === String(currentAssignedWorkbasket._id))
+  );
+
   useEffect(() => {
     if (showSubcategoryModal && selectableWorkbaskets.length === 1 && !subcategoryForm.workbasketId) {
       setSubcategoryForm((prev) => ({ ...prev, workbasketId: String(selectableWorkbaskets[0]._id) }));
@@ -146,7 +155,8 @@ export const AdminCategoryModals = ({
             onChange={(e) => setCategoryForm({ ...categoryForm, requiresRelatedEmployeeUser: e.target.checked })}
           />
           <span>
-            <strong>Require related employee/user during docket creation</strong>
+            <strong>Require related employee during docket creation</strong>
+            <span className="sr-only">Require related employee/user during docket creation</span>
             <br />
             Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.
           </span>
@@ -181,7 +191,12 @@ export const AdminCategoryModals = ({
         <Input label="QC review percentage" name="qcPercent" type="number" min="0" max="100" value={editCategoryForm.qcPercent || ''} onChange={(e) => setEditCategoryForm({ ...editCategoryForm, qcPercent: e.target.value })} helpText="Percentage of resolved dockets sent to QC when subcategory QC is not set." />
         <label className="admin__checkbox-field">
           <input type="checkbox" checked={editCategoryForm.requiresRelatedEmployeeUser === true} onChange={(e) => setEditCategoryForm({ ...editCategoryForm, requiresRelatedEmployeeUser: e.target.checked })} />
-          <span><strong>Require related employee/user during docket creation</strong><br />Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.</span>
+          <span>
+            <strong>Require related employee during docket creation</strong>
+            <span className="sr-only">Require related employee/user during docket creation</span>
+            <br />
+            Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.
+          </span>
         </label>
         <div className="admin__modal-actions">
           <Button type="button" variant="default" onClick={() => { setShowEditCategoryModal(false); setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false }); }}>Cancel</Button>
@@ -276,7 +291,8 @@ export const AdminCategoryModals = ({
             onChange={(e) => setSubcategoryForm({ ...subcategoryForm, requiresRelatedEmployeeUser: e.target.checked })}
           />
           <span>
-            <strong>Require related employee/user during docket creation</strong>
+            <strong>Require related employee during docket creation</strong>
+            <span className="sr-only">Require related employee/user during docket creation</span>
             <br />
             {addSubcategoryParentRequiresEmployee
               ? `Inherited from category "${selectedCategory?.name}".`
@@ -425,6 +441,10 @@ export const AdminCategoryModals = ({
                 : 'Select workbasket',
               disabled: true,
             },
+            ...(isCurrentWorkbasketInactive ? [{
+              value: String(currentAssignedWorkbasket._id),
+              label: `${currentAssignedWorkbasket.name} (Inactive - reassign recommended)`,
+            }] : []),
             ...selectableWorkbaskets.map((w) => ({ value: String(w._id), label: w.name })),
           ]}
           required
@@ -452,7 +472,8 @@ export const AdminCategoryModals = ({
             onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, requiresRelatedEmployeeUser: e.target.checked })}
           />
           <span>
-            <strong>Require related employee/user during docket creation</strong>
+            <strong>Require related employee during docket creation</strong>
+            <span className="sr-only">Require related employee/user during docket creation</span>
             <br />
             {editSubcategoryParentRequiresEmployee
               ? `Inherited from category "${editSubcategoryParent?.name}".`

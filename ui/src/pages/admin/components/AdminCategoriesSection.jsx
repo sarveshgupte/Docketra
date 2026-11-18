@@ -161,7 +161,7 @@ export const AdminCategoriesSection = ({
                     <CategoryIcon />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-bold text-slate-800 leading-none">{category.name}</h3>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-xs text-2xs font-bold uppercase tracking-wider ${
                         category.isActive 
@@ -170,8 +170,17 @@ export const AdminCategoriesSection = ({
                       }`}>
                         {category.isActive ? 'Active' : 'Inactive'}
                       </span>
+                      {category.requiresRelatedEmployeeUser ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-xs text-2xs font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+                          Requires Employee
+                        </span>
+                      ) : null}
                     </div>
-                    <p className="text-slate-400 text-xs mt-1">ID: {category._id}</p>
+                    <p className="text-slate-400 text-xs mt-1">
+                      ID: {category._id}
+                      {Number(category.defaultSlaDays) > 0 ? ` · Default SLA: ${category.defaultSlaDays}d` : ''}
+                      {Number(category.qcPercent) > 0 ? ` · Category QC: ${category.qcPercent}%` : ''}
+                    </p>
                   </div>
                 </div>
 
@@ -198,6 +207,13 @@ export const AdminCategoriesSection = ({
                   </button>
                 </div>
               </div>
+
+              {!category.isActive ? (
+                <div className="mx-6 mt-4 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                  <span>This category is disabled. Its subcategories will not be available for selection during docket creation.</span>
+                </div>
+              ) : null}
 
               {/* Subcategories Details Section */}
               <div className="p-6">
@@ -253,6 +269,14 @@ export const AdminCategoriesSection = ({
                                   <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 group-hover:scale-125 transition duration-200" />
                                     <span className="text-sm font-bold text-slate-700">{sub.name}</span>
+                                    {(sub.requiresRelatedEmployeeUser || category.requiresRelatedEmployeeUser) ? (
+                                      <span
+                                        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide bg-blue-50 text-blue-700 border border-blue-100"
+                                        title={category.requiresRelatedEmployeeUser ? `Inherited from category "${category.name}"` : 'Configured on subcategory'}
+                                      >
+                                        Requires Employee
+                                      </span>
+                                    ) : null}
                                   </div>
                                 </td>
                                 <td className="px-4 py-3.5 whitespace-nowrap">

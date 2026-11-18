@@ -493,7 +493,7 @@ module.exports = (deps) => {
       if (relatedEmployeeUserId && !relatedEmployeeUser) {
         return res.status(400).json({
           success: false,
-          message: 'Selected related employee/user is invalid for this firm.',
+          message: 'Selected related employee is invalid for this firm.',
           ...responseMeta,
         });
       }
