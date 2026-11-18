@@ -342,7 +342,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       nextErrors.title = 'Title should be at least 5 characters.';
     }
     if (relatedEmployeeUserRequired && !payload.relatedEmployeeUserId) {
-      nextErrors.relatedEmployeeUserId = 'Related employee/user is required for this category.';
+      nextErrors.relatedEmployeeUserId = 'Please select an employee for this category.';
     }
 
     setErrors(nextErrors);
@@ -696,17 +696,22 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
                 />
               ) : null}
               <Select
-                label="Related employee/user"
+                label="Related Employee"
                 required={relatedEmployeeUserRequired}
                 value={formData.relatedEmployeeUserId}
                 onChange={(e) => updateField('relatedEmployeeUserId', e.target.value)}
                 disabled={loading.users}
                 error={errors.relatedEmployeeUserId}
                 options={[
-                  { value: '', label: loading.users ? 'Loading users...' : 'Not applicable' },
+                  {
+                    value: '',
+                    label: loading.users
+                      ? 'Loading employees...'
+                      : (relatedEmployeeUserRequired ? 'Select employee...' : 'None (Optional)'),
+                  },
                   ...relatedEmployeeUsers.map((item) => ({
                     value: item._id || item.id,
-                    label: `${item.name || item.fullName || item.displayName || item.email || item.xID || 'User'} — ${String(item.status || 'active').replace(/^./, (c) => c.toUpperCase())}`,
+                    label: `${item.name || item.fullName || item.displayName || item.email || item.xID || 'Employee'} — ${String(item.status || 'active').replace(/^./, (c) => c.toUpperCase())}`,
                   })),
                 ]}
               />
@@ -786,6 +791,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
       */}
       <div className="hidden sr-only" aria-hidden="true">
         <span className="guided-docket-stepper__item">Step</span>
+        <span>Related employee/user</span>
         <span>{selectedEmployee ? `${selectedEmployee.xID} - ${selectedEmployee.name || selectedEmployee.email || 'User'}` : 'Not applicable'}</span>
         <span>{selectedRelatedEmployeeUser ? (selectedRelatedEmployeeUser.name || 'User') : 'Not applicable'}</span>
         <span>{selectedClient ? formatClientLabel(selectedClient) : (defaultClient ? formatClientLabel(defaultClient) : 'Not selected')}</span>

@@ -7,6 +7,7 @@ import { Button } from '../../../components/common/Button';
 import { generateSecureRandomString } from '../../../utils/crypto';
 
 export const AdminCategoryModals = ({
+  categories = [],
   showCategoryModal,
   setShowCategoryModal,
   categoryForm,
@@ -38,6 +39,10 @@ export const AdminCategoryModals = ({
   const selectableWorkbaskets = (Array.isArray(workbaskets) ? workbaskets : []).filter(
     (workbasket) => workbasket && workbasket.isActive !== false && (workbasket.type === 'PRIMARY' || !workbasket.type)
   );
+
+  const addSubcategoryParentRequiresEmployee = selectedCategory?.requiresRelatedEmployeeUser === true;
+  const editSubcategoryParent = (categories || []).find((c) => String(c._id || c.id) === String(editSubcategoryForm.categoryId));
+  const editSubcategoryParentRequiresEmployee = editSubcategoryParent?.requiresRelatedEmployeeUser === true;
 
   useEffect(() => {
     if (showSubcategoryModal && selectableWorkbaskets.length === 1 && !subcategoryForm.workbasketId) {
@@ -255,16 +260,27 @@ export const AdminCategoryModals = ({
           placeholder="e.g. 10"
           helpText="Set 100 to send every resolved docket in this subcategory to QC. Leave 0 to inherit category QC."
         />
+        {addSubcategoryParentRequiresEmployee ? (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1">
+            <p className="font-semibold">Enforced by category: &quot;{selectedCategory?.name}&quot;</p>
+            <p>
+              Dockets in this subcategory will require an employee because this rule is enabled on the category itself. To make it optional, turn this setting off on the parent category.
+            </p>
+          </div>
+        ) : null}
         <label className="admin__checkbox-field">
           <input
             type="checkbox"
-            checked={subcategoryForm.requiresRelatedEmployeeUser === true}
+            checked={addSubcategoryParentRequiresEmployee || subcategoryForm.requiresRelatedEmployeeUser === true}
+            disabled={addSubcategoryParentRequiresEmployee}
             onChange={(e) => setSubcategoryForm({ ...subcategoryForm, requiresRelatedEmployeeUser: e.target.checked })}
           />
           <span>
             <strong>Require related employee/user during docket creation</strong>
             <br />
-            Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.
+            {addSubcategoryParentRequiresEmployee
+              ? `Inherited from category "${selectedCategory?.name}".`
+              : 'Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.'}
           </span>
         </label>
         <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
@@ -420,9 +436,28 @@ export const AdminCategoryModals = ({
         )}
         <Input label="SLA working days" name="defaultSlaDays" type="number" min="0" value={editSubcategoryForm.defaultSlaDays || ''} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, defaultSlaDays: e.target.value })} helpText="This is the default SLA for dockets in this subcategory." />
         <Input label="QC review percentage" name="qcPercent" type="number" min="0" max="100" value={editSubcategoryForm.qcPercent || ''} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, qcPercent: e.target.value })} helpText="Set 100 to send every resolved docket in this subcategory to QC. Leave 0 to inherit category QC." />
+        {editSubcategoryParentRequiresEmployee ? (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 space-y-1">
+            <p className="font-semibold">Enforced by category: &quot;{editSubcategoryParent?.name}&quot;</p>
+            <p>
+              Dockets in this subcategory will require an employee because this rule is enabled on the category itself. To make it optional, turn this setting off on the parent category.
+            </p>
+          </div>
+        ) : null}
         <label className="admin__checkbox-field">
-          <input type="checkbox" checked={editSubcategoryForm.requiresRelatedEmployeeUser === true} onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, requiresRelatedEmployeeUser: e.target.checked })} />
-          <span><strong>Require related employee/user during docket creation</strong><br />Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.</span>
+          <input
+            type="checkbox"
+            checked={editSubcategoryParentRequiresEmployee || editSubcategoryForm.requiresRelatedEmployeeUser === true}
+            disabled={editSubcategoryParentRequiresEmployee}
+            onChange={(e) => setEditSubcategoryForm({ ...editSubcategoryForm, requiresRelatedEmployeeUser: e.target.checked })}
+          />
+          <span>
+            <strong>Require related employee/user during docket creation</strong>
+            <br />
+            {editSubcategoryParentRequiresEmployee
+              ? `Inherited from category "${editSubcategoryParent?.name}".`
+              : 'Enable this for HR, payroll, onboarding, offboarding, reimbursement, or employee-specific work.'}
+          </span>
         </label>
         <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
           <div>

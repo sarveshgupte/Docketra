@@ -358,7 +358,7 @@ module.exports = (deps) => {
       if (requiresRelatedEmployeeUser && !relatedEmployeeUserId) {
         return res.status(400).json({
           success: false,
-          message: 'Related employee/user is required for this category.',
+          message: 'Please select an employee for this category.',
           ...responseMeta,
         });
       }
@@ -716,11 +716,13 @@ module.exports = (deps) => {
             ? Math.round(ruleDays * 8 * 60)
             : Math.round(ruleHours * 60);
 
+          if (!slaState.slaConfigSnapshot) slaState.slaConfigSnapshot = {};
           slaState.slaConfigSnapshot.tatDurationMinutes = ruleDurationMinutes;
         }
 
         if (!resolvedSlaDueAt && defaultSlaDays > 0 && !hasValidRequestedSla) {
           slaState.slaDueAt = safeSlaService.calculateFallbackDueDateFromDays(createdAt, defaultSlaDays, { calendarConfig: firmCalendarConfig });
+          if (!slaState.slaConfigSnapshot) slaState.slaConfigSnapshot = {};
           slaState.slaConfigSnapshot.tatDurationMinutes = defaultSlaDays * 8 * 60;
         }
 
@@ -1258,9 +1260,11 @@ module.exports = (deps) => {
             ? Math.round(ruleDays * 8 * 60)
             : Math.round(ruleHours * 60);
 
+          if (!clonedSlaState.slaConfigSnapshot) clonedSlaState.slaConfigSnapshot = {};
           clonedSlaState.slaConfigSnapshot.tatDurationMinutes = ruleDurationMinutes;
         } else if (clonedDefaultSlaDays > 0) {
           clonedSlaState.slaDueAt = safeSlaService.calculateFallbackDueDateFromDays(now, clonedDefaultSlaDays, { calendarConfig: firmCalendarConfig });
+          if (!clonedSlaState.slaConfigSnapshot) clonedSlaState.slaConfigSnapshot = {};
           clonedSlaState.slaConfigSnapshot.tatDurationMinutes = clonedDefaultSlaDays * 8 * 60;
         } else {
           clonedSlaState.slaDueAt = originalCase.slaDueAt || now;

@@ -1900,6 +1900,7 @@ export const AdminPage = () => {
       />
 
       <AdminCategoryModals
+        categories={categories}
         showCategoryModal={showCategoryModal}
         setShowCategoryModal={setShowCategoryModal}
         categoryForm={categoryForm}

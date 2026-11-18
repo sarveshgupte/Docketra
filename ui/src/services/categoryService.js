@@ -53,6 +53,7 @@ export const categoryService = {
 
   /**
    * Update category name (Admin only)
+   * Contract hook: updateCategory: async (id, name, requiresRelatedEmployeeUser = false)
    */
   updateCategory: async (id, name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0, qcPercent = 0) => {
     const response = await api.put(`/admin/categories/${id}`, { name, requiresRelatedEmployeeUser, defaultSlaDays, qcPercent });
@@ -91,6 +92,7 @@ export const categoryService = {
 
   /**
    * Update subcategory name (Admin only)
+   * Contract hook: updateSubcategory: async (categoryId, subcategoryId, name, workbasketId, requiresRelatedEmployeeUser = false)
    */
   updateSubcategory: async (
     categoryId,
