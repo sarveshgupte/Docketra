@@ -59,7 +59,25 @@ const TeamMock = {
 };
 
 require.cache[require.resolve('../src/models/Case.model')] = { exports: CaseMock };
-require.cache[require.resolve('../src/models/Client.model')] = { exports: { find: () => mockQuery([]) } };
+require.cache[require.resolve('../src/models/Client.model')] = {
+  exports: {
+    find: () => mockQuery([]),
+    findOne: () => mockQuery(null),
+    findById: () => mockQuery(null),
+  },
+};
+require.cache[require.resolve('../src/models/Firm.model')] = {
+  exports: {
+    find: () => mockQuery([]),
+    findOne: () => mockQuery(null),
+    findById: () => mockQuery(null),
+  },
+};
+require.cache[require.resolve('../src/services/tenantIdentity.service')] = {
+  exports: {
+    resolveClientOwnershipFirmId: async (firmId) => firmId,
+  },
+};
 require.cache[require.resolve('../src/models/Comment.model')] = { exports: { find: () => mockQuery([]) } };
 require.cache[require.resolve('../src/models/Attachment.model')] = { exports: { find: () => mockQuery([]) } };
 require.cache[require.resolve('../src/models/Team.model')] = { exports: TeamMock };
@@ -95,7 +113,11 @@ const searchController = require('../src/controllers/search.controller');
   assert.strictEqual(scopedRes.data.success, true);
   assert.ok(capturedCaseQueries.length > 0, 'expected global worklist to execute a Case.find query');
 
-  const scopedQuery = capturedCaseQueries[0];
+  const scopedQuery = capturedCaseQueries.find((q) =>
+    (Array.isArray(q?.$and) ? q.$and : []).some(
+      (group) => Array.isArray(group?.$or) && group.$or.some((entry) => Object.prototype.hasOwnProperty.call(entry || {}, 'routedToTeamId')),
+    ),
+  ) || capturedCaseQueries[0];
   const queueScopeGroup = (Array.isArray(scopedQuery?.$and) ? scopedQuery.$and : []).find(
     (group) => Array.isArray(group?.$or) && group.$or.some((entry) => Object.prototype.hasOwnProperty.call(entry || {}, 'routedToTeamId')),
   );

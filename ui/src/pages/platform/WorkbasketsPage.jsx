@@ -216,9 +216,14 @@ export const PlatformWorkbasketsPage = () => {
       const matchesSearch = !needle || [
         formatDocketLabel(item),
         item.clientName,
+        item.clientSnapshot?.businessName,
+        item.client?.businessName,
         item.clientId,
         item.category,
         item.subcategory,
+        item.relatedEmployeeName,
+        item.relatedEmployeeUser?.name,
+        item.employeeSnapshot?.name,
         item.assigneeName,
       ].some((value) => String(value || '').toLowerCase().includes(needle));
       return matchesStatus && matchesCategory && matchesWorkbasket && matchesSearch;
@@ -235,7 +240,7 @@ export const PlatformWorkbasketsPage = () => {
         case 'clientId':
           return row.clientId || '';
         case 'clientName':
-          return row.clientName || '';
+          return row.clientName || row.clientSnapshot?.businessName || row.client?.businessName || '';
         case 'category':
           return row.category || '';
         case 'status':
@@ -477,14 +482,31 @@ export const PlatformWorkbasketsPage = () => {
                     </button>
                   </td>
                   <td className="px-3.5 py-2.5 text-slate-500 text-xs font-mono">{r.clientId || '—'}</td>
-                  <td className="px-3.5 py-2.5 text-slate-900 font-medium text-xs">{r.clientName || '—'}</td>
+                  <td className="px-3.5 py-2.5 text-slate-900 font-medium text-xs">
+                    {r.clientName || r.client?.businessName || r.clientSnapshot?.businessName || '—'}
+                  </td>
                   <td className="px-3.5 py-2.5 text-slate-600 text-xs">
-                    <span className="text-slate-900 font-medium">{r.category || '—'}</span>
-                    {r.subcategory && r.subcategory !== '-' && (
-                      <span className="text-slate-500 text-[11px] ml-1.5 px-1.5 py-0.5 bg-slate-100 rounded">
-                        {r.subcategory}
-                      </span>
-                    )}
+                    <div className="flex flex-col gap-1 items-start">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-slate-900 font-medium">{r.category || '—'}</span>
+                        {r.subcategory && r.subcategory !== '-' && (
+                          <span className="text-slate-600 text-[11px] px-1.5 py-0.5 bg-slate-100 rounded font-normal">
+                            {r.subcategory}
+                          </span>
+                        )}
+                      </div>
+                      {(r.relatedEmployeeName || r.relatedEmployeeUser?.name || r.employeeSnapshot?.name) && (
+                        <div
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50/80 text-blue-700 text-[11px] font-medium border border-blue-200/60"
+                          title={`Related Employee: ${r.relatedEmployeeName || r.relatedEmployeeUser?.name || r.employeeSnapshot?.name}`}
+                        >
+                          <svg className="w-3 h-3 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          <span className="truncate max-w-[150px]">{r.relatedEmployeeName || r.relatedEmployeeUser?.name || r.employeeSnapshot?.name}</span>
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3.5 py-2.5 text-xs">
                     <StatusBadge

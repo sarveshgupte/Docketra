@@ -789,6 +789,13 @@ module.exports = (deps) => {
           caseSubCategory: subcategoryDoc?.name || caseSubCategory || '',
           subcategory: subcategoryDoc?.name || caseSubCategory || '',
           clientId: finalClientId,
+          clientName: client?.businessName || client?.name || client?.clientFactSheet?.basicInfo?.clientName || null,
+          clientSnapshot: {
+            clientId: finalClientId,
+            businessName: client?.businessName || client?.name || client?.clientFactSheet?.basicInfo?.clientName || '',
+            primaryContactNumber: client?.primaryContactNumber || '',
+            businessEmail: client?.businessEmail || '',
+          },
           isInternal: normalizedIsInternal,
           workType: normalizedWorkType,
           crmClientId: crmClientId || null,

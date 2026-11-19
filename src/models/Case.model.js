@@ -1108,6 +1108,11 @@ const caseSchema = new mongoose.Schema({
     },
     trim: true,
   },
+  clientName: {
+    type: String,
+    trim: true,
+    default: null,
+  },
 
   /**
    * Optional CRM client linkage (ObjectId) for CRM module integration.
@@ -1470,20 +1475,29 @@ caseSchema.pre('validate', async function() {
   
   // If this is a new case and clientId is provided, fetch and snapshot the client
   // This preserves client data at the time of case creation for audit trail
-  if (this.isNew && this.clientId && !this.clientSnapshot) {
+  if (this.isNew && this.clientId && (!this.clientSnapshot || !this.clientName)) {
     const Client = mongoose.model('Client');
-    const clientQuery = Client.findOne({ clientId: this.clientId, firmId: this.firmId });
+    const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.service');
+    const ownershipFirmId = await resolveClientOwnershipFirmId(this.firmId).catch(() => null);
+    const candidateFirmIds = [...new Set([this.firmId, ownershipFirmId].map((id) => id && String(id).trim()).filter(Boolean))];
+    const clientQuery = Client.findOne({ clientId: this.clientId, firmId: { $in: candidateFirmIds } });
     if (session) {
       clientQuery.session(session);
     }
     const client = await clientQuery.lean();
     if (client) {
-      this.clientSnapshot = {
-        clientId: client.clientId,
-        businessName: client.businessName,
-        primaryContactNumber: client.primaryContactNumber,
-        businessEmail: client.businessEmail,
-      };
+      const resolvedBusinessName = client.businessName || client.name || client.clientFactSheet?.basicInfo?.clientName || '';
+      if (!this.clientSnapshot) {
+        this.clientSnapshot = {
+          clientId: client.clientId,
+          businessName: resolvedBusinessName,
+          primaryContactNumber: client.primaryContactNumber,
+          businessEmail: client.businessEmail,
+        };
+      }
+      if (!this.clientName && resolvedBusinessName) {
+        this.clientName = resolvedBusinessName;
+      }
     }
   }
   

@@ -6,7 +6,7 @@ const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
 const { serializeDocketDetailDto } = require('../serializers/docketDetail.serializer');
 const docketNarrativeStorage = require('./docketNarrativeStorage.service');
 const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
-const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName assignedTo assignedToXID assignedToName employeeXID employeeSnapshot createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
+const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName clientSnapshot assignedTo assignedToXID assignedToName employeeXID employeeSnapshot relatedEmployeeUser createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 const CLOUD_NARRATIVE_READ_TIMEOUT_MS = 1200;
 const DEFAULT_RUNTIME_TENANT = 'default-client-runtime-tenant';
 

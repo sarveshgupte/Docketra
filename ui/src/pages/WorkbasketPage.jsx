@@ -558,13 +558,47 @@ export const WorkbasketPage = () => {
       render: (caseItem) => caseItem.clientId || '—',
     },
     {
+      key: 'clientName',
+      header: 'Client Name',
+      sortable: true,
+      headerClassName: 'min-w-[12rem] whitespace-nowrap',
+      cellClassName: 'min-w-[12rem] whitespace-nowrap',
+      contentClassName: 'truncate',
+      render: (caseItem) => caseItem.clientName || caseItem.client?.businessName || caseItem.clientSnapshot?.businessName || '—',
+    },
+    {
       key: 'category',
       header: 'Category',
       sortable: true,
-      headerClassName: 'min-w-[10rem] whitespace-nowrap',
-      cellClassName: 'min-w-[10rem] whitespace-nowrap',
-      contentClassName: 'truncate',
-      render: (caseItem) => caseItem.category || '—',
+      headerClassName: 'min-w-[12rem] whitespace-nowrap',
+      cellClassName: 'min-w-[12rem] whitespace-nowrap',
+      render: (caseItem) => {
+        const subcategory = caseItem.subcategory || caseItem.caseSubCategory;
+        const employeeName = caseItem.relatedEmployeeName || caseItem.relatedEmployeeUser?.name || caseItem.employeeSnapshot?.name;
+        return (
+          <div className="flex flex-col gap-1 items-start">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-medium text-slate-900">{caseItem.category || '—'}</span>
+              {subcategory && subcategory !== '-' && (
+                <span className="text-slate-600 text-[11px] px-1.5 py-0.5 bg-slate-100 rounded font-normal">
+                  {subcategory}
+                </span>
+              )}
+            </div>
+            {employeeName && (
+              <div
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50/80 text-blue-700 text-[11px] font-medium border border-blue-200/60"
+                title={`Related Employee: ${employeeName}`}
+              >
+                <svg className="w-3 h-3 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="truncate max-w-[150px]">{employeeName}</span>
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'status',

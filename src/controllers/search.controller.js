@@ -11,6 +11,7 @@ const { logCaseListViewed } = require('../services/auditLog.service');
 const caseActionService = require('../services/caseAction.service');
 const { reopenDuePending } = require('../services/docketWorkflow.service');
 const { canViewUserWorklist } = require('../services/worklistAccess.service');
+const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.service');
 const log = require('../utils/log');
 const { logSlowEndpoint } = require('../utils/slowLog');
 const SLOW_WORKLIST_QUERY_MS = 400;
@@ -637,17 +638,12 @@ const employeeWorklist = async (req, res) => {
     };
     const sortField = sortFieldMap[sortBy] || 'createdAt';
     
-    const casesQuery = Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
-      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName workbasketId ownerTeamId')
-      .sort({ [sortField]: sortOrder, _id: 1 })
-      .skip((normalizedPage - 1) * normalizedLimit)
-      .limit(normalizedLimit);
+    const selectFields = 'caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName clientSnapshot relatedEmployeeUser employeeSnapshot employeeXID assignedToXID assignedToName workbasketId ownerTeamId';
 
     // ⚡ Bolt Performance Optimization:
     // Replaced concurrent countDocuments() and find() queries with a single find() using limit(limit + 1) to eliminate redundant database round-trips.
-    // Notice that casesQuery already has .limit(normalizedLimit). We will change it.
     const casesWithExtra = await Case.find(enforceTenantScope(query, req, { source: 'search.employeeWorklist' }))
-      .select('caseId caseNumber caseName category subcategory caseSubCategory dueDate slaDueAt createdAt createdBy updatedAt status clientId clientName assignedToXID assignedToName workbasketId ownerTeamId')
+      .select(selectFields)
       .sort({ [sortField]: sortOrder, _id: 1 })
       .skip((normalizedPage - 1) * normalizedLimit)
       .limit(normalizedLimit + 1)
@@ -668,16 +664,19 @@ const employeeWorklist = async (req, res) => {
 
     const missingClientNameIds = [...new Set(
       (cases || [])
-        .filter((c) => !c?.clientName && c?.clientId)
+        .filter((c) => !c?.clientName && !c?.clientSnapshot?.businessName && c?.clientId)
         .map((c) => String(c.clientId).trim())
         .filter(Boolean),
     )];
 
     let clientNameByClientId = new Map();
     if (missingClientNameIds.length > 0) {
-      const clientDocs = await Client.find(
-        enforceTenantScope({ clientId: { $in: missingClientNameIds } }, req, { source: 'search.employeeWorklist.clientLookup' }),
-      )
+      const ownershipFirmId = await resolveClientOwnershipFirmId(firmId);
+      const candidateFirmIds = [...new Set([firmId, ownershipFirmId].filter(Boolean))];
+      const clientDocs = await Client.find({
+        firmId: { $in: candidateFirmIds },
+        clientId: { $in: missingClientNameIds },
+      })
         .select('clientId businessName')
         .lean();
 
@@ -699,25 +698,35 @@ const employeeWorklist = async (req, res) => {
     
     res.json({
       success: true,
-      data: (cases || []).map(c => ({
-        _id: c._id, // Include _id for UI compatibility
-        caseId: c.caseId || c.caseNumber,
-        caseNumber: c.caseNumber || c.caseId,
-        caseName: c.caseName,
-        category: c.category,
-        subcategory: c.subcategory || c.caseSubCategory || null,
-        dueDate: c.dueDate || c.slaDueAt || null,
-        slaDueAt: c.slaDueAt || null,
-        createdAt: c.createdAt,
-        createdBy: c.createdBy,
-        updatedAt: c.updatedAt,
-        status: c.status,
-        assignedToXID: c.assignedToXID || null,
-        assignedToName: c.assignedToName || null,
-        workbasketId: c.workbasketId ? String(c.workbasketId) : (c.ownerTeamId ? String(c.ownerTeamId) : null),
-        clientId: c.clientId || null,
-        clientName: c.clientName || clientNameByClientId.get(String(c.clientId || '').trim()) || null,
-      })),
+      data: (cases || []).map(c => {
+        const resolvedClientName = c.clientName || c.clientSnapshot?.businessName || clientNameByClientId.get(String(c.clientId || '').trim()) || null;
+        const relatedEmployeeName = c.relatedEmployeeUser?.name || c.employeeSnapshot?.name || null;
+        const relatedEmployeeXID = c.relatedEmployeeUser?.xID || c.employeeSnapshot?.xID || c.employeeXID || null;
+        return {
+          _id: c._id, // Include _id for UI compatibility
+          caseId: c.caseId || c.caseNumber,
+          caseNumber: c.caseNumber || c.caseId,
+          caseName: c.caseName,
+          category: c.category,
+          subcategory: c.subcategory || c.caseSubCategory || null,
+          dueDate: c.dueDate || c.slaDueAt || null,
+          slaDueAt: c.slaDueAt || null,
+          createdAt: c.createdAt,
+          createdBy: c.createdBy,
+          updatedAt: c.updatedAt,
+          status: c.status,
+          assignedToXID: c.assignedToXID || null,
+          assignedToName: c.assignedToName || null,
+          workbasketId: c.workbasketId ? String(c.workbasketId) : (c.ownerTeamId ? String(c.ownerTeamId) : null),
+          clientId: c.clientId || null,
+          clientName: resolvedClientName,
+          clientSnapshot: c.clientSnapshot || null,
+          relatedEmployeeUser: c.relatedEmployeeUser || null,
+          employeeSnapshot: c.employeeSnapshot || null,
+          relatedEmployeeName,
+          relatedEmployeeXID,
+        };
+      }),
       pagination: {
         page: normalizedPage,
         limit: normalizedLimit,
@@ -923,6 +932,10 @@ const globalWorklist = async (req, res) => {
       caseName: 1,
       clientId: 1,
       clientName: 1,
+      clientSnapshot: 1,
+      relatedEmployeeUser: 1,
+      employeeSnapshot: 1,
+      employeeXID: 1,
       category: 1,
       subcategory: 1,
       caseSubCategory: 1,
@@ -986,16 +999,19 @@ const globalWorklist = async (req, res) => {
 
     const missingClientNameIds = [...new Set(
       (allCases || [])
-        .filter((c) => !c?.clientName && c?.clientId)
+        .filter((c) => !c?.clientName && !c?.clientSnapshot?.businessName && c?.clientId)
         .map((c) => String(c.clientId).trim())
         .filter(Boolean),
     )];
 
     let clientNameByClientId = new Map();
     if (missingClientNameIds.length > 0) {
-      const clientDocs = await Client.find(
-        enforceTenantScope({ clientId: { $in: missingClientNameIds } }, req, { source: 'search.globalWorklist.clientLookup' }),
-      )
+      const ownershipFirmId = await resolveClientOwnershipFirmId(firmId);
+      const candidateFirmIds = [...new Set([firmId, ownershipFirmId].filter(Boolean))];
+      const clientDocs = await Client.find({
+        firmId: { $in: candidateFirmIds },
+        clientId: { $in: missingClientNameIds },
+      })
         .select('clientId businessName')
         .lean();
 
@@ -1016,11 +1032,20 @@ const globalWorklist = async (req, res) => {
         slaDaysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
       
+      const resolvedClientName = c.clientName || c.clientSnapshot?.businessName || clientNameByClientId.get(String(c.clientId || '').trim()) || null;
+      const relatedEmployeeName = c.relatedEmployeeUser?.name || c.employeeSnapshot?.name || null;
+      const relatedEmployeeXID = c.relatedEmployeeUser?.xID || c.employeeSnapshot?.xID || c.employeeXID || null;
+
       return {
         caseId: c.caseId,
         caseName: c.caseName,
         clientId: c.clientId,
-        clientName: c.clientName || clientNameByClientId.get(String(c.clientId || '').trim()) || null,
+        clientName: resolvedClientName,
+        clientSnapshot: c.clientSnapshot || null,
+        relatedEmployeeUser: c.relatedEmployeeUser || null,
+        employeeSnapshot: c.employeeSnapshot || null,
+        relatedEmployeeName,
+        relatedEmployeeXID,
         status: c.status,
         category: c.category,
         subcategory: c.subcategory || c.caseSubCategory || null,
