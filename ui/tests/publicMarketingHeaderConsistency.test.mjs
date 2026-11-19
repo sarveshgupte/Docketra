@@ -12,11 +12,11 @@ const landing = read('src/components/landing/LandingPageContent.jsx');
 const appLayout = read('src/components/routing/AppLayout.jsx');
 const publicRoutes = read('src/routes/PublicRoutes.jsx');
 
-for (const label of ['Why', 'Product', 'Workflow', 'Pilot readiness', 'Trust', 'Workspace login', 'Start managing work']) {
+for (const label of ['Why', 'Product', 'Workflow', 'Pilot readiness', 'Trust', 'Pricing', 'Workspace login', 'Start managing work']) {
   assert.ok(sharedHeader.includes(label), `Shared header missing canonical label: ${label}`);
 }
 
-for (const stale of ['Features', 'How it Works', 'Use Cases', 'Pricing', 'Security', 'About', 'Create your workspace']) {
+for (const stale of ['Features', 'How it Works', 'Use Cases', 'Security', 'About', 'Create your workspace']) {
   assert.equal(sharedHeader.includes(stale), false, `Shared header should not include stale label: ${stale}`);
 }
 

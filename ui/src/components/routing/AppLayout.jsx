@@ -25,6 +25,9 @@ export const AppLayout = ({ children }) => {
               <Link to="/#features" className="text-gray-600 hover:text-gray-900">
                 Features
               </Link>
+              <Link to="/pricing" className="text-gray-600 hover:text-gray-900">
+                Pricing
+              </Link>
               <Link to="/terms" className="text-gray-600 hover:text-gray-900">
                 Terms of Use
               </Link>

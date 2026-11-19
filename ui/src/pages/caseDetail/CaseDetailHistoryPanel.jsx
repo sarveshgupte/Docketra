@@ -44,7 +44,11 @@ export const CaseDetailHistoryPanel = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'DONE' | 'ACTIVE' | 'WAITING' | 'QUEUE'
 
-  const clientName = caseInfo?.client?.businessName || caseInfo?.client?.name || caseInfo?.clientName || 'Client';
+  const clientName = caseInfo?.client?.businessName
+    || caseInfo?.client?.name
+    || caseInfo?.clientName
+    || caseInfo?.clientSnapshot?.businessName
+    || 'Client';
 
   const normalizedRows = useMemo(() => {
     return (clientDockets || []).map(getNormalizedHistoryRow);
@@ -249,14 +253,14 @@ export const CaseDetailHistoryPanel = ({
           <table className="case-detail-table w-full text-left text-xs" aria-label="Past dockets for this client">
             <thead className="bg-slate-50/90 text-slate-700 font-semibold border-b border-slate-200">
               <tr>
-                <th scope="col" className="py-2.5 px-3">Docket ID</th>
-                <th scope="col" className="py-2.5 px-3">Matter / Subject</th>
-                <th scope="col" className="py-2.5 px-3">Category & Subcategory</th>
-                <th scope="col" className="py-2.5 px-3">Lifecycle / Status</th>
-                <th scope="col" className="py-2.5 px-3">Created Date</th>
-                <th scope="col" className="py-2.5 px-3">Completed / Filed Date</th>
-                <th scope="col" className="py-2.5 px-3">Assigned To & Team</th>
-                <th scope="col" className="py-2.5 px-3 text-right">Action</th>
+                <th scope="col" className="py-2.5 px-3 whitespace-nowrap">Docket ID</th>
+                <th scope="col" className="py-2.5 px-3 whitespace-nowrap">Matter / Subject</th>
+                <th scope="col" className="py-2.5 px-3 whitespace-nowrap">Category & Subcategory</th>
+                <th scope="col" className="py-2.5 px-3 whitespace-nowrap">Lifecycle / Status</th>
+                <th scope="col" className="py-2.5 px-3 whitespace-nowrap">Created Date</th>
+                <th scope="col" className="py-2.5 px-3 whitespace-nowrap">Completed / Filed Date</th>
+                <th scope="col" className="py-2.5 px-3 whitespace-nowrap">Assigned To & Team</th>
+                <th scope="col" className="py-2.5 px-3 text-right whitespace-nowrap">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
@@ -267,7 +271,7 @@ export const CaseDetailHistoryPanel = ({
                 );
                 return (
                   <tr key={row.docketId} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-2.5 px-3 font-mono font-medium">
+                    <td className="py-2.5 px-3 font-mono font-medium whitespace-nowrap">
                       <Button
                         type="button"
                         variant="ghost"

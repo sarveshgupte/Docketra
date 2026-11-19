@@ -8,6 +8,7 @@ const DEFAULT_ITEMS = [
   { label: 'Workflow', id: 'workflow', href: '/#workflow', ariaLabel: 'Workflow', description: 'Statutory compliance lifecycle' },
   { label: 'Pilot readiness', id: 'pilot-readiness', href: '/#pilot-readiness', ariaLabel: 'Pilot Readiness', description: 'Security & pilot criteria' },
   { label: 'Trust', id: 'trust', href: '/#trust', ariaLabel: 'Trust', description: 'Data isolation & architecture' },
+  { label: 'Pricing', href: '/pricing', ariaLabel: 'Pricing', description: 'Plans & firm pricing' },
 ];
 
 export default function BubbleMenu({
@@ -140,16 +141,25 @@ export default function BubbleMenu({
 
           {/* Desktop Navigation Links (inline on large screens) */}
           <div className="hidden lg:flex items-center gap-1 xl:gap-2">
-            {menuItems.map((item, idx) => (
-              <a
-                key={idx}
-                href={item.href || `/#${item.id}`}
-                onClick={(e) => handleItemClick(e, item)}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-950 hover:bg-slate-100/80 rounded-xs transition-colors"
-              >
-                {item.label}
-              </a>
-            ))}
+            {menuItems.map((item, idx) => {
+              const itemHref = item.href || (item.id ? `/#${item.id}` : '');
+              const isPageActive = Boolean(itemHref.startsWith('/') && !itemHref.startsWith('/#') && location.pathname === itemHref);
+              return (
+                <a
+                  key={idx}
+                  href={itemHref}
+                  onClick={(e) => handleItemClick(e, item)}
+                  aria-label={item.ariaLabel || item.label}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-xs transition-colors ${
+                    isPageActive
+                      ? 'text-amber-800 bg-amber-50 font-bold'
+                      : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'
+                  }`}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
 
             {/* Solutions Dropdown */}
             <div className="relative group">
@@ -294,22 +304,30 @@ export default function BubbleMenu({
             <div className="py-2.5">
               <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400 mb-1 px-1">Overview</div>
               <ul className="space-y-0.5" role="menu" aria-label="Menu links">
-                {menuItems.map((item, idx) => (
-                  <li key={idx} role="none">
-                    <a
-                      role="menuitem"
-                      href={item.href || `/#${item.id}`}
-                      aria-label={item.ariaLabel || item.label}
-                      className="flex items-center justify-between rounded-xs px-2.5 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-50 hover:text-amber-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                      onClick={(e) => handleItemClick(e, item)}
-                    >
-                      <span>{item.label}</span>
-                      {item.description && (
-                        <span className="text-[10px] font-normal text-slate-400">{item.description}</span>
-                      )}
-                    </a>
-                  </li>
-                ))}
+                {menuItems.map((item, idx) => {
+                  const itemHref = item.href || (item.id ? `/#${item.id}` : '');
+                  const isPageActive = Boolean(itemHref.startsWith('/') && !itemHref.startsWith('/#') && location.pathname === itemHref);
+                  return (
+                    <li key={idx} role="none">
+                      <a
+                        role="menuitem"
+                        href={itemHref}
+                        aria-label={item.ariaLabel || item.label}
+                        className={`flex items-center justify-between rounded-xs px-2.5 py-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                          isPageActive
+                            ? 'bg-amber-50 text-amber-800 font-bold'
+                            : 'text-slate-800 hover:bg-slate-50 hover:text-amber-700'
+                        }`}
+                        onClick={(e) => handleItemClick(e, item)}
+                      >
+                        <span>{item.label}</span>
+                        {item.description && (
+                          <span className="text-[10px] font-normal text-slate-400">{item.description}</span>
+                        )}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
 

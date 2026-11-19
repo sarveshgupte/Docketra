@@ -17,7 +17,14 @@ function serializeDocketDetailDto({ caseObject = {}, client = null, ownerTeam = 
       email: toStringOrNull(client.businessEmail || client.email),
       contact: toStringOrNull(client.primaryContactNumber || client.contact),
       isInternal: Boolean(caseObject.isInternal),
-    } : null,
+    } : (caseObject.clientSnapshot?.businessName || caseObject.clientName ? {
+      id: null,
+      clientId: toStringOrNull(caseObject.clientId),
+      name: toStringOrNull(caseObject.clientSnapshot?.businessName || caseObject.clientName),
+      email: null,
+      contact: null,
+      isInternal: Boolean(caseObject.isInternal),
+    } : null),
     category: (caseObject.category || caseObject.caseCategory) ? {
       id: toStringOrNull(caseObject.categoryId),
       name: toStringOrNull(caseObject.category || caseObject.caseCategory),
@@ -32,6 +39,15 @@ function serializeDocketDetailDto({ caseObject = {}, client = null, ownerTeam = 
     workbasket: (ownerTeam || routedTeam) ? {
       id: toStringOrNull(routedTeam?._id || ownerTeam?._id),
       name: toStringOrNull(routedTeam?.name || ownerTeam?.name),
+    } : (caseObject.workbasketName ? {
+      id: toStringOrNull(caseObject.workbasketId || caseObject.ownerTeamId),
+      name: toStringOrNull(caseObject.workbasketName),
+    } : null),
+    relatedEmployee: caseObject.relatedEmployeeUser ? {
+      xID: toStringOrNull(caseObject.relatedEmployeeUser.xID),
+      name: toStringOrNull(caseObject.relatedEmployeeUser.name),
+      email: toStringOrNull(caseObject.relatedEmployeeUser.email),
+      status: toStringOrNull(caseObject.relatedEmployeeUser.status),
     } : null,
     dates: {
       createdAt: caseObject.createdAt || null,

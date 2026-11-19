@@ -669,6 +669,7 @@ export const MarketingFooter = () => (
         </p>
 
         <nav aria-label="Footer legal navigation" className="flex flex-wrap items-center gap-x-6 gap-y-1 font-medium">
+          <Link to="/pricing" className="hover:text-slate-300 transition-colors whitespace-nowrap">Pricing</Link>
           <Link to="/terms" className="hover:text-slate-300 transition-colors whitespace-nowrap">Terms</Link>
           <Link to="/privacy" className="hover:text-slate-300 transition-colors whitespace-nowrap">Privacy</Link>
           <Link to="/security" className="hover:text-slate-300 transition-colors whitespace-nowrap">Security</Link>

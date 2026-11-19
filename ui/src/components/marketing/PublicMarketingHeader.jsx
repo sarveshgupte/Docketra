@@ -3,13 +3,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Container from '../layout/Container';
 import BubbleMenu from '../common/BubbleMenu';
 
-// REGRESSION TEST COMPATIBILITY LABELS: 'Workspace login', 'Start managing work', 'Pilot readiness'
+// REGRESSION TEST COMPATIBILITY LABELS: 'Workspace login', 'Start managing work', 'Pilot readiness', 'Pricing'
 const NAV_LINKS = [
   { label: 'Why', id: 'why' },
   { label: 'Product', id: 'product' },
   { label: 'Workflow', id: 'workflow' },
   { label: 'Pilot readiness', id: 'pilot-readiness' },
   { label: 'Trust', id: 'trust' },
+  { label: 'Pricing', href: '/pricing', ariaLabel: 'Pricing', description: 'Plans & firm pricing' },
 ];
 
 export default function PublicMarketingHeader() {
@@ -19,6 +20,13 @@ export default function PublicMarketingHeader() {
   const isFindWorkspacePage = location.pathname === '/find-workspace';
 
   const handleSectionNavigation = (itemOrId) => {
+    const href = typeof itemOrId === 'object' ? itemOrId?.href : null;
+    if (href && !href.startsWith('#') && !href.startsWith('/#')) {
+      navigate(href);
+      setIsOpen(false);
+      return;
+    }
+
     const sectionId = typeof itemOrId === 'string'
       ? itemOrId
       : (itemOrId?.id || itemOrId?.href?.replace(/^\/?#/, ''));
@@ -76,6 +84,7 @@ export default function PublicMarketingHeader() {
       <span>Workflow</span>
       <span>Pilot readiness</span>
       <span>Trust</span>
+      <span>Pricing</span>
     </div>
   );
 }

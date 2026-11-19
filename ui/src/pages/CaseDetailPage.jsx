@@ -342,7 +342,14 @@ export const CaseDetailPage = () => {
     }));
   }, [caseData?.assignableUsers, caseData?.users, user?.xID, user?.name, user?.email, workloadData]);
 
-  const clientName = caseData?.client?.businessName || caseInfo?.clientName || caseInfo?.businessName || '—';
+  const clientName = caseData?.client?.businessName
+    || caseData?.client?.name
+    || caseInfo?.clientName
+    || caseInfo?.businessName
+    || caseInfo?.clientSnapshot?.businessName
+    || caseData?.clientSnapshot?.businessName
+    || caseData?.docketDetail?.client?.name
+    || '—';
   const clientIdLabel = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '—';
   const linkedClientId = caseData?.client?.clientId || caseInfo?.clientId || caseData?.clientId || '';
   const clientMongoId = caseData?.client?._id || caseData?.client?.id || caseData?.clientMongoId || caseInfo?.clientMongoId || '';
@@ -377,12 +384,24 @@ export const CaseDetailPage = () => {
     clientId: clientMongoId || linkedClientId || caseInfo?.clientId || caseData?.clientId,
     caseId,
   });
-  const queueLabel = caseInfo?.workbasketName
+  const isHexObjectId = (val) => typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val.trim());
+  const rawQueueCandidate = caseInfo?.workbasketName
     || caseInfo?.queueName
     || caseInfo?.ownerTeamName
-    || caseInfo?.ownerTeamId
-    || caseInfo?.workbasket
-    || '—';
+    || caseInfo?.routedToTeamName
+    || caseData?.docketDetail?.workbasket?.name
+    || (typeof caseInfo?.workbasket === 'object' ? caseInfo.workbasket?.name : null)
+    || (typeof caseInfo?.workbasket === 'string' && !isHexObjectId(caseInfo.workbasket) ? caseInfo.workbasket : null);
+  const queueLabel = rawQueueCandidate || (caseInfo?.ownerTeamId || caseInfo?.workbasketId ? 'General Workbasket' : '—');
+
+  const relatedEmployeeUser = caseInfo?.relatedEmployeeUser || caseData?.relatedEmployeeUser || null;
+  const relatedEmployeeName = (() => {
+    if (!relatedEmployeeUser || typeof relatedEmployeeUser !== 'object') return null;
+    if (relatedEmployeeUser.status === 'not_applicable' || relatedEmployeeUser.status === 'none') return null;
+    const n = relatedEmployeeUser.name || (relatedEmployeeUser.email ? relatedEmployeeUser.email.split('@')[0] : null) || relatedEmployeeUser.xID;
+    if (!n || String(n).trim().toLowerCase() === 'user') return null;
+    return String(n).trim();
+  })();
   const dueDateLabel = caseInfo?.dueDate || caseInfo?.slaDueAt || caseInfo?.deadlineAt || caseInfo?.pendingUntil || caseInfo?.reopenDate || null;
 
   // Compute SLA remaining days: positive = days left, negative = overdue
@@ -1363,6 +1382,9 @@ export const CaseDetailPage = () => {
             <div className="docket-detail-hero__identity">
               <p className="docket-detail-hero__eyebrow">Active docket</p>
               <h1>{formatDocketId(caseInfo?.caseId || caseId)}</h1>
+              {caseInfo?.title && (
+                <p className="text-xs text-slate-600 font-normal mt-0.5">{caseInfo.title}</p>
+              )}
               <div className="docket-detail-hero__tags">
                 <span className="docket-tag docket-tag--category">
                   {categoryLabel || 'Uncategorised'}
@@ -1408,9 +1430,17 @@ export const CaseDetailPage = () => {
                 <strong>{displayAssigneeLabel || 'Unassigned'}</strong>
               </div>
               <div>
-                <span>WB</span>
-                <strong>{queueLabel || '—'}</strong>
+                <span>Workbasket</span>
+                <strong title={queueLabel}>{queueLabel || '—'}</strong>
               </div>
+              {relatedEmployeeName ? (
+                <div>
+                  <span>Related Employee</span>
+                  <strong className="text-blue-700 font-medium">
+                    👤 {relatedEmployeeName}
+                  </strong>
+                </div>
+              ) : null}
               <div>
                 <span>Due</span>
                 <strong>{dueDateLabel ? formatDateTime(dueDateLabel) : 'No date'}</strong>
@@ -1429,23 +1459,6 @@ export const CaseDetailPage = () => {
             </div>
           </div>
         </section>
-
-        {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
-        <CaseDetailAlerts
-          actionError={actionError}
-          caseInfo={caseInfo}
-          caseId={caseId}
-          user={user}
-          isViewOnlyMode={isViewOnlyMode}
-          canAdminMoveAssignedDocket={canAdminMoveAssignedDocket}
-          isMoveLockedByAnotherUser={isMoveLockedByAnotherUser}
-          lockOwnerLabel={lockOwnerLabel}
-          assigningCase={assigningCase}
-          onOpenAssignModal={() => setShowAssignModal(true)}
-          onMoveToWorkbasket={handleMoveToWorkbasket}
-          onViewUserWorklist={handleViewUserWorklist}
-          docketSlaStatus={docketSlaStatus}
-        />
 
         {/* Tab Selection Navigation */}
         <div className="docket-detail-tabs-wrap">
@@ -1512,7 +1525,11 @@ export const CaseDetailPage = () => {
           </div>
 
           {/* Column 2: Center Column (Workspace & Activity Stream) */}
-          <div className={activeTab !== CASE_DETAIL_TABS.ACTIVITY ? "xl:col-span-6 lg:col-span-8 flex flex-col gap-4 w-full order-2" : "xl:col-span-9 lg:col-span-8 flex flex-col gap-4 w-full order-2"}>
+          <div className={
+            activeTab === CASE_DETAIL_TABS.ACTIVITY || !shouldShowActions
+              ? "xl:col-span-9 lg:col-span-8 flex flex-col gap-4 w-full order-2"
+              : "xl:col-span-6 lg:col-span-8 flex flex-col gap-4 w-full order-2"
+          }>
             {actionConfirmation ? <div className="case-detail__confirmation">{actionConfirmation}</div> : null}
             <CaseDetailAlerts
               actionError={actionError}
@@ -1721,129 +1738,121 @@ export const CaseDetailPage = () => {
           </div>
 
           {/* Column 3: Right Column (Workflow & Actions) */}
-          {activeTab !== CASE_DETAIL_TABS.ACTIVITY && (
+          {activeTab !== CASE_DETAIL_TABS.ACTIVITY && shouldShowActions && (
             <div className="xl:col-span-3 lg:col-span-12 flex flex-col gap-4 w-full order-3 docket-side-rail">
               {/* Workflow Actions Card */}
-              {shouldShowActions ? (
-                <section className="case-card docket-action-panel">
-                  <div className="docket-section-heading">
-                    <div>
-                      <p className="docket-section-kicker">Next step</p>
-                      <h2>⚡ Workflow</h2>
-                    </div>
+              <section className="case-card docket-action-panel">
+                <div className="docket-section-heading">
+                  <div>
+                    <p className="docket-section-kicker">Next step</p>
+                    <h2>⚡ Workflow</h2>
                   </div>
-                  <div className="flex flex-col gap-3">
-                    {/* Primary Actions (Resolve / Submit, Resume / Unpend) */}
-                    <div className="flex flex-col gap-2">
-                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => ['resolve', 'submit'].includes(action.key)) && (
-                        <Button
-                          variant="primary"
-                          onClick={() => openActionModal('resolve')}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          {routedTeamCannotResolve ? 'Submit Routed Docket' : 'Resolve Docket'}
-                        </Button>
-                      )}
-                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'unpend') && (
-                        <Button
-                          variant="primary"
-                          onClick={() => setShowUnpendModal(true)}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          Resume Docket
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Secondary Actions (Pend, Route, File) */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'pend') && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => openActionModal('pend')}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          Pend
-                        </Button>
-                      )}
-                      {canRouteDocket && (
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowRouteModal(true)}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          Route
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      {showFileAction && (
-                        <Button
-                          variant="secondary"
-                          onClick={() => { setFileComment(''); setShowFileModal(true); }}
-                          disabled={actionInFlight}
-                          className="w-full justify-center shadow-sm hover:shadow"
-                        >
-                          File
-                        </Button>
-                      )}
-                    </div>
-
-                    {/* Admin Worklist Movement (if permitted) */}
-                    {canAdminMoveAssignedDocket && (
-                      <div className="border-t pt-3 mt-1 flex flex-col gap-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Admin Controls</span>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button variant="outline" size="small" onClick={() => setShowAssignModal(true)} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
-                            Move WL
-                          </Button>
-                          <Button variant="outline" size="small" onClick={handleMoveToWorkbasket} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
-                            Move WB
-                          </Button>
-                        </div>
-                      </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {/* Primary Actions (Resolve / Submit, Resume / Unpend) */}
+                  <div className="flex flex-col gap-2">
+                    {canPerformLifecycleActions && lifecycleQuickActions.some((action) => ['resolve', 'submit'].includes(action.key)) && (
+                      <Button
+                        variant="primary"
+                        onClick={() => openActionModal('resolve')}
+                        disabled={actionInFlight}
+                        className="w-full justify-center shadow-sm hover:shadow"
+                      >
+                        {routedTeamCannotResolve ? 'Submit Routed Docket' : 'Resolve Docket'}
+                      </Button>
                     )}
-
-                    {/* Force QC Review Checkbox */}
-                    {canPerformLifecycleActions && (
-                      <div className="border-t pt-3 mt-1">
-                        <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={forceQcReview}
-                            onChange={(e) => setForceQcReview(e.target.checked)}
-                            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                          />
-                          Force QC Review
-                        </label>
-                      </div>
-                    )}
-
-                    {/* Warnings for QC/Unassigned Workbasket */}
-                    {isUnassignedWorkbasket && (
-                      <div className="mt-2 text-xs text-amber-700 bg-amber-50/70 border border-amber-200/80 rounded-md p-2.5">
-                        This docket is currently unassigned in a workbasket. Pull/Assign it from Workbasket flow before personal worklist actions.
-                      </div>
-                    )}
-                    {isQcContext && (
-                      <div className="mt-2 text-xs text-blue-700 bg-blue-50/70 border border-blue-200/80 rounded-md p-2.5">
-                        QC context active. Use QC workbasket actions where appropriate.
-                      </div>
+                    {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'unpend') && (
+                      <Button
+                        variant="primary"
+                        onClick={() => setShowUnpendModal(true)}
+                        disabled={actionInFlight}
+                        className="w-full justify-center shadow-sm hover:shadow"
+                      >
+                        Resume Docket
+                      </Button>
                     )}
                   </div>
-                </section>
-              ) : (
-                <section className="case-card docket-action-panel">
-                  <p className="text-xs text-gray-500 italic text-center">
-                    {isViewOnlyMode ? 'View-only mode. Workflow actions are hidden.' : `This docket is in a terminal state (${lifecycleStatus}). Actions are locked.`}
-                  </p>
-                </section>
-              )}
+
+                  {/* Secondary Actions (Pend, Route, File) */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {canPerformLifecycleActions && lifecycleQuickActions.some((action) => action.key === 'pend') && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => openActionModal('pend')}
+                        disabled={actionInFlight}
+                        className="w-full justify-center shadow-sm hover:shadow"
+                      >
+                        Pend
+                      </Button>
+                    )}
+                    {canRouteDocket && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowRouteModal(true)}
+                        disabled={actionInFlight}
+                        className="w-full justify-center shadow-sm hover:shadow"
+                      >
+                        Route
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    {showFileAction && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => { setFileComment(''); setShowFileModal(true); }}
+                        disabled={actionInFlight}
+                        className="w-full justify-center shadow-sm hover:shadow"
+                      >
+                        File
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Admin Worklist Movement (if permitted) */}
+                  {canAdminMoveAssignedDocket && (
+                    <div className="border-t pt-3 mt-1 flex flex-col gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Admin Controls</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button variant="outline" size="small" onClick={() => setShowAssignModal(true)} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
+                          Move WL
+                        </Button>
+                        <Button variant="outline" size="small" onClick={handleMoveToWorkbasket} disabled={isMoveLockedByAnotherUser || assigningCase} className="w-full justify-center text-xs">
+                          Move WB
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Force QC Review Checkbox */}
+                  {canPerformLifecycleActions && (
+                    <div className="border-t pt-3 mt-1">
+                      <label className="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={forceQcReview}
+                          onChange={(e) => setForceQcReview(e.target.checked)}
+                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                        />
+                        Force QC Review
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Warnings for QC/Unassigned Workbasket */}
+                  {isUnassignedWorkbasket && (
+                    <div className="mt-2 text-xs text-amber-700 bg-amber-50/70 border border-amber-200/80 rounded-md p-2.5">
+                      This docket is currently unassigned in a workbasket. Pull/Assign it from Workbasket flow before personal worklist actions.
+                    </div>
+                  )}
+                  {isQcContext && (
+                    <div className="mt-2 text-xs text-blue-700 bg-blue-50/70 border border-blue-200/80 rounded-md p-2.5">
+                      QC context active. Use QC workbasket actions where appropriate.
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
           )}
         </div>

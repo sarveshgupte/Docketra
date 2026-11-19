@@ -521,7 +521,7 @@ export const FirmLoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50/80 via-white to-slate-50/80 text-slate-900 selection:bg-indigo-500/20">
+    <div className="auth-wrapper min-h-screen flex flex-col bg-gradient-to-b from-slate-50/80 via-white to-slate-50/80 text-slate-900 selection:bg-indigo-500/20">
       <SeoHead
         title={`${firmData.name || 'Firm'} • Sign In • Docketra`}
         description={`Secure sign-in for ${firmData.name || 'your firm'} workspace on Docketra.`}
@@ -571,7 +571,7 @@ export const FirmLoginPage = () => {
         </div>
 
         {/* The Card */}
-        <div className="w-full rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-xl shadow-slate-900/[0.04]">
+        <div className="auth-card w-full rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-xl shadow-slate-900/[0.04]">
           {successMessage && step === 'credentials' && (
             <div
               className={`mb-4 rounded-xl p-3 text-xs font-medium border ${
