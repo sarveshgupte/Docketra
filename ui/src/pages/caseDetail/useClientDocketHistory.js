@@ -18,9 +18,10 @@ export const useClientDocketHistory = ({ activeTab, clientId, caseId }) => {
       try {
         const response = await caseApi.getClientDockets(clientId);
         const rows = response.data || response.dockets || [];
-        const currentDocketId = String(caseId || '');
+        const normalizeId = (id) => String(id || '').replace(/[\s\-_]/g, '').toLowerCase();
+        const currentDocketNorm = normalizeId(caseId);
         setClientDockets(
-          rows.filter((row) => String(resolveDocketId(row) || '') !== currentDocketId),
+          rows.filter((row) => normalizeId(resolveDocketId(row)) !== currentDocketNorm),
         );
       } catch (_error) {
         setClientDockets([]);

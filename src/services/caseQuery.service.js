@@ -6,6 +6,7 @@ const { applyWorkModeFilter, normalizeWorkMode } = require('../utils/workType');
 const { serializeDocketDetailDto } = require('../serializers/docketDetail.serializer');
 const docketNarrativeStorage = require('./docketNarrativeStorage.service');
 const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
+const { resolveClientOwnershipFirmId } = require('./tenantIdentity.service');
 const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName clientSnapshot assignedTo assignedToXID assignedToName employeeXID employeeSnapshot relatedEmployeeUser createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 const CLOUD_NARRATIVE_READ_TIMEOUT_MS = 1200;
 const DEFAULT_RUNTIME_TENANT = 'default-client-runtime-tenant';
@@ -435,15 +436,35 @@ module.exports = (deps) => {
       const clientPromise = (async () => {
         let client = caseData.client || null;
         if (!client && caseData.clientId) {
-          try {
-            client = await ClientRepository.findByClientId(scopedFirmId, caseData.clientId, req.user.role);
-          } catch (error) {
-            log.warn('[GET_CASE] Failed to load fallback client', {
-              caseId: displayCaseId,
-              clientId: caseData.clientId,
-              message: error?.message,
-            });
+          const candidateFirmIds = [...new Set([
+            scopedFirmId,
+            ...(tenantFirmCandidates || []),
+          ])];
+          for (const cFirmId of candidateFirmIds) {
+            try {
+              client = await ClientRepository.findByClientId(cFirmId, caseData.clientId, req.user.role);
+              if (client) break;
+            } catch (_error) {
+              // try next candidate
+            }
           }
+          if (!client) {
+            try {
+              const ownershipFirmId = await resolveClientOwnershipFirmId(scopedFirmId).catch(() => null);
+              if (ownershipFirmId && !candidateFirmIds.includes(String(ownershipFirmId))) {
+                client = await ClientRepository.findByClientId(ownershipFirmId, caseData.clientId, req.user.role);
+              }
+            } catch (_err) {
+              // ignore
+            }
+          }
+        }
+        if (!client && (caseObject.clientSnapshot?.businessName || caseObject.clientName)) {
+          client = {
+            clientId: caseData.clientId || caseObject.clientId,
+            businessName: caseObject.clientSnapshot?.businessName || caseObject.clientName,
+            status: 'ACTIVE',
+          };
         }
         return client;
       })();
@@ -463,12 +484,46 @@ module.exports = (deps) => {
           ? User.findOne({ xID: caseObject.assignedToXID, firmId: scopedFirmId }).select('_id name email xID').maxTimeMS(8000).lean()
           : Promise.resolve(null));
 
-      const ownerTeamPromise = caseObject.ownerTeamId
-        ? Team.findOne({ _id: caseObject.ownerTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
+      const targetOwnerTeamId = caseObject.ownerTeamId || caseObject.workbasketId || null;
+      const ownerTeamPromise = targetOwnerTeamId
+        ? (async () => {
+            const candidateFirmIds = [...new Set([scopedFirmId, ...(tenantFirmCandidates || [])])];
+            let team = null;
+            try {
+              team = await Team.findOne({ _id: targetOwnerTeamId, firmId: { $in: candidateFirmIds } }).select('_id name').maxTimeMS(8000).lean();
+            } catch (_err) {
+              // ignore
+            }
+            if (!team) {
+              try {
+                team = await Team.findById(targetOwnerTeamId).select('_id name').maxTimeMS(8000).lean();
+              } catch (_err) {
+                // ignore
+              }
+            }
+            return team;
+          })()
         : Promise.resolve(null);
 
-      const routedTeamPromise = caseObject.routedToTeamId
-        ? Team.findOne({ _id: caseObject.routedToTeamId, firmId: scopedFirmId }).select('_id name').maxTimeMS(8000).lean()
+      const targetRoutedTeamId = caseObject.routedToTeamId || null;
+      const routedTeamPromise = targetRoutedTeamId
+        ? (async () => {
+            const candidateFirmIds = [...new Set([scopedFirmId, ...(tenantFirmCandidates || [])])];
+            let team = null;
+            try {
+              team = await Team.findOne({ _id: targetRoutedTeamId, firmId: { $in: candidateFirmIds } }).select('_id name').maxTimeMS(8000).lean();
+            } catch (_err) {
+              // ignore
+            }
+            if (!team) {
+              try {
+                team = await Team.findById(targetRoutedTeamId).select('_id name').maxTimeMS(8000).lean();
+              } catch (_err) {
+                // ignore
+              }
+            }
+            return team;
+          })()
         : Promise.resolve(null);
 
       const invoicesPromise = Invoice.find(
@@ -619,8 +674,11 @@ module.exports = (deps) => {
           history,
           auditLog, // PR #45: Include audit log for UI
           // PR #45: Include access mode information for UI
+          clientName: client?.businessName || caseObject.clientSnapshot?.businessName || caseObject.clientName || null,
           ownerTeamName: ownerTeam?.name || null,
           routedToTeamName: routedTeam?.name || null,
+          workbasketName: ownerTeam?.name || routedTeam?.name || caseObject.workbasketName || null,
+          queueName: ownerTeam?.name || routedTeam?.name || caseObject.queueName || null,
           invoices: docketInvoices,
           accessMode: {
             isViewOnlyMode,
