@@ -77,7 +77,9 @@ let queriedFirmIds = null;
 
 const CaseMock = {
   find: () => mockQuery(mockCases),
+  findOne: () => mockQuery(null),
   countDocuments: async () => mockCases.length,
+  updateMany: async () => ({ acknowledged: true }),
 };
 
 const ClientMock = {

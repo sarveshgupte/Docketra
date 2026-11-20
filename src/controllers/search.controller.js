@@ -12,6 +12,7 @@ const caseActionService = require('../services/caseAction.service');
 const { reopenDuePending } = require('../services/docketWorkflow.service');
 const { canViewUserWorklist } = require('../services/worklistAccess.service');
 const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.service');
+const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
 const log = require('../utils/log');
 const { logSlowEndpoint } = require('../utils/slowLog');
 const SLOW_WORKLIST_QUERY_MS = 400;
@@ -677,14 +678,56 @@ const employeeWorklist = async (req, res) => {
         firmId: { $in: candidateFirmIds },
         clientId: { $in: missingClientNameIds },
       })
-        .select('clientId businessName')
+        .select('clientId businessName name legalName clientFactSheet profileRef isDefaultClient firmId')
         .lean();
 
-      clientNameByClientId = new Map(
+      const resolvedEntries = await Promise.all(
         (clientDocs || [])
           .filter((client) => client?.clientId)
-          .map((client) => [String(client.clientId).trim(), client.businessName || null]),
+          .map(async (client) => {
+            let name = await clientProfileStorageService.resolveClientLegalName({
+              firmId: client.firmId || firmId,
+              client,
+              timeoutMs: 2500,
+            }).catch(() => null);
+
+            if (name && typeof Case.updateMany === 'function') {
+              Case.updateMany(
+                {
+                  firmId: { $in: candidateFirmIds },
+                  clientId: client.clientId,
+                  $or: [{ clientName: null }, { clientName: '' }],
+                },
+                {
+                  $set: {
+                    clientName: name,
+                    'clientSnapshot.businessName': name,
+                  },
+                }
+              ).catch(() => {});
+            }
+            return [String(client.clientId).trim(), name || null];
+          })
       );
+
+      clientNameByClientId = new Map(resolvedEntries);
+
+      for (const missingId of missingClientNameIds) {
+        if (!clientNameByClientId.get(missingId) && typeof Case.findOne === 'function') {
+          const sibling = await Case.findOne({
+            firmId: { $in: candidateFirmIds },
+            clientId: missingId,
+            $or: [
+              { clientName: { $exists: true, $nin: [null, ''] } },
+              { 'clientSnapshot.businessName': { $exists: true, $nin: [null, ''] } },
+            ],
+          }).select('clientName clientSnapshot').lean().catch(() => null);
+          const siblingName = sibling?.clientName || sibling?.clientSnapshot?.businessName || null;
+          if (siblingName) {
+            clientNameByClientId.set(missingId, siblingName);
+          }
+        }
+      }
     }
     
     // Log case list view for audit
@@ -1012,14 +1055,56 @@ const globalWorklist = async (req, res) => {
         firmId: { $in: candidateFirmIds },
         clientId: { $in: missingClientNameIds },
       })
-        .select('clientId businessName')
+        .select('clientId businessName name legalName clientFactSheet profileRef isDefaultClient firmId')
         .lean();
 
-      clientNameByClientId = new Map(
+      const resolvedEntries = await Promise.all(
         (clientDocs || [])
           .filter((client) => client?.clientId)
-          .map((client) => [String(client.clientId).trim(), client.businessName || null]),
+          .map(async (client) => {
+            let name = await clientProfileStorageService.resolveClientLegalName({
+              firmId: client.firmId || firmId,
+              client,
+              timeoutMs: 2500,
+            }).catch(() => null);
+
+            if (name && typeof Case.updateMany === 'function') {
+              Case.updateMany(
+                {
+                  firmId: { $in: candidateFirmIds },
+                  clientId: client.clientId,
+                  $or: [{ clientName: null }, { clientName: '' }],
+                },
+                {
+                  $set: {
+                    clientName: name,
+                    'clientSnapshot.businessName': name,
+                  },
+                }
+              ).catch(() => {});
+            }
+            return [String(client.clientId).trim(), name || null];
+          })
       );
+
+      clientNameByClientId = new Map(resolvedEntries);
+
+      for (const missingId of missingClientNameIds) {
+        if (!clientNameByClientId.get(missingId) && typeof Case.findOne === 'function') {
+          const sibling = await Case.findOne({
+            firmId: { $in: candidateFirmIds },
+            clientId: missingId,
+            $or: [
+              { clientName: { $exists: true, $nin: [null, ''] } },
+              { 'clientSnapshot.businessName': { $exists: true, $nin: [null, ''] } },
+            ],
+          }).select('clientName clientSnapshot').lean().catch(() => null);
+          const siblingName = sibling?.clientName || sibling?.clientSnapshot?.businessName || null;
+          if (siblingName) {
+            clientNameByClientId.set(missingId, siblingName);
+          }
+        }
+      }
     }
     
     // Calculate SLA days remaining for each case

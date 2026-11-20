@@ -23,6 +23,16 @@ const SENSITIVE_TOP_LEVEL_FIELDS = [
   'clientFactSheet',
 ];
 
+const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
+const _profileCache = new Map();
+
+function _getProfileCacheKey(firmId, client) {
+  const fId = String(firmId || client?.firmId || '').trim();
+  const cId = String(client?.clientId || client?._id || '').trim();
+  const ver = String(client?.profileRef?.version || '');
+  return `${fId}:${cId}:${ver}`;
+}
+
 function sha256(value) {
   return crypto.createHash('sha256').update(String(value || ''), 'utf8').digest('hex');
 }
@@ -263,25 +273,68 @@ class ClientProfileStorageService {
     redactSensitiveFields(client);
     await client.save();
 
+    _profileCache.delete(_getProfileCacheKey(firmId, client));
+
     return { ref: client.profileRef, payload };
   }
 
   async getClientProfile({ firmId, client }) {
     if (!client?.profileRef?.provider) return null;
+    const cacheKey = _getProfileCacheKey(firmId, client);
+    const cached = _profileCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+
     const profileRef = client.profileRef;
+    let data = null;
 
     if (profileRef.mode === 'managed_fallback' || profileRef.provider === 'docketra_managed') {
       const backend = getManagedFallbackBackend();
       if (!backend) return null;
-      return readProfileFromManagedFallback(backend, profileRef.objectKey);
+      data = await readProfileFromManagedFallback(backend, profileRef.objectKey);
+    } else {
+      const backend = await resolveStorageBackend(firmId);
+      if (backend.type !== 'firm_connected') return null;
+      data = await readProfileFromGoogle(backend.provider, profileRef.fileId);
     }
 
-    const backend = await resolveStorageBackend(firmId);
-    if (backend.type !== 'firm_connected') return null;
-    return readProfileFromGoogle(backend.provider, profileRef.fileId);
+    if (data) {
+      if (_profileCache.size > 1000) {
+        const oldestKey = _profileCache.keys().next().value;
+        _profileCache.delete(oldestKey);
+      }
+      _profileCache.set(cacheKey, { data, expiresAt: Date.now() + PROFILE_CACHE_TTL_MS });
+    }
+
+    return data;
+  }
+
+  async resolveClientLegalName({ firmId, client, timeoutMs = 2500 } = {}) {
+    if (!client) return null;
+    let name = client.businessName || client.name || client.legalName || client.clientFactSheet?.basicInfo?.clientName || null;
+    if (name) return name;
+    if (client.profileRef) {
+      try {
+        const fetchPromise = this.getClientProfile({ firmId: client.firmId || firmId, client });
+        const profile = timeoutMs > 0
+          ? await Promise.race([
+              fetchPromise,
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Profile read timeout')), timeoutMs)),
+            ]).catch(() => null)
+          : await fetchPromise.catch(() => null);
+        if (profile?.profile?.legalName) {
+          return profile.profile.legalName;
+        }
+      } catch (_e) {
+        // ignore
+      }
+    }
+    return null;
   }
 
   async updateClientProfile({ firmId, client, partialProfileInput = {}, actorXID }) {
+    _profileCache.delete(_getProfileCacheKey(firmId, client));
     await requireWritableBusinessStorage({ firmId, requestId: null, actorXid: actorXID || null, targetPathCategory: 'client_profile' });
     let current = null;
     try {

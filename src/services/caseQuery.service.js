@@ -7,6 +7,7 @@ const { serializeDocketDetailDto } = require('../serializers/docketDetail.serial
 const docketNarrativeStorage = require('./docketNarrativeStorage.service');
 const commentHistoryNarrativeStorage = require('./commentHistoryNarrativeStorage.service');
 const { resolveClientOwnershipFirmId } = require('./tenantIdentity.service');
+const { clientProfileStorageService } = require('./clientProfileStorage.service');
 const CASE_LIST_PROJECTION = 'caseId caseNumber caseName title status category subcategory caseSubCategory priority clientId clientName clientSnapshot assignedTo assignedToXID assignedToName employeeXID employeeSnapshot relatedEmployeeUser createdBy createdByXID createdAt updatedAt dueDate slaDueAt isInternal workType lifecycle state pendingUntil ownerTeamId routedToTeamId';
 const CLOUD_NARRATIVE_READ_TIMEOUT_MS = 1200;
 const DEFAULT_RUNTIME_TENANT = 'default-client-runtime-tenant';
@@ -459,6 +460,22 @@ module.exports = (deps) => {
             }
           }
         }
+        if (client) {
+          let resolvedBusinessName = await clientProfileStorageService.resolveClientLegalName({
+            firmId: client.firmId || scopedFirmId,
+            client,
+            timeoutMs: 3000,
+          }).catch(() => null);
+
+          if (!resolvedBusinessName) {
+            resolvedBusinessName = caseObject.clientSnapshot?.businessName || caseObject.clientName || null;
+          }
+          if (resolvedBusinessName) {
+            client.businessName = resolvedBusinessName;
+            client.name = client.name || resolvedBusinessName;
+            client.legalName = client.legalName || resolvedBusinessName;
+          }
+        }
         if (!client && (caseObject.clientSnapshot?.businessName || caseObject.clientName)) {
           client = {
             clientId: caseData.clientId || caseObject.clientId,
@@ -626,6 +643,26 @@ module.exports = (deps) => {
       res.removeHeader('ETag');
 
       log.info('STEP 3 before response');
+      const resolvedDetailClientName = client?.businessName
+        || client?.name
+        || client?.legalName
+        || client?.clientFactSheet?.basicInfo?.clientName
+        || caseObject.clientSnapshot?.businessName
+        || caseObject.clientName
+        || null;
+
+      if (resolvedDetailClientName && (!caseObject.clientName || !caseObject.clientSnapshot?.businessName) && typeof Case.updateOne === 'function') {
+        Case.updateOne(
+          { _id: caseObject._id },
+          {
+            $set: {
+              ...(!caseObject.clientName ? { clientName: resolvedDetailClientName } : {}),
+              ...(!caseObject.clientSnapshot?.businessName ? { 'clientSnapshot.businessName': resolvedDetailClientName } : {}),
+            },
+          }
+        ).catch(() => {});
+      }
+
       const docketDetail = serializeDocketDetailDto({
         caseObject,
         client,
@@ -663,7 +700,7 @@ module.exports = (deps) => {
           } : null)),
           client: client ? {
             clientId: client.clientId,
-            businessName: client.businessName,
+            businessName: resolvedDetailClientName || client.businessName || null,
             primaryContactNumber: client.primaryContactNumber,
             businessEmail: client.businessEmail,
             status: client.status, // Include status for inactive label display
@@ -674,7 +711,7 @@ module.exports = (deps) => {
           history,
           auditLog, // PR #45: Include audit log for UI
           // PR #45: Include access mode information for UI
-          clientName: client?.businessName || caseObject.clientSnapshot?.businessName || caseObject.clientName || null,
+          clientName: resolvedDetailClientName,
           ownerTeamName: ownerTeam?.name || null,
           routedToTeamName: routedTeam?.name || null,
           workbasketName: ownerTeam?.name || routedTeam?.name || caseObject.workbasketName || null,

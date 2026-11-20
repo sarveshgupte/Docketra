@@ -779,6 +779,20 @@ module.exports = (deps) => {
           slaState.slaDueAt = resolvedDueDate;
         }
 
+        let resolvedClientName = client?.businessName || client?.name || client?.legalName || client?.clientFactSheet?.basicInfo?.clientName || null;
+        if (!resolvedClientName && client) {
+          try {
+            const { clientProfileStorageService } = require('./clientProfileStorage.service');
+            resolvedClientName = await clientProfileStorageService.resolveClientLegalName({
+              firmId,
+              client,
+              timeoutMs: 2500,
+            }).catch(() => null);
+          } catch (_err) {
+            // ignore
+          }
+        }
+
         const newCase = new Case({
           title: normalizedTitle,
           description: normalizedDescription,
@@ -789,10 +803,10 @@ module.exports = (deps) => {
           caseSubCategory: subcategoryDoc?.name || caseSubCategory || '',
           subcategory: subcategoryDoc?.name || caseSubCategory || '',
           clientId: finalClientId,
-          clientName: client?.businessName || client?.name || client?.clientFactSheet?.basicInfo?.clientName || null,
+          clientName: resolvedClientName || null,
           clientSnapshot: {
             clientId: finalClientId,
-            businessName: client?.businessName || client?.name || client?.clientFactSheet?.basicInfo?.clientName || '',
+            businessName: resolvedClientName || '',
             primaryContactNumber: client?.primaryContactNumber || '',
             businessEmail: client?.businessEmail || '',
           },

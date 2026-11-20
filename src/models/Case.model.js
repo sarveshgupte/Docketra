@@ -1475,7 +1475,7 @@ caseSchema.pre('validate', async function() {
   
   // If this is a new case and clientId is provided, fetch and snapshot the client
   // This preserves client data at the time of case creation for audit trail
-  if (this.isNew && this.clientId && (!this.clientSnapshot || !this.clientName)) {
+  if (this.isNew && this.clientId && (!this.clientSnapshot?.businessName || !this.clientName)) {
     const Client = mongoose.model('Client');
     const { resolveClientOwnershipFirmId } = require('../services/tenantIdentity.service');
     const ownershipFirmId = await resolveClientOwnershipFirmId(this.firmId).catch(() => null);
@@ -1486,13 +1486,29 @@ caseSchema.pre('validate', async function() {
     }
     const client = await clientQuery.lean();
     if (client) {
-      const resolvedBusinessName = client.businessName || client.name || client.clientFactSheet?.basicInfo?.clientName || '';
-      if (!this.clientSnapshot) {
+      let resolvedBusinessName = client.businessName || client.name || client.legalName || client.clientFactSheet?.basicInfo?.clientName || '';
+      if (!resolvedBusinessName && client.profileRef) {
+        try {
+          const { clientProfileStorageService } = require('../services/clientProfileStorage.service');
+          const profileName = await clientProfileStorageService.resolveClientLegalName({
+            firmId: this.firmId,
+            client,
+            timeoutMs: 2500,
+          }).catch(() => null);
+          if (profileName) {
+            resolvedBusinessName = profileName;
+          }
+        } catch (_err) {
+          // ignore
+        }
+      }
+      if (!this.clientSnapshot || !this.clientSnapshot.businessName) {
         this.clientSnapshot = {
+          ...(this.clientSnapshot || {}),
           clientId: client.clientId,
           businessName: resolvedBusinessName,
-          primaryContactNumber: client.primaryContactNumber,
-          businessEmail: client.businessEmail,
+          primaryContactNumber: client.primaryContactNumber || this.clientSnapshot?.primaryContactNumber,
+          businessEmail: client.businessEmail || this.clientSnapshot?.businessEmail,
         };
       }
       if (!this.clientName && resolvedBusinessName) {

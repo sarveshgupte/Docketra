@@ -564,7 +564,7 @@ export const WorkbasketPage = () => {
       headerClassName: 'min-w-[12rem] whitespace-nowrap',
       cellClassName: 'min-w-[12rem] whitespace-nowrap',
       contentClassName: 'truncate',
-      render: (caseItem) => caseItem.clientName || caseItem.client?.businessName || caseItem.clientSnapshot?.businessName || '—',
+      render: (caseItem) => caseItem.clientName || caseItem.client?.businessName || caseItem.client?.name || caseItem.client?.legalName || caseItem.clientSnapshot?.businessName || '—',
     },
     {
       key: 'category',

@@ -344,6 +344,8 @@ export const CaseDetailPage = () => {
 
   const clientName = caseData?.client?.businessName
     || caseData?.client?.name
+    || caseData?.client?.legalName
+    || caseData?.client?.clientFactSheet?.basicInfo?.clientName
     || caseInfo?.clientName
     || caseInfo?.businessName
     || caseInfo?.clientSnapshot?.businessName
@@ -1407,7 +1409,7 @@ export const CaseDetailPage = () => {
                   {isInternalWork ? (
                     <span className="text-gray-500 font-normal">Internal Work</span>
                   ) : (
-                    linkedClientRoute ? (
+                    linkedClientRoute && clientName && clientName !== '—' ? (
                       <Link to={linkedClientRoute} className="case-detail-table__link font-semibold hover:underline">
                         {clientName}
                       </Link>

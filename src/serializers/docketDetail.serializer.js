@@ -10,21 +10,21 @@ function serializeDocketDetailDto({ caseObject = {}, client = null, ownerTeam = 
     docketId: toStringOrNull(caseObject.caseId || caseObject.caseNumber || caseObject._id),
     title: toStringOrNull(caseObject.title || caseObject.caseName),
     description: toStringOrNull(caseObject.description),
-    client: client ? {
-      id: toStringOrNull(client._id),
-      clientId: toStringOrNull(client.clientId),
-      name: toStringOrNull(client.businessName || client.name),
-      email: toStringOrNull(client.businessEmail || client.email),
-      contact: toStringOrNull(client.primaryContactNumber || client.contact),
+    client: (client || caseObject.clientId || caseObject.clientName || caseObject.clientSnapshot?.businessName) ? {
+      id: toStringOrNull(client?._id),
+      clientId: toStringOrNull(client?.clientId || caseObject.clientId),
+      name: toStringOrNull(
+        client?.businessName
+        || client?.name
+        || client?.legalName
+        || client?.clientFactSheet?.basicInfo?.clientName
+        || caseObject.clientSnapshot?.businessName
+        || caseObject.clientName
+      ),
+      email: toStringOrNull(client?.businessEmail || client?.email || caseObject.clientSnapshot?.businessEmail),
+      contact: toStringOrNull(client?.primaryContactNumber || client?.contact || caseObject.clientSnapshot?.primaryContactNumber),
       isInternal: Boolean(caseObject.isInternal),
-    } : (caseObject.clientSnapshot?.businessName || caseObject.clientName ? {
-      id: null,
-      clientId: toStringOrNull(caseObject.clientId),
-      name: toStringOrNull(caseObject.clientSnapshot?.businessName || caseObject.clientName),
-      email: null,
-      contact: null,
-      isInternal: Boolean(caseObject.isInternal),
-    } : null),
+    } : null,
     category: (caseObject.category || caseObject.caseCategory) ? {
       id: toStringOrNull(caseObject.categoryId),
       name: toStringOrNull(caseObject.category || caseObject.caseCategory),

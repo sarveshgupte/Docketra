@@ -99,4 +99,42 @@ const { serializeDocketDetailDto } = require('../src/serializers/docketDetail.se
   assert.equal(cleanQueueLabel('HR Operations'), 'HR Operations', 'Human-readable name should be preserved');
 }
 
-console.log('✓ All docket view UX and detail resolution tests passed!');
+// 5. Test client resolution when client.businessName is null (BYOS data-residency isolation)
+{
+  const dtoWithRedactedMongoBusinessName = serializeDocketDetailDto({
+    caseObject: {
+      caseId: 'DOCKET-20261119-00001',
+      clientId: 'C000002',
+      clientSnapshot: { businessName: 'Cloud Profile Solutions Pvt Ltd' },
+    },
+    client: {
+      _id: '507f1f77bcf86cd799439012',
+      clientId: 'C000002',
+      businessName: null, // Mongo stores null for BYOS clients
+      legalName: 'Cloud Profile Solutions Pvt Ltd',
+    },
+  });
+
+  assert.equal(dtoWithRedactedMongoBusinessName.client?.name, 'Cloud Profile Solutions Pvt Ltd', 'client.name should resolve from legalName when businessName is null');
+}
+
+// 6. Test clientProfileStorageService.resolveClientLegalName
+(async () => {
+  const { clientProfileStorageService } = require('../src/services/clientProfileStorage.service');
+  
+  // Case A: Client already has legalName or businessName
+  const resolvedDirect = await clientProfileStorageService.resolveClientLegalName({
+    firmId: 'firm-1',
+    client: { clientId: 'C000002', legalName: 'Apex Advisory LLP' },
+  });
+  assert.equal(resolvedDirect, 'Apex Advisory LLP');
+
+  // Case B: Client has clientFactSheet basicInfo
+  const resolvedCfs = await clientProfileStorageService.resolveClientLegalName({
+    firmId: 'firm-1',
+    client: { clientId: 'C000002', businessName: null, clientFactSheet: { basicInfo: { clientName: 'CFS Named Firm' } } },
+  });
+  assert.equal(resolvedCfs, 'CFS Named Firm');
+
+  console.log('✓ All docket view UX and detail resolution tests passed!');
+})();
