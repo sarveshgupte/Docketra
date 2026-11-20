@@ -1,9 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Badge } from '../../components/common/Badge';
 import { formatDateTime } from '../../utils/formatDateTime';
-
-const isHexObjectId = (val) => typeof val === 'string' && /^[0-9a-fA-F]{24}$/.test(val.trim());
 
 export const CaseDetailSummaryHeader = ({
   caseInfo,
@@ -33,12 +30,6 @@ export const CaseDetailSummaryHeader = ({
     return details ? `${name} (${details})` : name;
   })();
 
-  const cleanQueueLabel = (() => {
-    if (!queueLabel || queueLabel === '—') return 'General Workbasket';
-    if (isHexObjectId(queueLabel)) return 'General Workbasket';
-    return queueLabel;
-  })();
-
   return (
     <section className="case-card rounded-md border border-slate-200/90 bg-white p-4 shadow-xs" aria-label="Docket summary header">
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -56,33 +47,10 @@ export const CaseDetailSummaryHeader = ({
 
       <dl className="flex flex-col divide-y divide-slate-100 text-xs mt-1">
         <div className="flex items-start justify-between py-2 gap-3">
-          <dt className="text-slate-500 font-medium text-[11px] shrink-0">Category</dt>
-          <dd className="text-slate-900 font-semibold text-right text-xs break-words">{categoryLabel || '—'}</dd>
-        </div>
-
-        <div className="flex items-start justify-between py-2 gap-3">
-          <dt className="text-slate-500 font-medium text-[11px] shrink-0">Subcategory</dt>
-          <dd className="text-slate-900 font-semibold text-right text-xs break-words">{subcategoryLabel || '—'}</dd>
-        </div>
-
-        <div className="flex items-start justify-between py-2 gap-3">
-          <dt className="text-slate-500 font-medium text-[11px] shrink-0">Client</dt>
-          <dd className="text-slate-900 font-semibold text-right text-xs break-words">
-            {isInternalWork ? (
-              <span className="text-slate-500 font-normal">Internal work</span>
-            ) : linkedClientRoute && clientName && clientName !== '—' ? (
-              <Link to={linkedClientRoute} className="text-blue-700 hover:text-blue-900 hover:underline">
-                {clientName}
-              </Link>
-            ) : (
-              clientName || '—'
-            )}
+          <dt className="text-slate-500 font-medium text-[11px] shrink-0">SLA / TAT</dt>
+          <dd className="text-slate-900 font-semibold text-right text-xs">
+            {slaDaysLabel && slaDaysLabel !== '-' ? `${slaDaysLabel} day(s)` : 'Not configured'}
           </dd>
-        </div>
-
-        <div className="flex items-start justify-between py-2 gap-3">
-          <dt className="text-slate-500 font-medium text-[11px] shrink-0">Assignee</dt>
-          <dd className="text-slate-900 font-semibold text-right text-xs break-words">{assigneeLabel || 'Unassigned'}</dd>
         </div>
 
         {relatedEmployeeUserLabel && (
@@ -100,20 +68,6 @@ export const CaseDetailSummaryHeader = ({
             <dd className="text-slate-900 font-semibold text-right text-xs break-words">{employeeLabel}</dd>
           </div>
         )}
-
-        <div className="flex items-start justify-between py-2 gap-3">
-          <dt className="text-slate-500 font-medium text-[11px] shrink-0">Workbasket</dt>
-          <dd className="text-slate-900 font-semibold text-right text-xs break-words" title={cleanQueueLabel}>
-            {cleanQueueLabel}
-          </dd>
-        </div>
-
-        <div className="flex items-start justify-between py-2 gap-3">
-          <dt className="text-slate-500 font-medium text-[11px] shrink-0">SLA / TAT</dt>
-          <dd className="text-slate-900 font-semibold text-right text-xs">
-            {slaDaysLabel && slaDaysLabel !== '-' ? `${slaDaysLabel} day(s)` : 'Not configured'}
-          </dd>
-        </div>
 
         <div className="flex items-start justify-between py-2 gap-3">
           <dt className="text-slate-500 font-medium text-[11px] shrink-0">Created</dt>

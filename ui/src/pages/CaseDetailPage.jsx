@@ -1502,6 +1502,8 @@ export const CaseDetailPage = () => {
                 <button
                   type="button"
                   onClick={() => runGuardedAction(() => openSidebar('attachments'), 'Unable to open Attachments panel right now.')}
+                  aria-label="Open attachments panel"
+                  title="Docket Attachments"
                   className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors cursor-pointer"
                 >
                   Files
@@ -1509,6 +1511,8 @@ export const CaseDetailPage = () => {
                 <button
                   type="button"
                   onClick={() => runGuardedAction(() => openSidebar('history'), 'Unable to open Audit History panel right now.')}
+                  aria-label="Open audit history"
+                  title="Audit History"
                   className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors cursor-pointer"
                 >
                   Audit Log
@@ -1517,6 +1521,8 @@ export const CaseDetailPage = () => {
                   <button
                     type="button"
                     onClick={() => runGuardedAction(() => setCloneModalOpen(true), 'Unable to open clone docket right now.')}
+                    aria-label="Clone docket"
+                    title="Clone Docket"
                     className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors cursor-pointer"
                   >
                     <span>⧉</span> Clone
