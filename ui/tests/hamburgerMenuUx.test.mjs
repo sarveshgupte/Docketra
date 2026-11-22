@@ -68,4 +68,8 @@ test('BubbleMenu CSS: Clean 3-bar morph, reduced motion, and compact 36px button
   // 36px compact button size matching header actions
   assert.ok(css.includes('width: 36px'), 'Toggle button width should match standard header action height (36px)');
   assert.ok(css.includes('height: 36px'), 'Toggle button height should match standard header action height (36px)');
+
+  // Responsive desktop hiding
+  assert.ok(css.includes('@media (min-width: 1024px)'), 'CSS must define desktop media query for toggle hiding');
+  assert.ok(css.includes('display: none'), 'CSS must explicitly hide hamburger toggle on desktop viewports');
 });

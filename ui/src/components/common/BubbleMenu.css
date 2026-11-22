@@ -47,6 +47,13 @@
   transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* Hide hamburger menu toggle on desktop viewports (>= 1024px) where inline navigation is rendered */
+@media (min-width: 1024px) {
+  .bubble-menu .toggle-bubble.menu-btn {
+    display: none !important;
+  }
+}
+
 .bubble-menu .toggle-bubble.menu-btn:hover {
   background-color: #f8fafc;
   border-color: #cbd5e1;
