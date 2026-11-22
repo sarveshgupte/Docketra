@@ -9,6 +9,7 @@ import { spacingClasses } from '../../theme/tokens';
 import { ROUTES } from '../../constants/routes';
 import { PilotAgreementModal, PILOT_TERMS_VERSION } from '../../components/marketing/PilotAgreementModal';
 import { SeoHead } from '../../components/common/SeoHead';
+import { DocketraLogo } from '../../components/common/DocketraLogo';
 import { API_BASE_URL } from '../../utils/constants';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,11 +42,12 @@ const getWorkspaceSlugPreview = (firmName) => {
 };
 
 const SignupStepDots = ({ step }) => (
-  <div className="mt-5 flex items-center justify-center gap-2" aria-label={`Signup step ${step} of 2`}>
+  <div className="mt-5 flex items-center justify-center gap-2" role="group" aria-label={`Signup progress: step ${step} of 2`}>
     {[1, 2].map((item) => (
       <span
         key={item}
-        className={`h-1.5 rounded transition-all ${
+        aria-hidden="true"
+        className={`h-1.5 rounded transition-all duration-200 ${
           item === step ? 'w-8 bg-slate-950' : 'w-4 bg-slate-200'
         }`}
       />
@@ -86,6 +88,14 @@ export default function Signup() {
   const [agreedToPilotTerms, setAgreedToPilotTerms] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState('pilot');
+  const [copiedField, setCopiedField] = useState(null);
+
+  const handleCopy = (text, field) => {
+    if (!text) return;
+    navigator.clipboard?.writeText?.(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const openLegalModal = (tab = 'pilot') => {
     setLegalModalTab(tab);
@@ -117,8 +127,26 @@ export default function Signup() {
     phone: '',
   });
 
+  const passwordCriteria = {
+    minLength: (form.password || '').length >= 8,
+    hasCase: /[a-z]/.test(form.password || '') && /[A-Z]/.test(form.password || ''),
+    hasNumber: /\d/.test(form.password || ''),
+    hasSpecial: /[^A-Za-z\d]/.test(form.password || ''),
+  };
+
   const onFormChange = (event) => {
     const { name, value } = event.target;
+    if (name === 'phone') {
+      let digits = value.replace(/\D/g, '');
+      if (digits.length === 12 && digits.startsWith('91')) {
+        digits = digits.slice(2);
+      }
+      digits = digits.slice(0, 10);
+      setForm((prev) => ({ ...prev, phone: digits }));
+      setErrors((prev) => ({ ...prev, phone: '' }));
+      setApiError('');
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
     setApiError('');
@@ -366,16 +394,8 @@ export default function Signup() {
             canonicalPath="/signup"
           />
           <section className="hidden lg:block" aria-label="Workspace signup success">
-            <Link to="/" className="inline-flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-950">
-              <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
-              </svg>
-              <div className="flex flex-col leading-none text-left">
-                <span className="text-lg font-black text-slate-900 tracking-tight">Docketra</span>
-                <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
-              </div>
+            <Link to="/" className="inline-block">
+              <DocketraLogo />
             </Link>
             <p className="mt-10 text-sm font-bold uppercase text-amber-700">Workspace created</p>
             <h2 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
@@ -400,13 +420,41 @@ export default function Signup() {
               <p className="mt-2 text-sm text-slate-600">Save these details for your first login.</p>
             </div>
             <div className="mt-6 grid gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                <p className="text-xs font-bold uppercase text-slate-500">Firm URL</p>
+              <div className="relative rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase text-slate-500">Firm URL</p>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(signupSuccessData.firmUrl || buildFallbackFirmLoginUrl(signupSuccessData.firmSlug), 'firmUrl')}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-950"
+                    aria-label="Copy firm URL"
+                  >
+                    {copiedField === 'firmUrl' ? (
+                      <span className="font-bold text-emerald-600">✓ Copied</span>
+                    ) : (
+                      <span>Copy</span>
+                    )}
+                  </button>
+                </div>
                 <p className="mt-2 break-words font-semibold text-slate-950">{signupSuccessData.firmUrl || buildFallbackFirmLoginUrl(signupSuccessData.firmSlug)}</p>
               </div>
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                <p className="text-xs font-bold uppercase text-emerald-700">Your xID</p>
-                <p className="mt-2 text-xl font-black text-emerald-950">{signupSuccessData.xid}</p>
+              <div className="relative rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase text-emerald-700">Your xID</p>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(signupSuccessData.xid, 'xid')}
+                    className="inline-flex items-center gap-1 rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-700"
+                    aria-label="Copy admin xID"
+                  >
+                    {copiedField === 'xid' ? (
+                      <span className="font-bold text-emerald-700">✓ Copied</span>
+                    ) : (
+                      <span>Copy</span>
+                    )}
+                  </button>
+                </div>
+                <p className="mt-2 font-mono text-xl font-black tracking-wider text-emerald-950">{signupSuccessData.xid}</p>
               </div>
             </div>
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -436,16 +484,8 @@ export default function Signup() {
           canonicalPath="/signup"
         />
         <section className="hidden lg:block" aria-label="Workspace signup context">
-          <Link to="/" className="inline-flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-950">
-            <svg className="h-9 w-9 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
-            </svg>
-            <div className="flex flex-col leading-none text-left">
-              <span className="text-lg font-black text-slate-900 tracking-tight">Docketra</span>
-              <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
-            </div>
+          <Link to="/" className="inline-block">
+            <DocketraLogo />
           </Link>
           <p className="mt-10 text-sm font-bold uppercase text-amber-700">Workspace signup</p>
           <h2 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
@@ -486,16 +526,8 @@ export default function Signup() {
         </section>
 
         <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-7">
-          <Link to="/" className="mb-5 inline-flex items-center gap-2 text-base font-extrabold tracking-tight text-slate-950 lg:hidden">
-            <svg className="h-8 w-8 text-amber-600 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M25 15H50C69.33 15 85 30.67 85 50C85 69.33 69.33 85 50 85H25V15Z" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
-            </svg>
-            <div className="flex flex-col leading-none text-left">
-              <span className="text-base font-black text-slate-900 tracking-tight">Docketra</span>
-              <span className="text-[7px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
-            </div>
+          <Link to="/" className="mb-5 inline-block lg:hidden">
+            <DocketraLogo size="sm" />
           </Link>
           <div className="auth-header text-center">
             <p className="auth-kicker">Docketra · Secure workspace setup</p>
@@ -543,10 +575,81 @@ export default function Signup() {
                 <p className="text-sm font-black text-slate-950">Primary admin</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">This person receives OTP, xID, and first-login instructions.</p>
               </div>
-              <Input id="signup-name" type="text" name="name" label="Primary Admin Name" className="w-full" value={form.name} onChange={onFormChange} disabled={loading} error={errors.name} required />
-              <Input id="signup-email" type="email" name="email" label="Primary Admin Email" className="w-full" value={form.email} onChange={onFormChange} disabled={loading} error={errors.email} required autoComplete="username" />
-              <Input id="signup-phone" type="text" name="phone" label="Primary Admin Phone" className="w-full" value={form.phone} onChange={onFormChange} disabled={loading} error={errors.phone} required />
-              <Input id="signup-password" type="password" name="password" label="Password" className="w-full" value={form.password} onChange={onFormChange} disabled={loading} error={errors.password} required autoComplete="new-password" />
+              <Input
+                id="signup-name"
+                type="text"
+                name="name"
+                label="Primary Admin Name"
+                placeholder="Full name"
+                className="w-full"
+                value={form.name}
+                onChange={onFormChange}
+                disabled={loading}
+                error={errors.name}
+                required
+                autoComplete="name"
+              />
+              <Input
+                id="signup-email"
+                type="email"
+                name="email"
+                label="Primary Admin Email"
+                placeholder="name@firm.com"
+                className="w-full"
+                value={form.email}
+                onChange={onFormChange}
+                disabled={loading}
+                error={errors.email}
+                required
+                autoComplete="email username"
+              />
+              <Input
+                id="signup-phone"
+                type="tel"
+                name="phone"
+                label="Primary Admin Mobile (+91)"
+                placeholder="98765 43210"
+                className="w-full font-mono"
+                value={form.phone}
+                onChange={onFormChange}
+                disabled={loading}
+                error={errors.phone}
+                required
+                inputMode="numeric"
+                autoComplete="tel-national"
+              />
+              <div>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  name="password"
+                  label="Password"
+                  placeholder="Min. 8 characters"
+                  className="w-full"
+                  value={form.password}
+                  onChange={onFormChange}
+                  disabled={loading}
+                  error={errors.password}
+                  required
+                  autoComplete="new-password"
+                />
+                {form.password ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]" aria-label="Password requirements">
+                    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium transition-colors ${passwordCriteria.minLength ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                      {passwordCriteria.minLength ? '✓' : '○'} 8+ chars
+                    </span>
+                    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium transition-colors ${passwordCriteria.hasCase ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                      {passwordCriteria.hasCase ? '✓' : '○'} Upper &amp; lower
+                    </span>
+                    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium transition-colors ${passwordCriteria.hasNumber ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                      {passwordCriteria.hasNumber ? '✓' : '○'} Number
+                    </span>
+                    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium transition-colors ${passwordCriteria.hasSpecial ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                      {passwordCriteria.hasSpecial ? '✓' : '○'} Symbol
+                    </span>
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-4 md:grid-cols-[1fr_220px]">
               <div>
@@ -563,9 +666,11 @@ export default function Signup() {
               </div>
             </div>
             {isTurnstileConfigured ? <div ref={turnstileContainerRef} className="min-h-[65px]" /> : null}
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              {`${STRONG_PASSWORD_MESSAGE}`}
-            </div>
+            {!form.password ? (
+              <p className="text-center text-xs text-slate-500">
+                {STRONG_PASSWORD_MESSAGE}
+              </p>
+            ) : null}
             <div className={`rounded-2xl border ${errors.agreedToPilotTerms ? 'border-rose-400 bg-rose-50/80' : 'border-slate-200 bg-slate-50'} p-4 transition-colors`}>
               <label className="flex items-start gap-3 cursor-pointer select-none">
                 <input
@@ -586,19 +691,31 @@ export default function Signup() {
                 <span className="text-xs leading-5 text-slate-700">
                   I agree to the <button
                     type="button"
-                    onClick={() => openLegalModal('pilot')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openLegalModal('pilot');
+                    }}
                     className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
                   >
                     Pilot Evaluation Agreement
                   </button>, <button
                     type="button"
-                    onClick={() => openLegalModal('terms')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openLegalModal('terms');
+                    }}
                     className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
                   >
                     Terms of Service &amp; Disclaimers
                   </button>, and <button
                     type="button"
-                    onClick={() => openLegalModal('privacy')}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openLegalModal('privacy');
+                    }}
                     className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
                   >
                     Privacy Policy
@@ -618,7 +735,7 @@ export default function Signup() {
               disabled={loading || !agreedToPilotTerms || (isTurnstileConfigured && !getEffectiveTurnstileToken())}
               loading={loading}
             >
-              {loading ? 'Sending verification code...' : 'Send verification code'}
+              {loading ? 'Creating workspace...' : 'Create workspace →'}
             </Button>
           </form>
         </>
@@ -632,8 +749,9 @@ export default function Signup() {
                   id="signup-otp"
                   type="text"
                   name="otp"
-                  label="Email OTP"
-                  className="w-full"
+                  label="Email OTP (6 digits)"
+                  className="w-full text-center font-mono text-xl tracking-[0.4em] sm:tracking-[0.5em] font-black"
+                  placeholder="······"
                   value={otp}
                   onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setErrors((prev) => ({ ...prev, otp: '' })); }}
                   onPaste={(e) => {
@@ -651,10 +769,10 @@ export default function Signup() {
                   pattern="[0-9]*"
                 />
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">Tip: paste the full code. We keep only the latest six digits.</p>
+              <p className="mt-3 text-xs leading-5 text-slate-500">Tip: paste the 6-digit verification code from your email.</p>
             </div>
             <Button type="submit" variant="primary" fullWidth disabled={loading} loading={loading}>
-              {loading ? 'Verifying...' : 'Verify & create workspace'}
+              {loading ? 'Activating workspace...' : 'Verify & activate workspace →'}
             </Button>
             <Button
               type="button"
