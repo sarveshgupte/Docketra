@@ -1,12 +1,26 @@
 const assert = require('assert');
 const Case = require('../src/models/Case.model');
 const Team = require('../src/models/Team.model');
+const User = require('../src/models/User.model');
 const DocketRoute = require('../src/models/DocketRoute.model');
+const Comment = require('../src/models/Comment.model');
+const CaseHistory = require('../src/models/CaseHistory.model');
 const svc = require('../src/services/docketRouting.service');
 
 (async () => {
-  const original = { caseFindOne: Case.findOne, teamFindOne: Team.findOne, routeCreate: DocketRoute.create, routeFindOne: DocketRoute.findOne };
+  const original = {
+    caseFindOne: Case.findOne,
+    teamFindOne: Team.findOne,
+    userFind: User.find,
+    routeCreate: DocketRoute.create,
+    routeFindOne: DocketRoute.findOne,
+    commentCreate: Comment.create,
+    historyCreate: CaseHistory.create,
+  };
   try {
+    Comment.create = async () => ({});
+    CaseHistory.create = async () => ({});
+    User.find = () => ({ select: () => ({ lean: async () => [] }) });
     const savedRoutes = [];
     const activeRoute = { returnedAt: null, note: 'orig', save: async function(){ this.saved=true; } };
     DocketRoute.create = async (payload) => { savedRoutes.push(payload); return payload; };
@@ -41,6 +55,12 @@ const svc = require('../src/services/docketRouting.service');
 
     console.log('docket routing route+submit checks passed');
   } finally {
-    Case.findOne = original.caseFindOne; Team.findOne = original.teamFindOne; DocketRoute.create = original.routeCreate; DocketRoute.findOne = original.routeFindOne;
+    Case.findOne = original.caseFindOne;
+    Team.findOne = original.teamFindOne;
+    User.find = original.userFind;
+    DocketRoute.create = original.routeCreate;
+    DocketRoute.findOne = original.routeFindOne;
+    Comment.create = original.commentCreate;
+    CaseHistory.create = original.historyCreate;
   }
 })();

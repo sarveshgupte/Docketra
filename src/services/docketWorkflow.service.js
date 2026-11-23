@@ -530,6 +530,14 @@ async function transition({ docketId, firmId, actor, toState, comment, reopenAt,
       const fromCanonicalState = getCanonicalDocketState(docket);
       const normalizedTarget = toDocketState(toState);
 
+      const isRouted = Boolean(docket.routedToTeamId) || docket.status === 'ROUTED' || docket.status === 'ROUTED_ASSIGNED';
+      if (isRouted && normalizedTarget === DocketStatus.FILED) {
+        throw makeError('Cannot file docket while routed', 409, 'CANNOT_FILE_ROUTED_DOCKET');
+      }
+      if (isRouted && normalizedTarget === DocketStatus.RESOLVED) {
+        throw makeError('Cannot resolve while docket is routed', 409, 'CANNOT_RESOLVE_ROUTED_DOCKET');
+      }
+
       if ([DocketStatus.PENDING, DocketStatus.RESOLVED, DocketStatus.FILED].includes(normalizedTarget)) {
         requireComment(comment, normalizedTarget);
       }

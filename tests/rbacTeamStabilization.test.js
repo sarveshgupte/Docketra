@@ -30,6 +30,7 @@ const loadUserControllerWithoutTxWrapper = () => {
 async function testNoSecondPrimaryAdmin() {
   const User = require('../src/models/User.model');
   const originalFindOne = User.findOne;
+  const originalExists = User.exists;
 
   let call = 0;
   User.findOne = (query) => {
@@ -44,10 +45,11 @@ async function testNoSecondPrimaryAdmin() {
       };
     }
     if (query?.role === 'PRIMARY_ADMIN') {
-      return { select: async () => ({ _id: '507f1f77bcf86cd799439022' }) };
+      return { select: () => ({ lean: () => ({ setOptions: () => Promise.resolve({ _id: '507f1f77bcf86cd799439022' }) }) }) };
     }
     return null;
   };
+  User.exists = async (query) => (query?.role === 'PRIMARY_ADMIN' ? { _id: '507f1f77bcf86cd799439022' } : null);
 
   const { patchUserRole } = loadUserControllerWithoutTxWrapper();
   const req = { params: { id: '507f1f77bcf86cd799439021' }, body: { role: 'PRIMARY_ADMIN' }, user: { role: 'PRIMARY_ADMIN', firmId: 'firm-1' } };
@@ -57,6 +59,7 @@ async function testNoSecondPrimaryAdmin() {
   assert.strictEqual(res.statusCode, 409);
 
   User.findOne = originalFindOne;
+  User.exists = originalExists;
   console.log('✓ prevents second PRIMARY_ADMIN in firm');
 }
 

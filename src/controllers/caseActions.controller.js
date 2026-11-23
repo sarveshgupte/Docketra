@@ -223,6 +223,15 @@ const fileCase = async (req, res) => {
         message: 'Authentication required',
       });
     }
+
+    const targetCase = await Case.findOne({ caseId, firmId: req.user.firmId }).select('ownerTeamId routedToTeamId status').lean();
+    if (!targetCase) {
+      return res.status(404).json({ success: false, message: 'Case not found' });
+    }
+    const isRouted = Boolean(targetCase.routedToTeamId) || targetCase.status === 'ROUTED' || targetCase.status === 'ROUTED_ASSIGNED';
+    if (isRouted) {
+      return res.status(409).json({ success: false, message: 'Cannot file docket while routed' });
+    }
     
     // Call service to file case - with firm scoping
     const caseData = await caseActionService.fileCase(req.user.firmId, caseId, comment, req.user, req);
@@ -250,6 +259,14 @@ const fileCase = async (req, res) => {
     
     if (error.message === 'Permission denied') {
       return res.status(403).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
+    if (error.message === 'Cannot file docket while routed' ||
+        error.message.startsWith('Cannot file docket')) {
+      return res.status(409).json({
         success: false,
         message: error.message,
       });

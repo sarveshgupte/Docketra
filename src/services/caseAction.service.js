@@ -19,7 +19,9 @@ const LIFECYCLE_TRANSITIONS = Object.freeze({
   OPEN: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   ACTIVE: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
   IN_PROGRESS: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
-  PENDING: Object.freeze([CaseStatus.OPEN, CaseStatus.ASSIGNED, CaseStatus.ROUTED, CaseStatus.UNASSIGNED]),
+  ROUTED: Object.freeze([CaseStatus.ROUTED_ASSIGNED, CaseStatus.ASSIGNED, CaseStatus.PENDING]),
+  ROUTED_ASSIGNED: Object.freeze([CaseStatus.PENDING, CaseStatus.ASSIGNED, CaseStatus.IN_PROGRESS]),
+  PENDING: Object.freeze([CaseStatus.OPEN, CaseStatus.ASSIGNED, CaseStatus.ROUTED, CaseStatus.ROUTED_ASSIGNED, CaseStatus.UNASSIGNED, CaseStatus.IN_PROGRESS]),
   QC_PENDING: Object.freeze([CaseStatus.RESOLVED, CaseStatus.OPEN]),
   RESOLVED: Object.freeze([]),
   FILED: Object.freeze([]),
@@ -144,6 +146,11 @@ const resolveCase = async (firmId, caseId, comment, user, req = null) => {
   
   if (!caseData) {
     throw new Error('Case not found');
+  }
+
+  const isRouted = Boolean(caseData?.routedToTeamId) || caseData?.status === 'ROUTED' || caseData?.status === 'ROUTED_ASSIGNED';
+  if (isRouted) {
+    throw new Error('Cannot resolve while docket is routed');
   }
 
   const currentDocketState = getCanonicalDocketState(caseData);
@@ -365,6 +372,11 @@ const fileCase = async (firmId, caseId, comment, user, req = null) => {
     throw new Error('Case not found');
   }
 
+  const isRouted = Boolean(caseData?.routedToTeamId) || caseData?.status === 'ROUTED' || caseData?.status === 'ROUTED_ASSIGNED';
+  if (isRouted) {
+    throw new Error('Cannot file docket while routed');
+  }
+
   const currentDocketState = getCanonicalDocketState(caseData);
   if (!canFile(currentDocketState)) {
     throw new Error(`Cannot file docket from current state: ${currentDocketState}`);
@@ -516,10 +528,10 @@ const unpendCase = async (firmId, caseId, comment, user, req = null, options = {
 
   let targetStatus = reqTargetStatus || caseData.statusBeforePended || caseData.previousStatus;
   if (!targetStatus) {
-    if (hasAssignee) {
+    if (isRouted) {
+      targetStatus = hasAssignee ? CaseStatus.ROUTED_ASSIGNED : CaseStatus.ROUTED;
+    } else if (hasAssignee) {
       targetStatus = CaseStatus.ASSIGNED;
-    } else if (isRouted) {
-      targetStatus = CaseStatus.ROUTED;
     } else {
       targetStatus = CaseStatus.UNASSIGNED;
     }
@@ -641,10 +653,10 @@ const performAutoReopen = async (caseData, firmCalendar = null) => {
 
   let targetStatus = caseData.statusBeforePended || caseData.previousStatus;
   if (!targetStatus) {
-    if (hasAssignee) {
+    if (isRouted) {
+      targetStatus = hasAssignee ? CaseStatus.ROUTED_ASSIGNED : CaseStatus.ROUTED;
+    } else if (hasAssignee) {
       targetStatus = CaseStatus.ASSIGNED;
-    } else if (isRouted) {
-      targetStatus = CaseStatus.ROUTED;
     } else {
       targetStatus = CaseStatus.UNASSIGNED;
     }

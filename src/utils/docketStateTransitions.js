@@ -23,8 +23,9 @@ function canResolve(state) {
   return normalized === 'IN_PROGRESS' || normalized === 'IN_QC';
 }
 
-function canFile(_state) {
-  return true;
+function canFile(state) {
+  const normalized = normalize(state);
+  return !['ROUTED', 'ROUTED_ASSIGNED', 'ROUTED_PEND'].includes(normalized);
 }
 
 module.exports = {

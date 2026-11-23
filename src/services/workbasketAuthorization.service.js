@@ -7,7 +7,7 @@ const TERMINAL_STATES = new Set(['RESOLVED', 'FILED']);
 const normalizeRole = (role) => String(role || '').trim().toUpperCase();
 const toId = (value) => String(value || '').trim();
 
-const resolveDocketWorkbasketId = (docket) => toId(docket?.ownerTeamId) || toId(docket?.workbasketId) || '';
+const resolveDocketWorkbasketId = (docket) => toId(docket?.routedToTeamId) || toId(docket?.ownerTeamId) || toId(docket?.workbasketId) || '';
 
 const isLinkedToWorkbasket = (user, workbasketId) => {
   const target = toId(workbasketId);
@@ -25,7 +25,9 @@ const canPullFromWorkbasket = ({ user, docket }) => {
   const role = normalizeRole(user?.role);
   if (isTerminal(docket)) return false;
   if (String(docket?.assignedToXID || '').trim()) return false;
-  if (String(docket?.state || '').toUpperCase() !== 'IN_WB') return false;
+  const state = String(docket?.state || '').toUpperCase();
+  const status = String(docket?.status || '').toUpperCase();
+  if (state !== 'IN_WB' && status !== 'ROUTED' && status !== 'UNASSIGNED') return false;
   if (ADMIN_ROLES.has(role)) return true;
   return isLinkedToWorkbasket(user, resolveDocketWorkbasketId(docket));
 };
@@ -34,7 +36,9 @@ const canAssignFromWorkbasket = ({ actor, docket, assignee }) => {
   const role = normalizeRole(actor?.role);
   if (isTerminal(docket)) return false;
   if (String(docket?.assignedToXID || '').trim()) return false;
-  if (String(docket?.state || '').toUpperCase() !== 'IN_WB') return false;
+  const state = String(docket?.state || '').toUpperCase();
+  const status = String(docket?.status || '').toUpperCase();
+  if (state !== 'IN_WB' && status !== 'ROUTED' && status !== 'UNASSIGNED') return false;
   if (ADMIN_ROLES.has(role)) return Boolean(assignee?.isActive);
   if (!MANAGER_ROLES.has(role)) return false;
   const docketWorkbasketId = resolveDocketWorkbasketId(docket);

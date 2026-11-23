@@ -282,6 +282,10 @@ async function managerMoveDocket({ docketId, actor, firmId, to }) {
     const prevAssignee = docket.assignedToXID;
     docket.assignedToXID = targetUserXid;
     docket.status = CaseStatus.IN_PROGRESS;
+    docket.state = 'IN_PROGRESS';
+    docket.queueType = 'PERSONAL';
+    docket.ownerTeamId = actor.teamId;
+    docket.workbasketId = actor.teamId;
     await createNotification({ firmId, recipientXID: targetUserXid, type: NotificationTypes.DOCKET_ASSIGNED, docketId, message: `Docket ${docketId} has been assigned to you.` });
 
     await logCaseHistory({
@@ -302,6 +306,10 @@ async function managerMoveDocket({ docketId, actor, firmId, to }) {
     const prevAssignee = docket.assignedToXID;
     docket.assignedToXID = null;
     docket.status = CaseStatus.UNASSIGNED || 'UNASSIGNED';
+    docket.state = 'IN_WB';
+    docket.queueType = 'GLOBAL';
+    docket.ownerTeamId = actor.teamId;
+    docket.workbasketId = actor.teamId;
 
     await logCaseHistory({
       caseId: docketId,
@@ -318,7 +326,7 @@ async function managerMoveDocket({ docketId, actor, firmId, to }) {
     });
   }
 
-  docket.routedToTeamId = actor.teamId;
+  docket.routedToTeamId = null;
   await docket.save();
   return docket;
 }

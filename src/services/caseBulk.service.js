@@ -111,7 +111,7 @@ module.exports = (deps) => {
       }
 
       const docketRecords = await Case.find({ firmId: req.user.firmId, caseId: { $in: caseIds } })
-        .select('caseId assignedToXID status state ownerTeamId workbasketId')
+        .select('caseId assignedToXID status state ownerTeamId workbasketId routedToTeamId')
         .lean();
       if (docketRecords.length !== caseIds.length) {
         return res.status(404).json({ success: false, message: 'One or more dockets were not found.' });
