@@ -17,8 +17,8 @@ export const CreateCasePage = () => {
   return (
     <PlatformShell
       moduleLabel="Dockets"
-      title="Create Docket"
-      subtitle="Create and route a docket from one page."
+      title="New Docket"
+      subtitle="Register and route a new docket to your team queues."
       actions={null}
     >
       <div className="create-case">
@@ -26,8 +26,13 @@ export const CreateCasePage = () => {
           initialClientId={initialClientId}
           onCancel={() => navigate(ROUTES.TASK_MANAGER(firmSlug))}
           onCreated={(response, wbName) => {
-            const docketId = response?.data?.docketId || response?.data?.caseId;
-            showSuccess(`Docket ${docketId || 'created'} created successfully. This docket has been moved to ${wbName || 'general'} wb.`);
+            const docketId = response?.data?.docketId || response?.data?.caseId || response?.data?.case?.caseId;
+            showSuccess(`Docket ${docketId || 'created'} created successfully and routed to ${wbName || 'General'} workbasket.`);
+            if (docketId) {
+              navigate(ROUTES.CASE_DETAIL(firmSlug, docketId));
+            } else {
+              navigate(ROUTES.TASK_MANAGER(firmSlug));
+            }
           }}
         />
       </div>

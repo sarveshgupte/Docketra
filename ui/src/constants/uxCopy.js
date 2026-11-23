@@ -1,6 +1,6 @@
 export const UX_COPY = {
   actions: {
-    CREATE_CASE: 'Create Docket',
+    CREATE_CASE: 'New Docket',
     EXPORT_CASES: 'Export CSV',
     ASSIGN_TO_ME: 'Assign to Me',
   },

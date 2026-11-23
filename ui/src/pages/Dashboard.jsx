@@ -230,7 +230,7 @@ export const DashboardPage = () => {
           <EmptyState
             title="No dockets yet"
             description="No dockets yet. Create your first task to activate the dashboard."
-            actionLabel="Create Docket"
+            actionLabel="New Docket"
             onAction={() => navigate(ROUTES.CREATE_CASE(firmSlug))}
           />
         ) : null}

@@ -750,7 +750,7 @@ export const WorkbasketPage = () => {
           meta="Tasks / Workbaskets"
           actions={(
             <Button variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
-              Create Docket
+              New Docket
             </Button>
           )}
         />
@@ -1156,7 +1156,7 @@ export const WorkbasketPage = () => {
                 <EmptyState
                   title={accessibleWorkbaskets.length === 0 ? 'No linked workbasket' : 'No dockets in selected workbasket'}
                   description={accessibleWorkbaskets.length === 0 ? 'You are not linked to any workbasket yet. Ask your admin to assign you to a workbasket.' : 'New unassigned dockets will appear here as soon as they enter the selected shared queue.'}
-                  actionLabel={isAdmin ? 'Create Docket' : undefined}
+                  actionLabel={isAdmin ? 'New Docket' : undefined}
                   onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
                 />
               )}

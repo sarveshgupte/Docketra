@@ -242,7 +242,7 @@ export const ClientWorkspacePage = () => {
       subtitle="Client profile, relationship context, linked work, documents, and firm-specific notes in one place."
       actions={(
         <Button variant="primary" onClick={() => navigate(`${ROUTES.CREATE_CASE(firmSlug)}?clientId=${encodeURIComponent(clientId)}`)}>
-          + Create Docket for Client
+          + New Docket for Client
         </Button>
       )}
     >

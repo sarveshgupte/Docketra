@@ -439,7 +439,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
   return (
     <Card className="create-case__single-sheet" onKeyDown={handleKeyDown}>
       {/* Semantic accessible title (visually hidden to avoid duplicating PlatformShell header) */}
-      <h1 className="sr-only">Create Docket</h1>
+      <h1 className="sr-only">New Docket</h1>
 
       {submitError ? <div className="guided-docket-notice guided-docket-notice--error mb-4" role="alert">{submitError}</div> : null}
       {statusMessage ? <div className="guided-docket-notice guided-docket-notice--info mb-4" role="status">{statusMessage}</div> : null}
@@ -682,17 +682,20 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
           </div>
         </section>
 
-        {/* Section 3: Additional Context (Only if applicable) */}
+        {/* Section 3: Employee Matter Context (Only if applicable) */}
         {(employeeContextEnabled || relatedEmployeeUserRequired || users.length > 0) ? (
           <section className="create-case__single-section">
             <div className="create-case__section-headline">
-              <h2>Assignment Context</h2>
+              <h2>Employee Matter Context</h2>
+              <p className="text-xs text-[var(--dt-text-muted)] mt-1">
+                Record which employee this matter concerns (e.g. for HR, payroll, reimbursement, or compliance records). This does not change who is assigned to work on the docket.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {employeeContextEnabled ? (
                 <Select
-                  label="Employee"
+                  label="Employee (subcategory context)"
                   value={formData.employeeXID}
                   onChange={(e) => updateField('employeeXID', e.target.value)}
                   disabled={loading.users}
@@ -700,7 +703,7 @@ export const GuidedDocketForm = ({ onCreated, onCancel, initialClientId = '' }) 
                 />
               ) : null}
               <Select
-                label="Related Employee"
+                label="Related employee/user"
                 required={relatedEmployeeUserRequired}
                 value={formData.relatedEmployeeUserId}
                 onChange={(e) => updateField('relatedEmployeeUserId', e.target.value)}

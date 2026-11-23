@@ -1,10 +1,15 @@
 const assert = require('assert');
 require.cache[require.resolve('../src/services/auditLog.service')] = { exports: { logCaseHistory: async () => {} } };
+require.cache[require.resolve('../src/services/docketNarrativeStorage.service')] = {
+  exports: {
+    uploadNarrative: async () => ({ provider: 'mock', mode: 'mock', fileId: 'f1', objectKey: 'k1', checksum: 'c1' }),
+  },
+};
 const buildService = require('../src/services/caseCreate.service');
 function mkRes(){ return { statusCode: 200, body:null, status(c){this.statusCode=c; return this;}, json(b){this.body=b; return this;} }; }
 (async()=>{
  let captured=null;
- const Case=function(doc){captured=doc; this.saveWithRetry=async()=>{}; this.toObject=()=>({...doc,_id:'1'});};
+ const Case=function(doc){captured=doc; this.saveWithRetry=async()=>{}; this.save=async()=>{}; this.toObject=()=>({...doc,_id:'1'});};
  const svc=buildService({
   mongoose:{Types:{ObjectId:{isValid:()=>true}}},randomUUID:()=> 'r',createHash:()=>({update(){return this;},digest(){return 'h';}}),
   Case, Comment:{}, Attachment:{}, CaseHistory:{create:async()=>{}}, CaseAudit:{}, Client:{findOne:async()=>null}, User:{}, Team:{findOne:()=>({sort:()=>({select:()=>({lean:async()=>({_id:'wb'})})})})}, WorkType:{}, SubWorkType:{}, CrmClient:{}, Deal:{}, Invoice:{}, CaseRepository:{findOne:async()=>null}, ClientRepository:{findByClientId:async()=>({status:'ACTIVE', firmId:'f1'})}, AttachmentRepository:{},

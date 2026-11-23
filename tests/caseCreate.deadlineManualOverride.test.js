@@ -1,5 +1,10 @@
 const assert = require('assert');
 require.cache[require.resolve('../src/services/auditLog.service')] = { exports: { logCaseHistory: async () => {} } };
+require.cache[require.resolve('../src/services/docketNarrativeStorage.service')] = {
+  exports: {
+    uploadNarrative: async () => ({ provider: 'mock', mode: 'mock', fileId: 'f1', objectKey: 'k1', checksum: 'c1' }),
+  },
+};
 const buildService = require('../src/services/caseCreate.service');
 function mkRes(){ return { statusCode: 200, body:null, status(c){this.statusCode=c; return this;}, json(b){this.body=b; return this;} }; }
 
@@ -13,7 +18,7 @@ const depsBase = {
 
 (async()=>{
   let captured = null;
-  const Case = function(doc){ captured = doc; this.saveWithRetry = async()=>{}; this.toObject = () => ({...doc, _id:'1'}); };
+  const Case = function(doc){ captured = doc; this.saveWithRetry = async()=>{}; this.save = async()=>{}; this.toObject = () => ({...doc, _id:'1'}); };
   const manualDue = '2026-02-20T00:00:00Z';
 
   const svcAllow = buildService({ ...depsBase, Case, categoryRepository:{findActiveCategory:async()=>({name:'Tax', subcategories:[{id:'s1',name:'GST',isActive:true,workbasketId:'wb',deadlineRule:{mode:'TAT_DAYS',tatDays:3,allowManualOverride:true}}]})} });

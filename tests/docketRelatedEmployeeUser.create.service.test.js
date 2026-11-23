@@ -1,12 +1,23 @@
 const assert = require('assert');
 require.cache[require.resolve('../src/services/auditLog.service')] = { exports: { logCaseHistory: async () => {} } };
+require.cache[require.resolve('../src/services/docketNarrativeStorage.service')] = {
+  exports: {
+    uploadNarrative: async () => ({
+      provider: 'mock',
+      mode: 'mock',
+      fileId: 'mock-file-id',
+      objectKey: 'mock-key',
+      checksum: 'mock-checksum',
+    }),
+  },
+};
 const buildService = require('../src/services/caseCreate.service');
 
 function mkRes(){ return { statusCode: 200, body: null, status(c){ this.statusCode = c; return this; }, json(b){ this.body = b; return this; } }; }
 
 function buildSvc({ relatedUser = null } = {}) {
   let captured = null;
-  const Case = function(doc){ captured = doc; this.saveWithRetry = async () => {}; this.toObject = () => ({ ...doc, _id: '1', caseId: 'CASE-1' }); };
+  const Case = function(doc){ captured = doc; this.saveWithRetry = async () => {}; this.save = async () => {}; this.toObject = () => ({ ...doc, _id: '1', caseId: 'CASE-1' }); };
   const svc = buildService({
     mongoose: { Types: { ObjectId: { isValid: (v) => /^[a-f\d]{24}$/i.test(String(v || '')) } } },
     randomUUID: () => 'req-1', createHash: () => ({ update(){ return this; }, digest(){ return 'h'; } }),

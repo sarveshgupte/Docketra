@@ -1363,7 +1363,7 @@ export const CaseDetailPage = () => {
       title={null}
       actions={(
         <Button type="button" variant="primary" onClick={() => navigate(ROUTES.CREATE_CASE(firmSlug))}>
-          + Create Docket
+          + New Docket
         </Button>
       )}
     >

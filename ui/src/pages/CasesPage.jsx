@@ -857,7 +857,7 @@ export const CasesPage = () => {
                         : isAdmin ? 'No dockets yet' : 'No assigned dockets'
                 }
                 description={isAdmin ? 'No dockets exist yet. Create your first docket after client, category/subcategory, and workbench setup are ready.' : 'No docket records are visible yet. Ask an admin to create and assign dockets, then monitor them here.'}
-                actionLabel={isAdmin ? 'Create Docket' : undefined}
+                actionLabel={isAdmin ? 'New Docket' : undefined}
                 onAction={isAdmin ? () => navigate(ROUTES.CREATE_CASE(firmSlug)) : undefined}
               />
             }
