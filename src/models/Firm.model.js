@@ -165,6 +165,11 @@ const firmSchema = new mongoose.Schema({
     default: null,
   },
 
+  subscriptionExpiresAt: {
+    type: Date,
+    default: null,
+  },
+
   featureFlags: {
     type: Map,
     of: featureFlagFirmStateSchema,

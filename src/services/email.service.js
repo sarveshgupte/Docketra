@@ -611,6 +611,7 @@ const sendFirmCreatedEmail = async (superadminEmail, data, context = null) => {
         <ul>
           <li><strong>Firm ID:</strong> ${data.firmId}</li>
           <li><strong>Firm Name:</strong> ${data.firmName}</li>
+          <li><strong>Plan:</strong> ${data.plan ? String(data.plan).toUpperCase() : 'PILOT'}${data.billingStatus ? ` (${data.billingStatus})` : ''}</li>
           <li><strong>Default Client ID:</strong> ${data.defaultClientId}</li>
         </ul>
         <p><strong>Default Admin:</strong></p>
@@ -633,6 +634,7 @@ A new firm has been provisioned in the Docketra system.
 Firm Details:
 - Firm ID: ${data.firmId}
 - Firm Name: ${data.firmName}
+- Plan: ${data.plan ? String(data.plan).toUpperCase() : 'PILOT'}${data.billingStatus ? ` (${data.billingStatus})` : ''}
 - Default Client ID: ${data.defaultClientId}
 
 Default Admin:

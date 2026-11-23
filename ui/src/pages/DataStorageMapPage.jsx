@@ -157,14 +157,14 @@ export function DataStorageMapPage() {
         </div>
 
         {/* Global Policy Banner */}
-        <div className="bg-gradient-to-r from-indigo-50/70 to-blue-50/40 border border-indigo-100/70 rounded-2xl p-5 flex gap-4 items-start backdrop-blur-md shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center shrink-0">
-            <ShieldIcon className="w-6 h-6" />
+        <div className="bg-indigo-50/60 border border-indigo-150 rounded-xl p-5 flex gap-4 items-start shadow-2xs">
+          <div className="w-9 h-9 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+            <ShieldIcon className="w-5 h-5" />
           </div>
           <div className="space-y-1">
             <h4 className="text-sm font-bold text-indigo-950">Zero-Residency Policy (BYOS)</h4>
-            <p className="text-xs text-indigo-900/80 leading-relaxed">
-              Docketra operates under a strict segregation model. All legal client profiles, documents, and CFS registers remain on your own firm's servers. We only load metadata inside the local user session to populate screens, ensuring your files are never exposed or retained on our systems.
+            <p className="text-xs text-indigo-900/90 leading-relaxed">
+              Your business data lives in your firm cloud storage. Docketra stores only control-plane metadata needed to run the app. All legal client profiles, documents, and CFS registers remain on your own firm's servers.
             </p>
           </div>
         </div>
@@ -318,7 +318,7 @@ export function DataStorageMapPage() {
                   <h3 className="text-sm font-bold text-slate-800">Control Plane Data</h3>
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                  Docketra retains only the minimum structural coordinates in our central database to route connections and execute core platform workflows.
+                  Docketra retains only MongoDB control-plane data needed to route connections and execute core platform workflows.
                 </p>
 
                 <div className="space-y-2.5">

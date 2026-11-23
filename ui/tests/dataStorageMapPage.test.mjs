@@ -1,8 +1,21 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const read = (relPath) => fs.readFileSync(path.resolve(process.cwd(), relPath), 'utf8');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uiRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(uiRoot, '..');
+
+const resolvePath = (relFromUi) => {
+  const fromUi = path.resolve(uiRoot, relFromUi);
+  if (fs.existsSync(fromUi)) return fromUi;
+  const fromRepo = path.resolve(repoRoot, 'ui', relFromUi);
+  if (fs.existsSync(fromRepo)) return fromRepo;
+  throw new Error(`Fixture not found: ${relFromUi}`);
+};
+const read = (relFromUi) => fs.readFileSync(resolvePath(relFromUi), 'utf8');
 
 const page = read('src/pages/DataStorageMapPage.jsx');
 assert.ok(page.includes('Data Storage Map'));

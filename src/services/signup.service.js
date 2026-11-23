@@ -523,6 +523,28 @@ const sendSignupWelcomeEmail = async ({
       xid,
       messageId: emailResult?.messageId || null,
     });
+
+    const superadminEmail = process.env.SUPERADMIN_EMAIL_NORMALIZED || process.env.SUPERADMIN_EMAIL;
+    if (superadminEmail) {
+      try {
+        const firmRecord = await Firm.findOne({ firmSlug }).select('firmId name defaultClientId plan billingStatus').lean();
+        if (firmRecord) {
+          await emailService.sendFirmCreatedEmail(superadminEmail, {
+            firmId: firmRecord.firmId,
+            firmName: firmRecord.name || firmName,
+            defaultClientId: String(firmRecord.defaultClientId || ''),
+            adminXID: xid,
+            adminEmail: email,
+            plan: firmRecord.plan,
+            billingStatus: firmRecord.billingStatus,
+          }, req).catch((err) => {
+            log.error('[PUBLIC_SIGNUP] Failed to send superadmin notification email:', err.message);
+          });
+        }
+      } catch (adminNotifyErr) {
+        log.error('[PUBLIC_SIGNUP] Error notifying superadmin of firm creation:', adminNotifyErr.message);
+      }
+    }
     return {
       success: true,
       messageId: emailResult?.messageId || null,
@@ -574,6 +596,18 @@ const createFirmAndAdmin = async ({
     agreementType: 'PILOT_CLICKWRAP',
   } : null);
 
+  // First 10 firms in main get 1 year free with zero limits.
+  // 11th firm onwards receives the standard Free Pilot plan and existing limits.
+  const firmNumeric = Number(String(firmId || '').replace('FIRM', '')) || 1;
+  const isEarlyPioneer = firmNumeric <= 10;
+  const oneYearFromNow = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+  const plan = isEarlyPioneer ? 'enterprise' : 'pilot';
+  const maxUsers = isEarlyPioneer ? 100 : 10;
+  const subscriptionStatus = isEarlyPioneer ? 'active' : null;
+  const billingStatus = isEarlyPioneer ? 'free_pioneer_1yr' : null;
+  const subscriptionExpiresAt = isEarlyPioneer ? oneYearFromNow : null;
+
   for (let attempt = 0; attempt < MAX_SLUG_COLLISION_RETRIES; attempt += 1) {
     firmSlug = await generateUniqueSlug(normalizedFirmName, session, attempt);
     try {
@@ -582,9 +616,12 @@ const createFirmAndAdmin = async ({
         name: normalizedFirmName,
         firmSlug,
         source: 'SELF_SERVE',
-        plan: 'pilot',
-        maxUsers: 10,
+        plan,
+        maxUsers,
         status: 'active',
+        subscriptionStatus,
+        billingStatus,
+        subscriptionExpiresAt,
         bootstrapStatus: 'PENDING',
         ...(resolvedLegalConsent ? { legalConsent: resolvedLegalConsent } : {}),
       }], { session });
@@ -660,7 +697,7 @@ const createFirmAndAdmin = async ({
     verificationMethod: isGoogleAuth ? 'GOOGLE' : 'OTP',
     termsAccepted: true,
     termsAcceptedAt: now,
-    termsVersion: resolvedLegalConsent?.termsVersion || 'v1.0',
+    termsVersion: legalConsent?.termsVersion || 'v1.0',
     signupIP: req?.ip || resolvedLegalConsent?.ipAddress || null,
     signupUserAgent: req?.headers?.['user-agent'] || resolvedLegalConsent?.userAgent || null,
     ...(resolvedLegalConsent ? { legalConsent: resolvedLegalConsent } : {}),

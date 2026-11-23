@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-at-least-32-chars-long';
+process.env.BACKUP_ENCRYPTION_KEY = process.env.BACKUP_ENCRYPTION_KEY || 'test-backup-key-at-least-32-chars-long';
+
 const assert = require('assert');
 const Module = require('module');
 const fs = require('fs');

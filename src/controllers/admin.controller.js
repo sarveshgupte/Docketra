@@ -2186,12 +2186,13 @@ const getFirmPlan = async (req, res) => {
     const traineeShieldActive = Boolean(firm.settings?.firm?.restrictTraineeDownloads);
 
     const rawPlan = String(firm.plan || 'pilot').toLowerCase();
-    const isPilot = rawPlan === 'pilot';
-    const currentPlan = isPilot ? 'pilot' : (rawPlan === 'growth' ? 'growth' : (rawPlan === 'starter' ? 'starter' : rawPlan));
+    const isEarlyPioneer = firm.billingStatus === 'free_pioneer_1yr' || (firm.subscriptionExpiresAt && new Date(firm.subscriptionExpiresAt) > new Date() && rawPlan === 'enterprise');
+    const isPilot = rawPlan === 'pilot' && !isEarlyPioneer;
+    const currentPlan = isEarlyPioneer ? 'enterprise' : (isPilot ? 'pilot' : (rawPlan === 'growth' ? 'growth' : (rawPlan === 'starter' ? 'starter' : rawPlan)));
 
     const limits = {
-      maxSeats: firm.maxUsers || (currentPlan === 'growth' ? 12 : (currentPlan === 'starter' ? 5 : 2)),
-      maxClients: currentPlan === 'growth' ? 150 : (currentPlan === 'starter' ? 50 : 5),
+      maxSeats: isEarlyPioneer || currentPlan === 'enterprise' ? (firm.maxUsers || 100) : (firm.maxUsers || (currentPlan === 'growth' ? 12 : (currentPlan === 'starter' ? 5 : 2))),
+      maxClients: isEarlyPioneer || currentPlan === 'enterprise' ? null : (currentPlan === 'growth' ? 150 : (currentPlan === 'starter' ? 50 : 5)),
       maxDocketsMonthly: isPilot ? 15 : null,
     };
 
@@ -2199,9 +2200,11 @@ const getFirmPlan = async (req, res) => {
       success: true,
       data: {
         plan: currentPlan,
-        tierName: isPilot
-          ? 'Proof of Sovereign Isolation Pilot'
-          : (currentPlan === 'growth' ? 'Growth Tier' : (currentPlan === 'starter' ? 'Pioneer 30 / Starter' : currentPlan.toUpperCase())),
+        tierName: isEarlyPioneer
+          ? 'Pioneer Cohort (1 Year Free - Unlimited)'
+          : (isPilot
+            ? 'Proof of Sovereign Isolation Pilot'
+            : (currentPlan === 'growth' ? 'Growth Tier' : (currentPlan === 'starter' ? 'Pioneer 30 / Starter' : currentPlan.toUpperCase()))),
         isPilot,
         limits,
         currentUsage: {

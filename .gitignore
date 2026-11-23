@@ -82,6 +82,7 @@ env.yaml
 # Caches and Scratch files
 .firebase/
 scratch/
+backups/
 graphify-out/
 .codex-calendar-check.png
 __pycache__/

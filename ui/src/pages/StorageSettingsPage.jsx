@@ -267,6 +267,27 @@ export function StorageSettingsPage() {
     }
   }, [config]);
 
+  const handleCloseRestoreModal = () => {
+    if (restoreLoading) return;
+    setShowRestoreModal(false);
+    setRestoreProgress(0);
+    setRestoreStatus('');
+    setRestoreJobId('');
+    setRestoreFile(null);
+    setRestoreExportId('');
+    setRestoreOtpCode('');
+    setRestoreVerificationToken('');
+  };
+
+  useEffect(() => {
+    if (!showRestoreModal) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') handleCloseRestoreModal();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showRestoreModal, restoreLoading]);
+
   const onSaveBackupSettings = async (e) => {
     if (e) e.preventDefault();
     setSavingBackupSettings(true);
@@ -484,7 +505,7 @@ export function StorageSettingsPage() {
   };
 
   const onDisconnectGoogle = async () => {
-    const confirmed = window.confirm('Disconnect firm storage? Future uploads will revert to Docketra-managed storage.');
+    const confirmed = window.confirm('Disconnect firm Google Drive? Future uploads will use Docketra-managed storage.');
     if (!confirmed) return;
     setDisconnecting(true);
     try {
@@ -599,13 +620,13 @@ export function StorageSettingsPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8 space-y-6 transition hover:shadow-md duration-300">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
               <div>
-                <span className="text-xs uppercase font-bold tracking-wider text-slate-400">Active Storage Architecture</span>
+                <span className="text-xs uppercase font-bold tracking-wider text-slate-400">Storage overview</span>
                 <h2 className="text-xl font-bold text-slate-800 mt-1">{currentModeLabel}</h2>
               </div>
               <div className="flex items-center gap-2 self-start md:self-center">
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
                   statusLabel === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                  statusLabel === 'Needs attention' ? 'bg-rose-50 text-rose-700 border border-rose-200 animate-pulse' :
+                  statusLabel === 'Needs attention' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
                   'bg-slate-50 text-slate-600 border border-slate-200'
                 }`}>
                   <span className={`h-2 w-2 rounded-full ${statusLabel === 'Active' ? 'bg-emerald-500' : statusLabel === 'Needs attention' ? 'bg-rose-500' : 'bg-slate-400'}`} />
@@ -729,11 +750,11 @@ export function StorageSettingsPage() {
                   </Button>
                   <Button type="button" variant="outline" onClick={loadConfiguration} disabled={loading}>Recheck Storage Status</Button>
                   <Button type="button" variant="outline" onClick={onTestConnection} disabled={testing}>{testing ? 'Testing Connection…' : 'Test Credentials'}</Button>
-                  <Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect Storage Connection'}</Button>
+                  <Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect firm Google Drive'}</Button>
                 </>
               ) : (
                 <div className="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100 text-indigo-800 text-sm font-medium w-full flex items-center justify-between">
-                  <span>Reverted to Docketra-managed secure cloud sandbox.</span>
+                  <span>Docketra-managed encrypted storage is currently active.</span>
                   <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-bold uppercase">Active Default</span>
                 </div>
               )}
@@ -764,9 +785,9 @@ export function StorageSettingsPage() {
           {/* Elevated Provider Switcher Suite */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8 space-y-6 transition hover:shadow-md duration-300">
             <div>
-              <span className="text-xs uppercase font-bold tracking-wider text-slate-400">Connection Command Center</span>
+              <span className="text-xs uppercase font-bold tracking-wider text-slate-400">Storage Providers</span>
               <h2 className="text-xl font-bold text-slate-800 mt-1">Configure Provider Settings</h2>
-              <p className="text-slate-500 text-sm mt-1">Elevate OneDrive and S3 as first-class adapters, or link Google Drive directly in your dashboard.</p>
+              <p className="text-slate-500 text-sm mt-1">Connect firm-owned Google Drive directly, or configure advanced manual providers (OneDrive, Amazon S3).</p>
             </div>
 
             {/* Premium Three-Way Card Tab System */}
@@ -834,7 +855,7 @@ export function StorageSettingsPage() {
               {providerTab === 'google-drive' && (
                 <div className="space-y-6 max-w-2xl">
                   <div>
-                    <h4 className="font-bold text-slate-800 text-base">Configure Google Drive Connection</h4>
+                    <h3 className="font-bold text-slate-800 text-base">Firm-owned Google Drive</h3>
                     <p className="text-slate-500 text-sm leading-relaxed mt-1">
                       Link your firm&apos;s G Suite or Google Drive securely. All dockets and attachments are stored directly in your own Google Drive.
                     </p>
@@ -853,12 +874,12 @@ export function StorageSettingsPage() {
                       </div>
                       <p className="text-xs text-emerald-600">Connected account: <strong>{config?.connectedEmail || 'N/A'}</strong></p>
                       <div className="flex flex-wrap gap-2 pt-1">
-                        <Button type="button" variant="primary" onClick={connectGoogleDrive}>Reconnect Account</Button>
-                        <Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect Connection'}</Button>
+                        <Button type="button" variant="primary" onClick={connectGoogleDrive}>Reconnect Google Drive</Button>
+                        <Button type="button" variant="outline" onClick={onDisconnectGoogle} disabled={disconnecting}>{disconnecting ? 'Disconnecting…' : 'Disconnect firm Google Drive'}</Button>
                       </div>
                     </div>
                   ) : (
-                    <Button type="button" variant="primary" onClick={connectGoogleDrive}>Connect Firm Google Drive</Button>
+                    <Button type="button" variant="primary" onClick={connectGoogleDrive} title="Connect Firm Google Drive" className="motion-safe:active:scale-[0.96]">Connect firm Google Drive</Button>
                   )}
 
                   {/* Google Drive "Zero-Access" Verifiable Proof & Consent Badge */}
@@ -943,7 +964,10 @@ export function StorageSettingsPage() {
 
               {providerTab === 'onedrive' && (
                 <div className="space-y-5">
-                  <h4 className="font-bold text-slate-800">Configure Microsoft OneDrive</h4>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Advanced manual providers</span>
+                    <h4 className="font-bold text-slate-800 text-base mt-0.5">Configure Microsoft OneDrive</h4>
+                  </div>
                   <p className="text-slate-500 text-sm leading-relaxed">
                     Connect your Microsoft 365 Business OneDrive. Token rotations will guarantee connection longevity.
                   </p>
@@ -959,7 +983,7 @@ export function StorageSettingsPage() {
                       <h4 className="font-bold text-sm">Step-up Administrative Authentication</h4>
                     </div>
                     <p className="text-xs text-slate-500 leading-relaxed">
-                      Saving storage change adaptions requires confirming your administrative identity via temporary OTP verification.
+                      Saving storage changes requires confirming your administrator identity with an OTP.
                     </p>
                     
                     <div className="flex flex-col sm:flex-row gap-3 items-end max-w-lg">
@@ -981,7 +1005,10 @@ export function StorageSettingsPage() {
 
               {providerTab === 's3' && (
                 <div className="space-y-5">
-                  <h4 className="font-bold text-slate-800">Configure Amazon AWS S3</h4>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Advanced manual providers</span>
+                    <h4 className="font-bold text-slate-800 text-base mt-0.5">Configure Amazon AWS S3</h4>
+                  </div>
                   <p className="text-slate-500 text-sm leading-relaxed">
                     Enter AWS IAM access keys with strict permission boundaries. Ensure the bucket has CORS configured.
                   </p>
@@ -1004,7 +1031,7 @@ export function StorageSettingsPage() {
                       <h4 className="font-bold text-sm">Step-up Administrative Authentication</h4>
                     </div>
                     <p className="text-xs text-slate-500 leading-relaxed">
-                      Saving storage change adaptions requires confirming your administrative identity via temporary OTP verification.
+                      Saving storage changes requires confirming your administrator identity with an OTP.
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-3 items-end max-w-lg">
@@ -1092,10 +1119,10 @@ export function StorageSettingsPage() {
             <div className="flex justify-between items-center">
               <div>
                 <span className="text-xs uppercase font-bold tracking-wider text-slate-400">Space Allocation</span>
-                <h3 className="font-bold text-slate-800 text-lg mt-0.5">Storage Capacity</h3>
+                <h3 className="font-bold text-slate-800 text-lg mt-0.5">Storage capacity</h3>
               </div>
               <Button type="button" variant="outline" onClick={loadStorageUsage} disabled={usageLoading}>
-                {usageLoading ? 'Refreshing…' : 'Refresh Space'}
+                {usageLoading ? 'Refreshing…' : 'Refresh usage'}
               </Button>
             </div>
 
@@ -1132,10 +1159,10 @@ export function StorageSettingsPage() {
                 <div className="space-y-1">
                   <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200/50">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        usagePercent >= 90 ? 'bg-gradient-to-r from-rose-500 to-rose-600' :
-                        usagePercent >= 75 ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
-                        'bg-gradient-to-r from-emerald-500 to-indigo-600'
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        usagePercent >= 90 ? 'bg-rose-600' :
+                        usagePercent >= 75 ? 'bg-amber-500' :
+                        'bg-emerald-600'
                       }`}
                       style={{ width: `${Math.max(0, Math.min(100, usagePercent))}%` }}
                     />
@@ -1163,7 +1190,7 @@ export function StorageSettingsPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8 space-y-5 transition hover:shadow-md duration-300">
             <div>
               <span className="text-xs uppercase font-bold tracking-wider text-slate-400">Architectural Schema</span>
-              <h3 className="font-bold text-slate-800 text-lg mt-0.5">Control-Plane Data Mapping</h3>
+              <h3 className="font-bold text-slate-800 text-lg mt-0.5">Data storage map</h3>
               <p className="text-slate-500 text-sm mt-1">Review the logical allocation mapping between MongoDB control records and your cloud binaries.</p>
             </div>
 
@@ -1215,11 +1242,10 @@ export function StorageSettingsPage() {
           {/* Backup & Disaster Recovery Card */}
           <div className="bg-white border border-slate-200/90 text-slate-900 rounded-lg shadow-2xs p-6 md:p-8 space-y-6">
             <div className="space-y-2">
-              <span className="text-[10px] uppercase font-bold tracking-widest text-slate-700 bg-slate-100 px-2 py-0.5 rounded-sm border border-slate-200 inline-block font-mono">Enterprise Resilience Suite</span>
-              <h3 className="font-bold text-xl sm:text-2xl text-slate-950 tracking-tight">Disaster Recovery & Nightly Backups</h3>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-slate-700 bg-slate-100 px-2 py-0.5 rounded-sm border border-slate-200 inline-block font-mono">Resilience Suite</span>
+              <h3 className="font-bold text-xl sm:text-2xl text-slate-950 tracking-tight">Backup and export</h3>
               <p className="text-slate-600 text-sm max-w-2xl leading-relaxed">
-                Nightly backups package all system directories into secure AES-256-GCM encrypted ZIP archives. 
-                In case of administrative workspace failures, you can seamlessly deploy recovery restorations.
+                Scheduled backups package all firm file directories into secure AES-256-GCM encrypted ZIP archives stored in your cloud storage.
               </p>
             </div>
 
@@ -1227,18 +1253,17 @@ export function StorageSettingsPage() {
               <Button 
                 type="button" 
                 variant="primary" 
-                allowUnsafeClassName={true}
-                className="!bg-slate-950 hover:!bg-slate-800 !border-none !text-white font-bold rounded-md shadow-xs" 
+                title="Backup Storage Now"
+                className="font-bold rounded-md shadow-xs motion-safe:active:scale-[0.96]" 
                 onClick={onGenerateExport} 
                 disabled={exporting}
               >
-                {exporting ? 'Generating Vault Backup…' : 'Backup Storage Now'}
+                {exporting ? 'Generating Vault Backup…' : 'Generate storage export'}
               </Button>
               <Button 
                 type="button" 
                 variant="outline" 
-                allowUnsafeClassName={true}
-                className="!border-slate-300 !text-slate-700 hover:!bg-slate-100 font-semibold transition-all duration-200 rounded-md" 
+                className="font-semibold transition-all duration-200 rounded-md motion-safe:active:scale-[0.96]" 
                 onClick={() => setShowRestoreModal(true)}
               >
                 Open Restore Wizard
@@ -1336,27 +1361,22 @@ export function StorageSettingsPage() {
 
       {/* Modern Restore Wizard Modal */}
       {showRestoreModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="restore-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overscroll-contain"
+        >
           <div className="bg-white rounded-lg shadow-2xl border border-slate-200/90 w-full max-w-lg overflow-hidden animate-in fade-in duration-200">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
               <div>
-                <h2 className="text-base font-bold text-slate-950">Storage Restore Wizard</h2>
+                <h2 id="restore-modal-title" className="text-base font-bold text-slate-950">Storage Restore Wizard</h2>
                 <p className="text-xs text-slate-500">Secure AES-256-GCM Decrypter Engine</p>
               </div>
               <button
                 type="button"
                 className="text-slate-400 hover:text-slate-700 text-xl font-semibold h-7 w-7 rounded-md hover:bg-slate-100 flex items-center justify-center transition"
-                onClick={() => {
-                  if (restoreLoading) return;
-                  setShowRestoreModal(false);
-                  setRestoreProgress(0);
-                  setRestoreStatus('');
-                  setRestoreJobId('');
-                  setRestoreFile(null);
-                  setRestoreExportId('');
-                  setRestoreOtpCode('');
-                  setRestoreVerificationToken('');
-                }}
+                onClick={handleCloseRestoreModal}
                 aria-label="Close modal"
               >
                 ×
