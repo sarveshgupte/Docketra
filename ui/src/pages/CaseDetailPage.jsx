@@ -1776,7 +1776,7 @@ export const CaseDetailPage = () => {
                         disabled={actionInFlight}
                         className="w-full justify-center shadow-sm hover:shadow"
                       >
-                        Resume Docket
+                        Unpend Docket
                       </Button>
                     )}
                   </div>

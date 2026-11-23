@@ -92,6 +92,15 @@ const isWorkingDateTime = (dateTime, config) => {
   return config.workingDays.includes(dateTime.weekday);
 };
 
+const isWorkingDay = (jsDate = new Date(), configInput = DEFAULT_SLA_CONFIG) => {
+  const config = normalizeConfig(configInput);
+  const dateTime = DateTime.isDateTime(jsDate)
+    ? jsDate.setZone(config.timezone)
+    : DateTime.fromJSDate(new Date(jsDate), { zone: config.timezone });
+  if (!dateTime.isValid) return true;
+  return isWorkingDateTime(dateTime, config);
+};
+
 const atBusinessStart = (dateTime, config) => dateTime
   .set({
     hour: config.businessStart.hour,
@@ -232,7 +241,10 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
   const toStatus = normalizeStatus(newStatus);
   const previousTat = clampMinutes(caseDoc?.tatAccumulatedMinutes);
 
-  if (toStatus === CaseStatus.PENDING && !caseDoc?.tatPaused) {
+  const isPendedStatus = (s) => s === CaseStatus.PENDING || s === 'PENDED' || s === 'PEND';
+  const isActiveWorkStatus = (s) => s === CaseStatus.OPEN || s === 'ASSIGNED' || s === 'IN_PROGRESS' || s === 'ROUTED' || s === 'UNASSIGNED';
+
+  if (isPendedStatus(toStatus) && !caseDoc?.tatPaused) {
     const elapsed = computeElapsedMinutes(caseDoc.tatLastStartedAt, now);
     // Defensive invariant: never allow negative TAT even under clock anomalies.
     const newTat = Math.max(previousTat + elapsed, 0);
@@ -253,15 +265,28 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
     };
   }
 
-  if (toStatus === CaseStatus.OPEN) {
-    if (!(fromStatus === CaseStatus.PENDING || caseDoc?.tatPaused)) {
+  if (isActiveWorkStatus(toStatus)) {
+    if (!(isPendedStatus(fromStatus) || caseDoc?.tatPaused)) {
       return { patch: {}, auditEvent: null };
     }
+    const config = normalizeConfig(options.config || caseDoc?.slaConfigSnapshot || DEFAULT_SLA_CONFIG);
+
+    // Align resumption to business start time so non-working days & off-hours are never counted against SLA
+    const alignedStart = alignToBusinessTime(now, config).toJSDate();
+
+    const patch = {
+      tatPaused: false,
+      tatLastStartedAt: alignedStart,
+    };
+
+    // If docket has an slaDueAt and tatDurationMinutes, recalculate slaDueAt based on remaining minutes from alignedStart
+    if (caseDoc?.slaDueAt && config.tatDurationMinutes > 0) {
+      const remainingMinutes = Math.max(0, config.tatDurationMinutes - previousTat);
+      patch.slaDueAt = calculateDueDate(alignedStart, remainingMinutes, config);
+    }
+
     return {
-      patch: {
-        tatPaused: false,
-        tatLastStartedAt: now,
-      },
+      patch,
       auditEvent: {
         event: 'SLA_RESUMED',
         previousTat,
@@ -299,6 +324,9 @@ const handleStatusTransition = (caseDoc, newStatus, options = {}) => {
 module.exports = {
   DEFAULT_SLA_CONFIG,
   calculateDueDate,
+  alignToBusinessTime,
+  isWorkingDay,
+  isWorkingDateTime,
   getEffectiveTatMinutes,
   isBreached,
   initializeCaseSla,

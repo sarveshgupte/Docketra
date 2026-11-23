@@ -75,14 +75,14 @@ export const CaseWorkflowModals = ({
       )}
     >
       <div style={{ padding: 'var(--spacing-md)' }}>
-        <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)' }}>
-          Pending a docket temporarily pauses it until a specified date.
-          The docket will remain in your worklist but move below active dockets until the selected date.
+        <p style={{ marginBottom: 'var(--spacing-md)', color: 'var(--text-secondary)', fontSize: '0.875rem', lineHeight: '1.4' }}>
+          Pending pauses SLA tracking until the reopen date. If the reopen date falls on a weekend or firm holiday, the docket will remain paused and reopen at 10:00 AM on the next working day.
         </p>
         <Textarea label="Comment (Required)" value={pendComment} onChange={(e) => setPendComment(e.target.value)} placeholder="Explain why this docket is being pended…" rows={4} required disabled={pendingCase} />
         <div className="mt-3">
           <label htmlFor="pending-until" className="mb-1 block text-sm font-medium text-gray-700">Reopen Date (Required)</label>
           <input id="pending-until" type="date" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={pendingUntil} onChange={(e) => setPendingUntil(e.target.value)} disabled={pendingCase} min={pendingMinDate} />
+          <p className="mt-1 text-xs text-gray-500">SLA clock remains paused during non-working days and firm holidays.</p>
         </div>
       </div>
     </Modal>
@@ -149,9 +149,11 @@ export const CaseWorkflowModals = ({
       </div>
     </Modal>
 
-    <Modal isOpen={showUnpendModal} onClose={() => { setShowUnpendModal(false); setUnpendComment(''); }} title="Unpend Docket" actions={<><Button variant="outline" onClick={() => { setShowUnpendModal(false); setUnpendComment(''); }} disabled={unpendingCase}>Cancel</Button><Button variant="primary" onClick={handleUnpendCase} disabled={!unpendComment.trim() || unpendingCase}>{unpendingCase ? 'Resuming…' : 'Resume Docket'}</Button></>}>
+    <Modal isOpen={showUnpendModal} onClose={() => { setShowUnpendModal(false); setUnpendComment(''); }} title="Unpend Docket" actions={<><Button variant="outline" onClick={() => { setShowUnpendModal(false); setUnpendComment(''); }} disabled={unpendingCase}>Cancel</Button><Button variant="primary" onClick={handleUnpendCase} disabled={!unpendComment.trim() || unpendingCase}>{unpendingCase ? 'Unpending…' : 'Unpend Docket'}</Button></>}>
       <div style={{ padding: 'var(--spacing-md)' }}>
-        <p className="mb-2 text-sm text-gray-600">Unpending a docket will move it back to OPEN lifecycle and return it to your worklist.</p>
+        <p className="mb-2 text-sm text-gray-600" style={{ lineHeight: '1.4' }}>
+          Unpending resumes work on this docket. If unpended outside business hours or during a weekend or holiday, SLA tracking will automatically resume at 10:00 AM on the next business day.
+        </p>
         <Textarea label="Comment (Required)" value={unpendComment} onChange={(e) => setUnpendComment(e.target.value)} placeholder="Explain why this docket is being unpended…" rows={4} required disabled={unpendingCase} />
       </div>
     </Modal>

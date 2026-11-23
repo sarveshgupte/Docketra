@@ -22,6 +22,8 @@ const { logActivitySafe } = require('./docketActivity.service');
 const { REASON_CODES } = require('./pilotDiagnostics.service');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const { canTransition } = require('../utils/docketStateTransitions');
+const { getFirmSlaCalendarConfig } = require('./firmCalendar.service');
+const { isWorkingDay } = require('./caseSla.service');
 
 const getCaseNumberCandidates = (id) => {
   if (!id) return [];
@@ -842,12 +844,13 @@ async function qcDecision({ docketId, firmId, actor, decision, comment }) {
   return docket;
 }
 
-async function reopenDuePending() {
+async function reopenDuePending(options = {}) {
   if ((process.env.MONGODB_URI || process.env.MONGO_URI) && mongoose.connection && mongoose.connection.readyState === 0) {
     return { count: 0, docketIds: [] };
   }
 
-  const now = new Date();
+  const now = options.now ? new Date(options.now) : new Date();
+  const enforceWorkingDays = options.enforceWorkingDays !== false;
   const pendingStatusVariants = [
     'PENDING',
     'PEND',
@@ -871,11 +874,33 @@ async function reopenDuePending() {
     return { count: 0, docketIds: [] };
   }
 
+  const calendarCache = new Map();
+  const getCalendarForFirm = async (firmId) => {
+    if (!firmId) return null;
+    const key = String(firmId);
+    if (calendarCache.has(key)) return calendarCache.get(key);
+    try {
+      const cfg = await getFirmSlaCalendarConfig(firmId);
+      calendarCache.set(key, cfg);
+      return cfg;
+    } catch (_err) {
+      return null;
+    }
+  };
+
   const updatePromises = [];
-  const docketIds = [];
+  const unpendedDockets = [];
 
   for (const docket of dueCases) {
-    docketIds.push(docket.caseId);
+    if (enforceWorkingDays && docket.firmId) {
+      const firmCalendar = await getCalendarForFirm(docket.firmId);
+      if (firmCalendar && !isWorkingDay(now, firmCalendar)) {
+        // Skip unpending on non-working days (weekends, holidays) so SLA is not unpaused outside working hours
+        continue;
+      }
+    }
+
+    unpendedDockets.push(docket);
     const hasAssignee = docket.assignedToXID && String(docket.assignedToXID).trim() !== '';
     const isRouted = docket.routedToTeamId && String(docket.routedToTeamId).trim() !== '';
 
@@ -947,7 +972,7 @@ async function reopenDuePending() {
   await Promise.all(updatePromises);
 
   // Safely emit events ONLY after persistence is complete
-  for (const docket of dueCases) {
+  for (const docket of unpendedDockets) {
     emitDocketEvent(EVENT_NAMES.PENDING_REOPEN, { docketId: docket.caseId, firmId: docket.firmId });
     if (docket.assignedToXID) {
       await createDocketNotification({
@@ -961,7 +986,7 @@ async function reopenDuePending() {
     }
   }
 
-  return { count: dueCases.length, docketIds };
+  return { count: unpendedDockets.length, docketIds: unpendedDockets.map((d) => d.caseId) };
 }
 
 async function reassign({ docketId, firmId, actor, toUserXID, comment }) {

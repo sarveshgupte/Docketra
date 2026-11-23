@@ -2,6 +2,7 @@
 const assert = require('assert');
 
 require.cache[require.resolve('../src/services/docketAudit.service')] = { exports: { logDocketEvent: async () => {}, createLog: async () => {} } };
+require.cache[require.resolve('../src/services/auditLog.service')] = { exports: { logCaseHistory: async () => {} } };
 require.cache[require.resolve('../src/services/docketActivity.service')] = { exports: { logActivitySafe: () => {} } };
 require.cache[require.resolve('../src/services/docketEvents.service')] = { exports: { EVENT_NAMES: { PENDING_REOPEN: 'PENDING_REOPEN', QC_FAILURE: 'QC_FAILURE', QC_REQUEST: 'QC_REQUEST', ASSIGNMENT: 'ASSIGNMENT' }, emitDocketEvent: () => {} } };
 require.cache[require.resolve('../src/domain/notifications')] = { exports: { NotificationTypes: {}, createNotification: async () => {} } };

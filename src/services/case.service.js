@@ -84,6 +84,8 @@ async function updateStatus(caseId, newStatus, context = {}) {
   const slaTransition = caseSlaService.handleStatusTransition(existingCase, normalizedNewStatus, {
     now: new Date(),
     userId: context.userId || context.performedByXID || null,
+    config: context.config,
+    firmId: tenantId || existingCase.firmId,
   });
 
   await transitionDocket(caseId, normalizedNewStatus, context.userId || context.performedByXID || 'SYSTEM', {

@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Firm = require('../models/Firm.model');
 const { normalizeFirmSettings } = require('./adminController.service');
 
@@ -18,9 +19,26 @@ function toFirmSlaCalendarConfig(settings = {}) {
 
 async function getFirmSlaCalendarConfig(firmId, options = {}) {
   if (!firmId) return toFirmSlaCalendarConfig();
-  const query = Firm.findById(firmId).select('settings.firm').lean();
-  if (options.session) query.session(options.session);
-  const firm = await query;
+  if (mongoose.connection && mongoose.connection.readyState !== 1) {
+    return toFirmSlaCalendarConfig();
+  }
+  let firm = null;
+  try {
+    const query = Firm.findById(firmId).select('settings.firm').lean();
+    if (options.session) query.session(options.session);
+    firm = await query;
+  } catch (_err) {
+    firm = null;
+  }
+  if (!firm) {
+    try {
+      const query = Firm.findOne({ firmId: String(firmId) }).select('settings.firm').lean();
+      if (options.session) query.session(options.session);
+      firm = await query;
+    } catch (_err) {
+      firm = null;
+    }
+  }
   return toFirmSlaCalendarConfig(firm?.settings?.firm || {});
 }
 

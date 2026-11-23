@@ -11,6 +11,8 @@ const { DateTime } = require('luxon');
 const { logCaseHistory } = require('./auditLog.service');
 const { getCanonicalDocketState } = require('../utils/docketStateMapper');
 const { canResolve, canFile } = require('../utils/docketStateTransitions');
+const { getFirmSlaCalendarConfig } = require('./firmCalendar.service');
+const { isWorkingDay } = require('./caseSla.service');
 
 const LIFECYCLE_TRANSITIONS = Object.freeze({
   ASSIGNED: Object.freeze([CaseStatus.PENDING, CaseStatus.QC_PENDING, CaseStatus.RESOLVED, CaseStatus.FILED]),
@@ -289,6 +291,7 @@ const pendCase = async (firmId, caseId, comment, reopenDate, user, req = null) =
       statusBeforePended,
       pendedAt: new Date(),
       pendedReason: comment.trim(),
+      pendingReason: comment.trim(),
       autoReopenAt: pendingUntil,
       pendedByXID: user.xID,
       pendingUntil,
@@ -532,6 +535,13 @@ const unpendCase = async (firmId, caseId, comment, user, req = null, options = {
   const previousStatus = caseData.status;
   const previousPendingUntil = caseData.pendingUntil;
 
+  let firmCalendar = null;
+  try {
+    firmCalendar = await getFirmSlaCalendarConfig(caseData.firmId || firmId);
+  } catch (_e) {
+    // fallback
+  }
+
   await CaseService.updateStatus(caseId, targetStatus, {
     tenantId: firmId,
     role: user.role,
@@ -542,10 +552,12 @@ const unpendCase = async (firmId, caseId, comment, user, req = null, options = {
     ipAddress: req?.ip || null,
     userAgent: req?.get?.('user-agent') || null,
     req,
+    config: firmCalendar,
     statusPatch: {
       statusBeforePended: null,
       pendedAt: null,
       pendedReason: null,
+      pendingReason: null,
       autoReopenAt: null,
       unpendedAt: new Date(),
       pendingUntil: null,
@@ -602,83 +614,118 @@ const unpendCase = async (firmId, caseId, comment, user, req = null, options = {
  * Helper function to perform auto-reopen logic on a single case
  * 
  * @param {object} caseData - Case document to reopen
+ * @param {object} firmCalendar - Optional firm calendar config
  * @private
  */
-const performAutoReopen = async (caseData) => {
+const performAutoReopen = async (caseData, firmCalendar = null) => {
   const previousStatus = caseData.status;
   const previousPendingUntil = caseData.pendingUntil;
   const now = new Date();
 
+  let calendar = firmCalendar;
+  if (!calendar && caseData.firmId) {
+    try {
+      calendar = await getFirmSlaCalendarConfig(caseData.firmId);
+    } catch (_e) {
+      // fallback
+    }
+  }
+
+  // Air-tight invariant: never unpend dockets during non-working days (weekends / holidays)
+  if (calendar && !isWorkingDay(now, calendar)) {
+    return { skipped: true, reason: 'NON_WORKING_DAY' };
+  }
+
   const hasAssignee = caseData.assignedToXID && String(caseData.assignedToXID).trim() !== '';
   const isRouted = caseData.routedToTeamId && String(caseData.routedToTeamId).trim() !== '';
 
-  let targetStatus;
-  if (hasAssignee) {
-    targetStatus = CaseStatus.ASSIGNED;
-  } else if (isRouted) {
-    targetStatus = CaseStatus.ROUTED;
-  } else {
-    targetStatus = CaseStatus.UNASSIGNED;
+  let targetStatus = caseData.statusBeforePended || caseData.previousStatus;
+  if (!targetStatus) {
+    if (hasAssignee) {
+      targetStatus = CaseStatus.ASSIGNED;
+    } else if (isRouted) {
+      targetStatus = CaseStatus.ROUTED;
+    } else {
+      targetStatus = CaseStatus.UNASSIGNED;
+    }
   }
 
-  const session = await mongoose.startSession();
-  try {
-    await session.withTransaction(async () => {
-      await CaseService.updateStatus(caseData.caseId, targetStatus, {
-        tenantId: caseData.firmId,
-        role: 'Admin',
-        userId: 'SYSTEM',
-        performedByXID: 'SYSTEM',
-        performedBy: 'SYSTEM',
-        actorRole: 'SYSTEM',
-        session,
-        statusPatch: {
-          pendingUntil: null,
-          reopenAt: null,
-          lastActionByXID: 'SYSTEM',
-          lastActionAt: now,
-        },
-        auditMetadata: {
-          pendingUntil: previousPendingUntil,
-          autoReopened: true,
-          reason: 'pending_until elapsed',
-          reopened_at: now.toISOString(),
-        },
-      });
-
-      // Add system comment
-      await Comment.create([{
-        caseId: caseData.caseId,
-        firmId: caseData.firmId,
-        text: `Case automatically reopened after pending period expired (was pended until: ${previousPendingUntil})`,
-        createdBy: 'SYSTEM', // Use uppercase for consistency
-        createdByXID: 'SYSTEM',
-        note: 'Auto-reopen system action',
-      }], { session });
-
-      // Record action in audit trail
-      await recordAction(
-        caseData.caseId,
-        caseData.firmId,
-        CASE_ACTION_TYPES.CASE_AUTO_REOPENED,
-        `Case automatically reopened by system. Previous status: ${previousStatus}. Was pended until: ${previousPendingUntil}`,
-        'SYSTEM',
-        'SYSTEM',
-        'SYSTEM',
-        {
-          previousStatus,
-          newStatus: targetStatus,
-          pendingUntil: previousPendingUntil,
-          autoReopened: true,
-          reason: 'pending_until elapsed',
-          reopened_at: now.toISOString(),
-        },
-        null,
-        session
-      );
+  const executeReopen = async (session = null) => {
+    await CaseService.updateStatus(caseData.caseId, targetStatus, {
+      tenantId: caseData.firmId,
+      role: 'Admin',
+      userId: 'SYSTEM',
+      performedByXID: 'SYSTEM',
+      performedBy: 'SYSTEM',
+      actorRole: 'SYSTEM',
+      session,
+      config: calendar,
+      statusPatch: {
+        statusBeforePended: null,
+        pendedAt: null,
+        pendedReason: null,
+        pendingReason: null,
+        autoReopenAt: null,
+        unpendedAt: now,
+        pendingUntil: null,
+        reopenAt: null,
+        pendedByXID: null,
+        lastActionByXID: 'SYSTEM',
+        lastActionAt: now,
+      },
+      auditMetadata: {
+        pendingUntil: previousPendingUntil,
+        autoReopened: true,
+        reason: 'pending_until elapsed',
+        reopened_at: now.toISOString(),
+      },
     });
-  } finally {
-    await session.endSession();
+
+    // Add system comment
+    await Comment.create([{
+      caseId: caseData.caseId,
+      firmId: caseData.firmId,
+      text: `Case automatically reopened after pending period expired (was pended until: ${previousPendingUntil})`,
+      createdBy: 'SYSTEM', // Use uppercase for consistency
+      createdByXID: 'SYSTEM',
+      note: 'Auto-reopen system action',
+    }], session ? { session } : undefined);
+
+    // Record action in audit trail
+    await recordAction(
+      caseData.caseId,
+      caseData.firmId,
+      CASE_ACTION_TYPES.CASE_AUTO_REOPENED,
+      `Case automatically reopened by system. Previous status: ${previousStatus}. Was pended until: ${previousPendingUntil}`,
+      'SYSTEM',
+      'SYSTEM',
+      'SYSTEM',
+      {
+        previousStatus,
+        newStatus: targetStatus,
+        pendingUntil: previousPendingUntil,
+        autoReopened: true,
+        reason: 'pending_until elapsed',
+        reopened_at: now.toISOString(),
+      },
+      null,
+      session
+    );
+  };
+
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await executeReopen(session);
+      });
+      return { success: true, caseId: caseData.caseId };
+    } finally {
+      await session.endSession();
+    }
+  } else {
+    await executeReopen(null);
+    return { success: true, caseId: caseData.caseId };
   }
 };
 
@@ -686,7 +733,7 @@ const performAutoReopen = async (caseData) => {
  * Auto-reopen expired pending cases for a specific user
  * 
  * Finds all cases assigned to userXid with status PENDING where pendingUntil <= now
- * and changes their status back to OPEN.
+ * and changes their status back to active state, skipping non-working days.
  * 
  * This is called at read time (worklist, dashboard) to ensure data correctness
  * even without a background job scheduler.
@@ -707,11 +754,24 @@ const autoReopenExpiredPendingCases = async (userXid, firmId = null) => {
   
   const reopenedCases = [];
   
-  await Promise.all(pendedCases.map(async (caseData) => {
-    // Intentionally run concurrently to prevent N+1 sequencing overhead
-    await performAutoReopen(caseData);
-    reopenedCases.push(caseData.caseId);
-  }));
+  for (const caseData of pendedCases) {
+    const caseFirmId = caseData.firmId || firmId;
+    let firmCalendar = null;
+    try {
+      firmCalendar = await getFirmSlaCalendarConfig(caseFirmId);
+    } catch (_err) {
+      // fallback
+    }
+
+    if (firmCalendar && !isWorkingDay(now, firmCalendar)) {
+      continue;
+    }
+
+    const res = await performAutoReopen(caseData, firmCalendar);
+    if (res && res.success) {
+      reopenedCases.push(caseData.caseId);
+    }
+  }
   
   return {
     success: true,
@@ -724,7 +784,7 @@ const autoReopenExpiredPendingCases = async (userXid, firmId = null) => {
  * Auto-reopen pended cases (global)
  * 
  * Finds all cases with status PENDING where pendingUntil <= now
- * and changes their status back to OPEN.
+ * and changes their status back to active state, skipping non-working days.
  * 
  * This should be called by a scheduler (cron job) periodically.
  * 
@@ -742,11 +802,24 @@ const autoReopenPendedCases = async (firmId = null) => {
   
   const reopenedCases = [];
   
-  await Promise.all(pendedCases.map(async (caseData) => {
-    // Intentionally run concurrently to prevent N+1 sequencing overhead
-    await performAutoReopen(caseData);
-    reopenedCases.push(caseData.caseId);
-  }));
+  for (const caseData of pendedCases) {
+    const caseFirmId = caseData.firmId || firmId;
+    let firmCalendar = null;
+    try {
+      firmCalendar = await getFirmSlaCalendarConfig(caseFirmId);
+    } catch (_err) {
+      // fallback
+    }
+
+    if (firmCalendar && !isWorkingDay(now, firmCalendar)) {
+      continue;
+    }
+
+    const res = await performAutoReopen(caseData, firmCalendar);
+    if (res && res.success) {
+      reopenedCases.push(caseData.caseId);
+    }
+  }
   
   return {
     success: true,
