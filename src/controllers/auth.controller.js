@@ -47,6 +47,10 @@ const {
   getGoogleOAuthClient,
   signGoogleState,
   parseGoogleState,
+  resolveAllowedFrontendOrigin,
+  resolveAllowedBackendOrigin,
+  getTargetBackendForOrigin,
+  getBackendOriginFromReq,
 } = require('../services/authGoogle.service');
 const config = require('../config/config');
 const { loadEnv } = require('../config/env');
@@ -4036,8 +4040,9 @@ const findWorkspaceByXid = async (req, res) => {
 const GOOGLE_AUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES = 5;
 
-const redirectGoogleResult = (res, params = {}) => {
-  const base = process.env.FRONTEND_URL || 'http://localhost:5173';
+const redirectGoogleResult = (res, params = {}, returnOrigin = null) => {
+  const allowedOrigin = resolveAllowedFrontendOrigin(returnOrigin);
+  const base = allowedOrigin || process.env.FRONTEND_URL || 'http://localhost:5173';
   const target = new URL('/oauth/post-auth', base);
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
@@ -4070,6 +4075,15 @@ const startGoogleAuth = async (req, res) => {
       return res.status(400).json({ success: false, message: 'firmSlug is required for setup flow.' });
     }
 
+    const candidateOrigin = req.query?.returnTo || req.query?.frontendUrl || req.headers?.origin || req.headers?.referer;
+    const returnOrigin = resolveAllowedFrontendOrigin(candidateOrigin)
+      || resolveAllowedFrontendOrigin(process.env.FRONTEND_URL)
+      || 'https://docketra.in';
+
+    const targetBackendUrl = getBackendOriginFromReq(req)
+      || getTargetBackendForOrigin(returnOrigin)
+      || null;
+
     const isWorkspaceSignup = intent === 'signup' && !setupToken;
 
     const oauthClient = getGoogleOAuthClient(env);
@@ -4082,6 +4096,8 @@ const startGoogleAuth = async (req, res) => {
       firmName: firmName || null,
       phone: phone || null,
       agreedToPilotTerms,
+      returnOrigin,
+      targetBackendUrl,
       issuedAt: Date.now(),
     });
 
@@ -4103,17 +4119,35 @@ const startGoogleAuth = async (req, res) => {
 
 const googleAuthCallback = async (req, res) => {
   let resolvedFirmSlug = null;
+  let returnOrigin = null;
+  const respond = (params) => redirectGoogleResult(res, params, returnOrigin);
+
   try {
     ensureGoogleAuthEnabled();
     const code = String(req.query?.code || '').trim();
     const state = parseGoogleState(req.query?.state);
 
     if (!code || !state) {
-      return redirectGoogleResult(res, { error: 'INVALID_REQUEST' });
+      return respond({ error: 'INVALID_REQUEST' });
     }
 
+    returnOrigin = resolveAllowedFrontendOrigin(state.returnOrigin) || null;
+
     if (!state.issuedAt || (Date.now() - Number(state.issuedAt)) > GOOGLE_AUTH_STATE_TTL_MS) {
-      return redirectGoogleResult(res, { error: 'STATE_EXPIRED', firmSlug: state?.firmSlug || null });
+      return respond({ error: 'STATE_EXPIRED', firmSlug: state?.firmSlug || null });
+    }
+
+    // Cross-backend callback delegation:
+    // If state specifies a different target backend (e.g. CUG backend vs production callback URL),
+    // redirect the callback to that backend to query the appropriate environment database.
+    const targetBackendUrl = resolveAllowedBackendOrigin(state.targetBackendUrl) || getTargetBackendForOrigin(returnOrigin);
+    const currentBackendOrigin = getBackendOriginFromReq(req);
+
+    if (targetBackendUrl && currentBackendOrigin && targetBackendUrl !== currentBackendOrigin) {
+      const redirectTarget = new URL('/api/auth/google/callback', targetBackendUrl);
+      redirectTarget.searchParams.set('code', code);
+      redirectTarget.searchParams.set('state', String(req.query?.state || ''));
+      return res.redirect(redirectTarget.toString());
     }
 
     const intent = String(state.intent || '').toLowerCase();
@@ -4121,7 +4155,7 @@ const googleAuthCallback = async (req, res) => {
     const isWorkspaceSignup = intent === 'signup' && !state.setupToken;
 
     if (!isWorkspaceSignup && (!['login', 'signup'].includes(intent) || !resolvedFirmSlug)) {
-      return redirectGoogleResult(res, { error: 'INVALID_REQUEST' });
+      return respond({ error: 'INVALID_REQUEST' });
     }
 
     const oauthClient = getGoogleOAuthClient(env);
@@ -4139,7 +4173,7 @@ const googleAuthCallback = async (req, res) => {
     const emailVerified = profile?.email_verified === true;
 
     if (!googleSub || !googleEmail || !emailVerified) {
-      return redirectGoogleResult(res, { error: 'GOOGLE_IDENTITY_INVALID', firmSlug: resolvedFirmSlug });
+      return respond({ error: 'GOOGLE_IDENTITY_INVALID', firmSlug: resolvedFirmSlug });
     }
 
     if (isWorkspaceSignup) {
@@ -4152,7 +4186,7 @@ const googleAuthCallback = async (req, res) => {
       if (existingUser) {
         if (existingUser.lockedByAdmin) {
           const primaryAdmin = await User.findOne({ firmId: existingUser.firmId, isPrimaryAdmin: true, status: { $ne: 'deleted' } }).select('email');
-          return redirectGoogleResult(res, {
+          return respond({
             error: 'ACCOUNT_LOCKED_BY_ADMIN',
             primaryAdminEmail: primaryAdmin?.email || '',
             firmSlug: resolvedFirmSlug,
@@ -4185,7 +4219,7 @@ const googleAuthCallback = async (req, res) => {
             consumedAt: null,
           });
 
-          return redirectGoogleResult(res, {
+          return respond({
             exchangeToken,
             firmSlug: tenantContext.firmSlug,
             mode: 'login',
@@ -4227,7 +4261,7 @@ const googleAuthCallback = async (req, res) => {
         }
 
         if (!created) {
-          return redirectGoogleResult(res, { error: 'SIGNUP_FAILED' });
+          return respond({ error: 'SIGNUP_FAILED' });
         }
 
         await signupService.sendSignupWelcomeEmail({
@@ -4251,7 +4285,7 @@ const googleAuthCallback = async (req, res) => {
           consumedAt: null,
         });
 
-        return redirectGoogleResult(res, {
+        return respond({
           exchangeToken,
           firmSlug: created.firmSlug,
           mode: 'signup',
@@ -4268,7 +4302,7 @@ const googleAuthCallback = async (req, res) => {
         issuedAt: Date.now(),
       });
 
-      return redirectGoogleResult(res, {
+      return respond({
         mode: 'signup_pending',
         googlePendingToken,
         name: googleName || '',
@@ -4278,7 +4312,7 @@ const googleAuthCallback = async (req, res) => {
 
     const tenant = await resolveTenantBySlug(resolvedFirmSlug);
     if (!tenant || !isActiveStatus(tenant.status)) {
-      return redirectGoogleResult(res, { error: 'FIRM_INACTIVE', firmSlug: resolvedFirmSlug });
+      return respond({ error: 'FIRM_INACTIVE', firmSlug: resolvedFirmSlug });
     }
 
     const tenantCandidateIds = [
@@ -4313,7 +4347,7 @@ const googleAuthCallback = async (req, res) => {
 
       const tokenExpiresAt = user?.setupTokenExpiresAt || user?.passwordSetupExpires || null;
       if (!user || !tokenExpiresAt || tokenExpiresAt < now) {
-        return redirectGoogleResult(res, { error: 'SETUP_TOKEN_INVALID', firmSlug: resolvedFirmSlug });
+        return respond({ error: 'SETUP_TOKEN_INVALID', firmSlug: resolvedFirmSlug });
       }
 
       user.status = 'active';
@@ -4355,7 +4389,7 @@ const googleAuthCallback = async (req, res) => {
       user = await User.findOne(tenantScopedUserQuery);
 
       if (!user || !isActiveStatus(user.status) || !user.isActive) {
-        return redirectGoogleResult(res, { error: 'ACCOUNT_NOT_FOUND', firmSlug: resolvedFirmSlug });
+        return respond({ error: 'ACCOUNT_NOT_FOUND', firmSlug: resolvedFirmSlug });
       }
 
       if (user.lockedByAdmin) {
@@ -4367,7 +4401,7 @@ const googleAuthCallback = async (req, res) => {
           isPrimaryAdmin: true,
           status: { $ne: 'deleted' },
         }).select('email');
-        return redirectGoogleResult(res, {
+        return respond({
           error: 'ACCOUNT_LOCKED_BY_ADMIN',
           primaryAdminEmail: primaryAdmin?.email || '',
           firmSlug: resolvedFirmSlug
@@ -4376,7 +4410,7 @@ const googleAuthCallback = async (req, res) => {
 
       const existingGoogleId = String(user?.authProviders?.google?.googleId || '').trim();
       if (existingGoogleId && existingGoogleId !== googleSub) {
-        return redirectGoogleResult(res, { error: 'GOOGLE_ACCOUNT_MISMATCH', firmSlug: resolvedFirmSlug });
+        return respond({ error: 'GOOGLE_ACCOUNT_MISMATCH', firmSlug: resolvedFirmSlug });
       }
 
       if (!existingGoogleId) {
@@ -4404,13 +4438,13 @@ const googleAuthCallback = async (req, res) => {
       consumedAt: null,
     });
 
-    return redirectGoogleResult(res, {
+    return respond({
       exchangeToken,
       firmSlug: resolvedFirmSlug,
       mode: intent,
     });
   } catch (error) {
-    return redirectGoogleResult(res, { error: 'GOOGLE_AUTH_FAILED', firmSlug: resolvedFirmSlug });
+    return respond({ error: 'GOOGLE_AUTH_FAILED', firmSlug: resolvedFirmSlug });
   }
 };
 

@@ -327,6 +327,7 @@ export const FirmLoginPage = () => {
     const params = new URLSearchParams({
       intent: 'login',
       firmSlug: firmSlug || '',
+      returnTo: window.location.origin,
     });
 
     const targetUrl = new URL(`${API_BASE_URL}/auth/google/start?${params.toString()}`, window.location.origin).toString();

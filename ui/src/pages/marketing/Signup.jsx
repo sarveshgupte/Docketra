@@ -225,6 +225,7 @@ export default function Signup() {
     if (agreedToPilotTerms) {
       params.set('agreedToPilotTerms', 'true');
     }
+    params.set('returnTo', window.location.origin);
 
     const targetUrl = new URL(`${API_BASE_URL}/auth/google/start?${params.toString()}`, window.location.origin).toString();
     window.location.assign(targetUrl);

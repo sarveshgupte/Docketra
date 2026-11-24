@@ -69,9 +69,131 @@ const parseGoogleState = (rawState) => {
   }
 };
 
+const KNOWN_FRONTEND_HOSTS = [
+  'docketra-cug.web.app',
+  'docketra-cug.firebaseapp.com',
+  'cug.docketra.in',
+  'docketra.in',
+  'www.docketra.in',
+  'app.docketra.in',
+  'docketra-prod.web.app',
+  'docketra-prod.firebaseapp.com',
+];
+
+const KNOWN_BACKEND_HOSTS = [
+  'docketra-api-cug-1078507569854.us-central1.run.app',
+  'docketra-api-1078507569854.us-central1.run.app',
+  'api.docketra.in',
+  'cug-api.docketra.in',
+];
+
+const isLocalhost = (hostname) => (
+  hostname === 'localhost'
+  || hostname === '127.0.0.1'
+  || hostname === '[::1]'
+);
+
+const getConfiguredOrigins = () => {
+  const raw = [
+    process.env.FRONTEND_ORIGINS,
+    process.env.FRONTEND_URL,
+    process.env.API_PUBLIC_ORIGIN,
+    process.env.RENDER_EXTERNAL_URL,
+  ].filter(Boolean).join(',');
+
+  return raw.split(',').map((s) => s.trim()).filter(Boolean);
+};
+
+const resolveAllowedFrontendOrigin = (candidate) => {
+  if (!candidate || typeof candidate !== 'string') return null;
+  try {
+    const parsed = new URL(candidate);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    const hostname = parsed.hostname.toLowerCase();
+
+    const configured = getConfiguredOrigins();
+    for (const conf of configured) {
+      try {
+        if (new URL(conf).origin.toLowerCase() === parsed.origin.toLowerCase()) {
+          return parsed.origin;
+        }
+      } catch (_) {}
+    }
+
+    if (parsed.protocol === 'https:' && KNOWN_FRONTEND_HOSTS.includes(hostname)) {
+      return parsed.origin;
+    }
+
+    if (process.env.NODE_ENV !== 'production' && isLocalhost(hostname)) {
+      return parsed.origin;
+    }
+
+    return null;
+  } catch (_e) {
+    return null;
+  }
+};
+
+const resolveAllowedBackendOrigin = (candidate) => {
+  if (!candidate || typeof candidate !== 'string') return null;
+  try {
+    const parsed = new URL(candidate);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    const hostname = parsed.hostname.toLowerCase();
+
+    const configured = getConfiguredOrigins();
+    for (const conf of configured) {
+      try {
+        if (new URL(conf).origin.toLowerCase() === parsed.origin.toLowerCase()) {
+          return parsed.origin;
+        }
+      } catch (_) {}
+    }
+
+    if (parsed.protocol === 'https:' && KNOWN_BACKEND_HOSTS.includes(hostname)) {
+      return parsed.origin;
+    }
+
+    if (process.env.NODE_ENV !== 'production' && isLocalhost(hostname)) {
+      return parsed.origin;
+    }
+
+    return null;
+  } catch (_e) {
+    return null;
+  }
+};
+
+const getTargetBackendForOrigin = (frontendOrigin) => {
+  if (!frontendOrigin || typeof frontendOrigin !== 'string') return null;
+  const lower = frontendOrigin.toLowerCase();
+  if (lower.includes('docketra-cug') || lower.includes('cug.docketra.in')) {
+    return 'https://docketra-api-cug-1078507569854.us-central1.run.app';
+  }
+  return null;
+};
+
+const getBackendOriginFromReq = (req) => {
+  if (!req) return null;
+  const host = String(req.get ? req.get('host') : req.headers?.host || '').trim();
+  const proto = String(req.protocol || (req.headers && req.headers['x-forwarded-proto']) || 'https').trim().split(',')[0];
+  if (host) {
+    const candidate = `${proto}://${host}`;
+    const resolved = resolveAllowedBackendOrigin(candidate);
+    if (resolved) return resolved;
+  }
+  return resolveAllowedBackendOrigin(process.env.API_PUBLIC_ORIGIN);
+};
+
 module.exports = {
   getGoogleAuthRedirectUri,
   getGoogleOAuthClient,
   signGoogleState,
   parseGoogleState,
+  resolveAllowedFrontendOrigin,
+  resolveAllowedBackendOrigin,
+  getTargetBackendForOrigin,
+  getBackendOriginFromReq,
+  KNOWN_FRONTEND_HOSTS,
+  KNOWN_BACKEND_HOSTS,
 };
