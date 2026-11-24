@@ -1,7 +1,7 @@
 import React from 'react';
 
 /**
- * DocketraLogo Component
+ * DocketsHQLogo / DocketraLogo Component
  * Reusable brand mark + logotype for authentication and marketing pages.
  */
 export const DocketraLogo = ({ size = 'md', className = '' }) => {
@@ -38,7 +38,7 @@ export const DocketraLogo = ({ size = 'md', className = '' }) => {
       </svg>
       <div className="flex flex-col leading-none text-left">
         <span className={`${isSm ? 'text-base' : 'text-lg'} font-black text-slate-900 tracking-tight`}>
-          Docketra
+          Dockets<span className="text-amber-600">HQ</span>
         </span>
         <span className={`${isSm ? 'text-[7px]' : 'text-[8px]'} font-bold text-amber-700 tracking-wider uppercase mt-0.5`}>
           The Company Brain
@@ -47,5 +47,7 @@ export const DocketraLogo = ({ size = 'md', className = '' }) => {
     </div>
   );
 };
+
+export const DocketsHQLogo = DocketraLogo;
 
 export default DocketraLogo;

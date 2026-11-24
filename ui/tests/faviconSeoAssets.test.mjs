@@ -55,7 +55,7 @@ test('ui/public/manifest.json contains configured icons and branding', () => {
   const manifestPath = path.join(uiPublicDir, 'manifest.json');
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
 
-  assert.equal(manifest.name, 'Docketra');
+  assert.equal(manifest.name, 'DocketsHQ');
   assert.ok(Array.isArray(manifest.icons) && manifest.icons.length >= 3, 'manifest must have icon definitions');
   const hasTouchIcon = manifest.icons.some((i) => i.src === '/apple-touch-icon.png');
   const has32Icon = manifest.icons.some((i) => i.src === '/favicon-32x32.png');

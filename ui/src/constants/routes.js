@@ -57,6 +57,7 @@ export const ROUTES = {
   TASK_MANAGER: (firmSlug) => `/app/firm/${firmSlug}/task-manager`,
   SETTINGS: (firmSlug) => `/app/firm/${firmSlug}/settings`,
   COMPARE: '/compare',
+  COMPARE_DOCKETSHQ_EXCEL_WHATSAPP: '/compare/docketshq-vs-excel-whatsapp',
   COMPARE_EXCEL_WHATSAPP: '/compare/docketra-vs-excel-whatsapp',
   SOLUTIONS: '/solutions',
   SOLUTIONS_COMPANY_SECRETARIES: '/solutions/company-secretaries',

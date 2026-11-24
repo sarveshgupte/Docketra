@@ -64,12 +64,12 @@ export const FindWorkspacePage = () => {
   return (
     <div className="auth-wrapper find-workspace-page">
       <SeoHead
-        title="Find Workspace • Docketra"
+        title="Find Workspace • DocketsHQ"
         description="Enter your xID and route to your firm's secure workspace."
       />
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Find workspace">
-          <h1 className="find-workspace-page__heading">Find your Docketra workspace</h1>
+          <h1 className="find-workspace-page__heading">Find your DocketsHQ workspace</h1>
           <p className="find-workspace-page__intro">
             Enter your xID and we&apos;ll route you to your firm&apos;s secure login page without exposing private user details.
           </p>
@@ -105,7 +105,7 @@ export const FindWorkspacePage = () => {
                         {ws.firmName}
                       </span>
                       <span className="text-xs text-slate-500 font-mono">
-                        docketra.in/{ws.firmSlug}/login
+                        {typeof window !== 'undefined' ? window.location.host : 'docketshq.com'}/{ws.firmSlug}/login
                       </span>
                     </div>
                     <span className="text-slate-400 group-hover:text-blue-600 font-semibold text-xs ml-2">

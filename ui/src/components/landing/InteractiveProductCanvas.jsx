@@ -27,7 +27,7 @@ const CANVAS_TABS = [
     label: 'Drive Vault',
     badge: 'Private BYOS',
     badgeStyle: 'bg-slate-100 text-slate-800 border-slate-300',
-    description: 'All working papers stay inside your private Google Drive. Docketra never indexes pre-existing files.',
+    description: 'All working papers stay inside your private Google Drive. DocketsHQ never indexes pre-existing files.',
   },
   {
     id: 'clients',
@@ -279,7 +279,7 @@ export function InteractiveProductCanvas({ className = '' }) {
                     >
                       Simulate staff download attempt
                     </button>
-                    <span className="text-xs text-slate-500">Test how Docketra prevents local data theft</span>
+                    <span className="text-xs text-slate-500">Test how DocketsHQ prevents local data theft</span>
                   </div>
 
                   {shieldState === 'testing' && (
@@ -396,7 +396,7 @@ export function InteractiveProductCanvas({ className = '' }) {
                     <span className="text-emerald-700 font-medium">Folder Monitor Active</span>
                   </div>
                   <p className="text-slate-600 leading-relaxed">
-                    If an article assistant accidentally moves or renames a folder in Google Drive, Docketra heals the path automatically.
+                    If an article assistant accidentally moves or renames a folder in Google Drive, DocketsHQ heals the path automatically.
                   </p>
 
                   <div className="pt-2 flex flex-wrap items-center justify-between gap-3">

@@ -65,7 +65,10 @@ test('DocketraVsExcelWhatsAppPage contains all required CRO and SEO sections', (
   const pageContent = fs.readFileSync(pagePath, 'utf8');
 
   // Pilot Eyebrow Banner
-  assert.ok(pageContent.includes('🚀 Docketra Pilot Cohort Open'), 'Pilot banner badge must be present');
+  assert.ok(
+    pageContent.includes('🚀 DocketsHQ Pilot Cohort Open') || pageContent.includes('🚀 Docketra Pilot Cohort Open'),
+    'Pilot banner badge must be present'
+  );
   assert.ok(pageContent.includes('3 Months Free Access • 0 Setup Fees'), 'Pilot banner microcopy must be present');
 
   // Hero Section
@@ -99,7 +102,10 @@ test('DocketraVsExcelWhatsAppPage contains all required CRO and SEO sections', (
   // Interactive FAQ Accordion
   assert.ok(pageContent.includes('What is included in the 3-month free pilot?'), 'FAQ 1 must be present');
   assert.ok(pageContent.includes('How hard is it to migrate our existing client spreadsheet?'), 'FAQ 2 must be present');
-  assert.ok(pageContent.includes('How does Docketra handle Indian statutory formats?'), 'FAQ 3 must be present');
+  assert.ok(
+    pageContent.includes('How does DocketsHQ handle Indian statutory formats?') || pageContent.includes('How does Docketra handle Indian statutory formats?'),
+    'FAQ 3 must be present'
+  );
   assert.ok(pageContent.includes('openFaqIndex'), 'Interactive accordion state must be present');
 
   // Closing CTA Banner

@@ -13,7 +13,11 @@ assert.ok(protectedRoutes.includes('path="clients/:clientId"'), 'Client workspac
 assert.ok(workspacePage.includes('Client Memory'), 'Client workspace should use Client Memory language.');
 assert.ok(workspacePage.includes('Company Brain context'), 'Client workspace should include Company Brain context callout.');
 assert.ok(workspacePage.includes('Linked work will appear here as dockets are connected to this client.'), 'Client workspace should include linked work empty state copy.');
-assert.ok(workspacePage.includes('Linked documents and references will appear here as client files are connected through Docketra.'), 'Client workspace should include documents empty state copy.');
+assert.ok(
+  workspacePage.includes('Linked documents and references will appear here as client files are connected through DocketsHQ.') ||
+  workspacePage.includes('Linked documents and references will appear here as client files are connected through Docketra.'),
+  'Client workspace should include documents empty state copy.'
+);
 assert.equal(
   workspacePage.includes('vector') || workspacePage.includes('embeddings') || workspacePage.includes('document extraction'),
   false,

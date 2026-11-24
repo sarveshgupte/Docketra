@@ -1,6 +1,6 @@
 /**
  * Enterprise Sidebar Layout Component
- * Docketra B2B SaaS Platform — 2026 Edition
+ * DocketsHQ B2B SaaS Platform — 2026 Edition
  * Minimalist collapsible sidebar + flat omnibar header
  *
  * @deprecated For authenticated firm-facing routes, use PlatformShell instead.
@@ -661,7 +661,7 @@ export const Layout = ({ children, title, subtitle }) => {
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const resolvedTitle = title || activeNavLabel || 'Workspace';
-    document.title = `${resolvedTitle} • Docketra`;
+    document.title = `${resolvedTitle} • DocketsHQ`;
   }, [title, activeNavLabel]);
 
   return (

@@ -20,14 +20,14 @@ const OnboardingAside = () => (
               <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
             </svg>
-      Docketra
+      DocketsHQ
     </Link>
     <p className="mt-10 text-sm font-bold uppercase text-amber-700">Final setup</p>
     <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
       Finish the workspace profile before the real work begins.
     </h1>
     <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
-      A clean firm profile helps Docketra route users, dashboards, and workspace context correctly from day one.
+      A clean firm profile helps DocketsHQ route users, dashboards, and workspace context correctly from day one.
     </p>
     <div className="mt-8 grid gap-3">
       {['Firm identity', 'Admin contact', 'Workspace route ready'].map((item) => (
@@ -143,7 +143,7 @@ export function CompleteProfile() {
       <OnboardingShell>
         <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
           <div className="auth-header text-center">
-            <p className="auth-kicker">Docketra · Onboarding</p>
+            <p className="auth-kicker">DocketsHQ · Onboarding</p>
             <h1 className="text-3xl font-black text-slate-950">Sign in required</h1>
             <p className="mt-2 text-sm text-slate-600">Please sign in to continue onboarding.</p>
           </div>
@@ -170,7 +170,7 @@ export function CompleteProfile() {
       <OnboardingShell>
         <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
           <div className="auth-header text-center">
-            <p className="auth-kicker">Docketra · Onboarding</p>
+            <p className="auth-kicker">DocketsHQ · Onboarding</p>
             <h1 className="text-3xl font-black text-slate-950">We couldn&apos;t load onboarding</h1>
           </div>
           <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
@@ -187,7 +187,7 @@ export function CompleteProfile() {
     <OnboardingShell>
       <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
         <div className="auth-header text-center">
-          <p className="auth-kicker">Docketra · Workspace onboarding</p>
+          <p className="auth-kicker">DocketsHQ · Workspace onboarding</p>
           <h1 className="text-3xl font-black text-slate-950 md:text-4xl">Complete your workspace setup</h1>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">Step 2 of 2: add your workspace details.</p>
           <div className="mt-5 flex justify-center gap-2" aria-hidden="true">

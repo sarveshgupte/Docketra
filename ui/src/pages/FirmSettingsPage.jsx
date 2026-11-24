@@ -1000,7 +1000,7 @@ export const FirmSettingsPage = () => {
                   <p className="text-sm font-medium text-slate-900">Corporate Registry & MCA21 Gateway</p>
                   <div className="space-y-3 text-sm leading-6 text-slate-500">
                     <p>Powers client master data auto-filling from CIN/PAN, live Directors Registry imports, past filing records, and index of charges.</p>
-                    <p>By default, Docketra runs in <strong>Regulatory Sandbox</strong> mode, providing complete deterministic mock registry fixtures for Indian corporate structures without third-party fees.</p>
+                    <p>By default, DocketsHQ runs in <strong>Regulatory Sandbox</strong> mode, providing complete deterministic mock registry fixtures for Indian corporate structures without third-party fees.</p>
                     <p>To connect live MCA21 production records, select an upstream provider and enter your firm's API credentials.</p>
                   </div>
                 </div>
@@ -1324,7 +1324,7 @@ export const FirmSettingsPage = () => {
                   <p className="text-sm font-medium text-slate-900">Onboard Firm Data in Bulk</p>
                   <div className="space-y-3 text-sm leading-6 text-slate-500">
                     <p>Import client master records and multi-year historical docket work from CSV files.</p>
-                    <p>Download pre-filled templates, fill in past records, and upload to import into Docketra.</p>
+                    <p>Download pre-filled templates, fill in past records, and upload to import into DocketsHQ.</p>
                   </div>
                 </div>
 
@@ -1747,16 +1747,16 @@ export const FirmSettingsPage = () => {
                 {/* Anti-Jamku Stance Callout */}
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-3">
                   <h4 className="text-base font-semibold text-slate-900">
-                    Why Docketra does not offer ₹6,500 generic task tracker rates
+                    Why DocketsHQ does not offer ₹6,500 generic task tracker rates
                   </h4>
                   <p className="text-sm leading-6 text-slate-600">
-                    Generic office tools store client data on shared servers without download controls or maker-checker audit logs. Docketra gives you full custody and compliance:
+                    Generic office tools store client data on shared servers without download controls or maker-checker audit logs. DocketsHQ gives you full custody and compliance:
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
                     <div className="rounded-lg border border-slate-200 bg-white p-3.5 space-y-1">
                       <p className="text-xs font-semibold text-slate-900">1. Your Drive, your custody</p>
                       <p className="text-xs leading-5 text-slate-500">
-                        Files stay in your firm’s Google Drive. Even if you leave Docketra, your documents remain with you.
+                        Files stay in your firm’s Google Drive. Even if you leave DocketsHQ, your documents remain with you.
                       </p>
                     </div>
                     <div className="rounded-lg border border-slate-200 bg-white p-3.5 space-y-1">
@@ -1768,7 +1768,7 @@ export const FirmSettingsPage = () => {
                     <div className="rounded-lg border border-slate-200 bg-white p-3.5 space-y-1">
                       <p className="text-xs font-semibold text-slate-900">3. Trainee Laptop Shield</p>
                       <p className="text-xs leading-5 text-slate-500">
-                        Article assistants view files inside Docketra without saving client returns to personal pendrives or laptops.
+                        Article assistants view files inside DocketsHQ without saving client returns to personal pendrives or laptops.
                       </p>
                     </div>
                   </div>
@@ -1780,7 +1780,7 @@ export const FirmSettingsPage = () => {
                     <div>
                       <h4 className="text-base font-semibold text-slate-900">Payment & Invoice History</h4>
                       <p className="text-xs text-slate-500">
-                        Official tax invoices and payment receipts for your firm’s Docketra subscriptions.
+                        Official tax invoices and payment receipts for your firm’s DocketsHQ subscriptions.
                       </p>
                     </div>
                     <Button

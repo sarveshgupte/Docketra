@@ -207,8 +207,8 @@ export const FeedbackModal = ({ isOpen, onClose }) => {
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
               {successResult
-                ? 'Thank you for helping us improve Docketra'
-                : 'Direct channel to Docketra platform engineering and admins'}
+                ? 'Thank you for helping us improve DocketsHQ'
+                : 'Direct channel to DocketsHQ platform engineering and admins'}
             </p>
           </div>
           <button

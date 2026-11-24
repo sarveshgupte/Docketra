@@ -96,6 +96,7 @@
 
 .firm-switcher__list {
   overflow-y: auto;
+  overscroll-behavior: contain;
   max-height: 320px;
 }
 

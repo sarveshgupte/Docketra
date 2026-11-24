@@ -71,20 +71,20 @@ const COMPARISON_ROWS = [
 
 const FAQS = [
   {
-    question: 'Can Docketra read our firm’s existing confidential files in Google Drive?',
-    answer: 'No. When you connect Google Drive, Docketra uses Google’s restricted drive.file permission. It only accesses the specific /Docketra/ folder it created. We have zero access to read, search, or index any of your pre-existing client files, PAN copies, or private archives.',
+    question: 'Can DocketsHQ read our firm’s existing confidential files in Google Drive?',
+    answer: 'No. When you connect Google Drive, DocketsHQ uses Google’s restricted drive.file permission. It only accesses the specific /DocketsHQ/ folder it created. We have zero access to read, search, or index any of your pre-existing client files, PAN copies, or private archives.',
   },
   {
     question: 'What happens to our client records if we cancel our subscription?',
     answer: '100% of your client files and organized folders stay inside your firm’s own Google Drive. If you ever cancel, you keep everything. No lock-in, no export delays, and no charges.',
   },
   {
-    question: 'Our clients refuse to open web links and only dump files in WhatsApp. How does Docketra handle this?',
-    answer: 'Clients do not need to register on any portal or click links. They can keep texting documents on WhatsApp as usual. Your team simply forwards or drops the WhatsApp file into Docketra with one click. Docketra saves it directly to the client’s Google Drive folder, notes the message details, and checks off the pending task.',
+    question: 'Our clients refuse to open web links and only dump files in WhatsApp. How does DocketsHQ handle this?',
+    answer: 'Clients do not need to register on any portal or click links. They can keep texting documents on WhatsApp as usual. Your team simply forwards or drops the WhatsApp file into DocketsHQ with one click. DocketsHQ saves it directly to the client’s Google Drive folder, notes the message details, and checks off the pending task.',
   },
   {
     question: 'Our article clerks and trainees rotate every 2 to 3 years. How long does training take?',
-    answer: 'Zero days. Docketra comes with ready-made statutory checklists for MCA filings (MGT-7/AOC-4), DIR-3 KYC, GST returns, and Tax Audit Form 3CD. Fresh article assistants can follow the steps from Day 1, and partners review and sign off before final submission.',
+    answer: 'Zero days. DocketsHQ comes with ready-made statutory checklists for MCA filings (MGT-7/AOC-4), DIR-3 KYC, GST returns, and Tax Audit Form 3CD. Fresh article assistants can follow the steps from Day 1, and partners review and sign off before final submission.',
   },
   {
     question: 'How does the Pioneer 30 Launch Cohort rate work?',
@@ -95,16 +95,16 @@ const FAQS = [
     answer: 'Our Growth Tier (₹21,990 / year flat or ₹2,499 / month) is the top choice for expanding practices with 6 to 12 team members. It includes 12 seats, 150 active clients, department queues (ROC, GST, Direct Tax), and Trainee Laptop Shield. Need more seats? You can add individual seats at just ₹1,200 / seat / year without an enterprise contract.',
   },
   {
-    question: 'Why is Docketra priced at ₹12,990/yr when basic tools like Jamku advertise ₹6,500?',
-    answer: 'Jamku stores files on shared third-party servers with unrestricted junior downloads. Docketra keeps 100% of your client documents inside your own Google Drive, blocks junior trainees from downloading client PAN/ITR files to personal laptops, and provides SQC-1 maker-checker audit sign-offs for peer review.',
+    question: 'Why is DocketsHQ priced at ₹12,990/yr when basic tools like Jamku advertise ₹6,500?',
+    answer: 'Jamku stores files on shared third-party servers with unrestricted junior downloads. DocketsHQ keeps 100% of your client documents inside your own Google Drive, blocks junior trainees from downloading client PAN/ITR files to personal laptops, and provides SQC-1 maker-checker audit sign-offs for peer review.',
   },
   {
     question: 'What is the Free Pilot, and how do we upgrade?',
-    answer: 'The Free Pilot is our official Proof of Sovereign Isolation sandbox for 2 seats and 5 clients (₹0 forever). You can test live filings, check that Docketra cannot read your private Drive files, and verify that trainee download blocks work. When your firm needs more seats, upgrade to Pioneer 30 or Growth Tier in one click.',
+    answer: 'The Free Pilot is our official Proof of Sovereign Isolation sandbox for 2 seats and 5 clients (₹0 forever). You can test live filings, check that DocketsHQ cannot read your private Drive files, and verify that trainee download blocks work. When your firm needs more seats, upgrade to Pioneer 30 or Growth Tier in one click.',
   },
   {
     question: 'What if an assistant or clerk accidentally deletes or moves a folder inside Google Drive?',
-    answer: 'If an assistant accidentally moves or deletes a folder in Google Drive, Docketra detects it immediately, alerts the partner or admin, and restores or re-links the folder in one click.',
+    answer: 'If an assistant accidentally moves or deletes a folder in Google Drive, DocketsHQ detects it immediately, alerts the partner or admin, and restores or re-links the folder in one click.',
   },
 ];
 
@@ -120,7 +120,7 @@ export const PricingPage = () => {
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25">
       <SeoHead
         canonicalPath="/pricing"
-        title="Transparent Practice Operations Pricing | Docketra"
+        title="Transparent Practice Operations Pricing | DocketsHQ"
         description="Predictable, flat-rate pricing for Indian CA, CS, and compliance firms. Sovereign Google Drive BYOS, maker-checker QC, zero setup fees, and transparent yearly plans."
       />
 
@@ -488,7 +488,7 @@ export const PricingPage = () => {
         <Container size="7xl">
           <motion.div {...REVEAL} className="max-w-2xl mx-auto text-center space-y-2 mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              How Docketra compares to legacy tools and Excel
+              How DocketsHQ compares to legacy tools and Excel
             </h2>
             <p className="text-sm text-slate-600">
               Why leading Indian firms are abandoning centralized servers and messy spreadsheets.
@@ -501,7 +501,7 @@ export const PricingPage = () => {
                 <tr>
                   <th scope="col" className="p-4 w-1/4 font-semibold text-slate-900">Operational Capability</th>
                   <th scope="col" className="p-4 w-1/4 bg-emerald-50/60 text-slate-950 font-bold border-x border-emerald-200">
-                    Docketra (The Company Brain)
+                    DocketsHQ (The Company Brain)
                   </th>
                   <th scope="col" className="p-4 w-1/4 text-slate-700 font-medium">Jamku / Legacy</th>
                   <th scope="col" className="p-4 w-1/4 text-slate-700 font-medium">Excel + WhatsApp</th>

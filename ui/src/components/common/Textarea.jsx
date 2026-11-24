@@ -1,7 +1,8 @@
-import React, { useId, useState, useEffect, useRef } from 'react';
+import React, { forwardRef, useId, useState, useEffect, useRef } from 'react';
 import { FormLabel } from './FormLabel';
 import { formClasses } from '../../theme/tokens';
 import api from '../../services/api';
+import { cn } from '../../lib/utils';
 
 // Helper to extract initials
 const getInitials = (name) => {
@@ -13,7 +14,7 @@ const getInitials = (name) => {
 
 // Helper to generate a unique HSL gradient based on name
 const getAvatarGradient = (name) => {
-  if (!name) return 'linear-gradient(135deg, var(--dt-accent) 0%, #3b82f6 100%)';
+  if (!name) return 'linear-gradient(135deg, var(--dt-accent, #2563eb) 0%, #3b82f6 100%)';
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -23,7 +24,7 @@ const getAvatarGradient = (name) => {
   return `linear-gradient(135deg, hsl(${h1}, 75%, 48%) 0%, hsl(${h2}, 85%, 58%) 100%)`;
 };
 
-export const Textarea = ({
+export const Textarea = forwardRef(({
   label,
   error,
   success,
@@ -32,22 +33,20 @@ export const Textarea = ({
   readOnly = false,
   required = false,
   className = '',
+  textareaClassName = '',
   rows = 4,
   enableMentions = false,
-  // Destructure event handlers and value so the {...rest} spread below does NOT
-  // accidentally override our custom handleInputChange / handleKeyDown.
   onChange: parentOnChange,
   onKeyDown: parentOnKeyDown,
   value,
   id: propId,
   ...rest
-}) => {
+}, ref) => {
   const generatedId = useId();
   const textareaId = propId || rest.name || `textarea-${generatedId}`;
   const suggestionsListId = `${textareaId}-suggestions`;
   const errorId = `${textareaId}-error`;
   const helpId = `${textareaId}-help`;
-  const listboxId = `${textareaId}-listbox`;
   const describedBy = [
     rest['aria-describedby'],
     error ? errorId : null,
@@ -59,7 +58,6 @@ export const Textarea = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [mentionSearch, setMentionSearch] = useState('');
   const [mentionIndex, setMentionIndex] = useState(-1);
   const suggestionsRef = useRef(null);
 
@@ -72,7 +70,7 @@ export const Textarea = ({
       try {
         const response = await api.get('/dockets/eligible-users');
         if (response.data?.success && Array.isArray(response.data.data) && isMounted) {
-          setUsers(response.data.data.filter(u => u.isActive));
+          setUsers(response.data.data.filter((u) => u.isActive));
         }
       } catch (err) {
         console.error('Failed to load eligible users for mentions:', err);
@@ -90,30 +88,24 @@ export const Textarea = ({
     const currentValue = event.target.value;
     const cursor = event.target.selectionStart;
 
-    // First call the parent's onChange so that state remains synced
     if (parentOnChange) {
       parentOnChange(event);
     }
 
     if (!enableMentions) return;
 
-    // Check if user is typing a mention
     const textBeforeCursor = currentValue.substring(0, cursor);
     const atIndex = textBeforeCursor.lastIndexOf('@');
 
-    // Active mention: @ found and no space between @ and cursor
     if (atIndex !== -1 && !textBeforeCursor.substring(atIndex + 1).includes(' ')) {
       const query = textBeforeCursor.substring(atIndex + 1).toUpperCase();
       setMentionIndex(atIndex);
-      setMentionSearch(query);
 
-      // When users haven't loaded yet, don't show empty popover
       if (!users.length) {
         setShowSuggestions(false);
         return;
       }
 
-      // Empty query (just typed @) → show all users
       const filtered = query === ''
         ? users
         : users.filter(
@@ -130,7 +122,34 @@ export const Textarea = ({
     }
   };
 
-  // Keyboard navigation inside popover
+  const selectUser = (selectedUser) => {
+    const text = value || '';
+    const cursor = document.getElementById(textareaId)?.selectionStart || text.length;
+    const mentionText = `@${selectedUser.name} (${selectedUser.xID}) `;
+    const newValue = text.substring(0, mentionIndex) + mentionText + text.substring(cursor);
+
+    if (parentOnChange) {
+      parentOnChange({
+        target: {
+          name: rest.name,
+          id: textareaId,
+          value: newValue,
+        },
+      });
+    }
+
+    setShowSuggestions(false);
+
+    const textarea = document.getElementById(textareaId);
+    if (textarea) {
+      const newCursorPos = mentionIndex + mentionText.length;
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+    }
+  };
+
   const handleKeyDown = (event) => {
     if (!showSuggestions || !suggestions.length) {
       if (parentOnKeyDown) {
@@ -158,40 +177,6 @@ export const Textarea = ({
     }
   };
 
-  // Select user and replace `@query` range with tag
-  const selectUser = (selectedUser) => {
-    const text = value || '';
-    const cursor = document.getElementById(textareaId)?.selectionStart || text.length;
-
-    // Format: @Name (xID)
-    const mentionText = `@${selectedUser.name} (${selectedUser.xID}) `;
-    const newValue = text.substring(0, mentionIndex) + mentionText + text.substring(cursor);
-
-    // Trigger parent onChange with a synthetic event
-    if (parentOnChange) {
-      parentOnChange({
-        target: {
-          name: rest.name,
-          id: textareaId,
-          value: newValue,
-        },
-      });
-    }
-
-    setShowSuggestions(false);
-
-    // Focus and position cursor after selection
-    const textarea = document.getElementById(textareaId);
-    if (textarea) {
-      const newCursorPos = mentionIndex + mentionText.length;
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
-    }
-  };
-
-  // Click outside to close popover
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (suggestionsRef.current && !suggestionsRef.current.contains(event.target)) {
@@ -205,26 +190,33 @@ export const Textarea = ({
     };
   }, []);
 
-  // Returns an array of PRIMARY (non-QC) workbasket name strings for a user
   const getWorkbaskets = (u) => {
     if (Array.isArray(u.teamIds) && u.teamIds.length > 0) {
       const names = u.teamIds
-        .filter(t => t.type !== 'QC')
-        .map(t => t.name)
+        .filter((t) => t.type !== 'QC')
+        .map((t) => t.name)
         .filter(Boolean);
       if (names.length > 0) return names;
     }
-    // Fallback: single teamId — only show if not QC
     if (u.teamId && u.teamId.name && u.teamId.type !== 'QC') return [u.teamId.name];
     return ['Unassigned'];
   };
 
   return (
-    <div className={`w-full relative ${className}`}>
+    <div className={cn('w-full relative', className)}>
       <FormLabel htmlFor={textareaId} label={label} required={required} />
       <textarea
+        ref={ref}
         id={textareaId}
-        className={`${formClasses.textareaBase} ${error ? 'border-[var(--dt-error)] text-[var(--dt-error)] focus:border-[var(--dt-error)] focus:ring-[var(--dt-error)]/20' : ''} ${!error && success ? formClasses.inputSuccess : ''}`}
+        className={cn(
+          'w-full rounded-[var(--dt-radius-control,2px)] border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-900 placeholder:text-slate-400 shadow-none transition-[border-color,box-shadow] duration-150',
+          'hover:border-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 focus-visible:border-slate-900',
+          'disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:border-slate-200',
+          formClasses.textareaBase,
+          error && 'border-rose-500 focus-visible:ring-rose-500 focus-visible:border-rose-500',
+          !error && success && 'border-emerald-500 focus-visible:ring-emerald-500 focus-visible:border-emerald-500',
+          textareaClassName
+        )}
         disabled={disabled}
         readOnly={readOnly}
         rows={rows}
@@ -249,11 +241,11 @@ export const Textarea = ({
         <div 
           id={suggestionsListId}
           ref={suggestionsRef}
-          className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-[var(--dt-border-whisper)] rounded-md shadow-lg py-1 text-xs"
+          className="absolute z-50 left-0 mt-1 w-full max-h-56 overflow-y-auto overscroll-contain bg-white border border-slate-200/90 rounded-md shadow-xl py-1 text-xs"
           role="listbox"
           aria-label="Teammate mentions list"
         >
-          <div className="px-3 py-1.5 border-b border-[var(--dt-border-whisper)] text-[var(--dt-text-muted)] font-semibold uppercase tracking-wider text-[10px]">
+          <div className="px-3 py-1.5 border-b border-slate-100 text-slate-500 font-semibold uppercase tracking-wider text-[10px]">
             Teammate Mentions
           </div>
           {suggestions.map((u, index) => {
@@ -264,17 +256,18 @@ export const Textarea = ({
                 key={u.id || u._id || index}
                 onClick={() => selectUser(u)}
                 onMouseEnter={() => setSelectedIndex(index)}
-                className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors',
                   isActive 
-                    ? 'bg-[var(--dt-accent-subtle)] text-[var(--dt-accent)] font-medium' 
-                    : 'text-[var(--dt-text-secondary)] hover:bg-[var(--dt-surface-subtle)]'
-                }`}
+                    ? 'bg-slate-100/90 text-slate-900 font-medium' 
+                    : 'text-slate-700 hover:bg-slate-50'
+                )}
                 role="option"
                 aria-selected={isActive}
               >
-                {/* Initials Avatar with custom gradient */}
+                {/* Initials Avatar */}
                 <div 
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-[10px] shadow-sm border border-white flex-shrink-0"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-[10px] shadow-xs border border-white shrink-0"
                   style={{ background: getAvatarGradient(u.name) }}
                 >
                   {getInitials(u.name)}
@@ -282,32 +275,16 @@ export const Textarea = ({
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-semibold text-sm truncate text-[var(--dt-text)]">{u.name}</span>
-                    {/* xID badge — accent tint, tight letter-spacing, tabular nums */}
-                    <span
-                      style={{
-                        fontFamily: "'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace",
-                        fontSize: '9.5px',
-                        letterSpacing: '0.08em',
-                        fontWeight: 700,
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        background: 'color-mix(in srgb, var(--dt-accent) 10%, transparent)',
-                        color: 'var(--dt-accent)',
-                        border: '1px solid color-mix(in srgb, var(--dt-accent) 25%, transparent)',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
+                    <span className="font-semibold text-xs truncate text-slate-900">{u.name}</span>
+                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200/60 shrink-0 whitespace-nowrap">
                       {u.xID}
                     </span>
                   </div>
-                  {/* Workbasket pills — one per WB */}
                   <div className="flex flex-wrap gap-1 mt-1">
                     {getWorkbaskets(u).map((wbName, wbIdx) => (
                       <span
                         key={wbIdx}
-                        className="inline-flex items-center gap-0.5 text-[10px] text-[var(--dt-text-muted)] bg-[var(--dt-surface-subtle)] border border-[var(--dt-border-whisper)] rounded px-1.5 py-0.5 font-medium"
+                        className="inline-flex items-center text-[10px] text-slate-500 bg-slate-50 border border-slate-200/80 rounded px-1.5 py-0.2 font-medium"
                       >
                         {wbName}
                       </span>
@@ -320,14 +297,16 @@ export const Textarea = ({
         </div>
       )}
 
-      {error && <p className={formClasses.errorText} id={errorId}>{error}</p>}
+      {error && <p className={cn(formClasses.errorText, 'text-rose-600 text-xs mt-1')} id={errorId}>{error}</p>}
       {!error && success && (
-        <p className={formClasses.successText} id={helpId}>
+        <p className={cn(formClasses.successText, 'text-emerald-600 text-xs mt-1 flex items-center gap-1')} id={helpId}>
           <span aria-hidden="true">✓</span>
           <span>{success}</span>
         </p>
       )}
-      {!error && helpText && <p className={formClasses.helpText} id={helpId}>{helpText}</p>}
+      {!error && helpText && <p className={cn(formClasses.helpText, 'text-slate-500 text-xs mt-1')} id={helpId}>{helpText}</p>}
     </div>
   );
-};
+});
+
+Textarea.displayName = 'Textarea';

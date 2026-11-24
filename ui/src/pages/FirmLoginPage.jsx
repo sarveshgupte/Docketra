@@ -519,8 +519,8 @@ export const FirmLoginPage = () => {
   return (
     <div className="auth-wrapper min-h-screen flex flex-col bg-gradient-to-b from-slate-50/80 via-white to-slate-50/80 text-slate-900 selection:bg-indigo-500/20">
       <SeoHead
-        title={`${firmData.name || 'Firm'} • Sign In • Docketra`}
-        description={`Secure sign-in for ${firmData.name || 'your firm'} workspace on Docketra.`}
+        title={`${firmData.name || 'Firm'} • Sign In • DocketsHQ`}
+        description={`Secure sign-in for ${firmData.name || 'your firm'} workspace on DocketsHQ.`}
       />
 
       {/* Top Navbar Header */}
@@ -544,7 +544,7 @@ export const FirmLoginPage = () => {
             {step === 'credentials' ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Verified Workspace • docketra.in/{firmSlug}
+                Verified Workspace • {typeof window !== 'undefined' ? window.location.host : 'docketshq.com'}/{firmSlug}
               </span>
             ) : (
               <span className="text-xs text-slate-500">
@@ -776,7 +776,7 @@ export const FirmLoginPage = () => {
           <span>•</span>
           <a href="mailto:support@docketra.in" className="hover:text-slate-600 transition-colors">Contact Support</a>
         </div>
-        <p className="text-[11px]">© {new Date().getFullYear()} Docketra. The Company Brain for Professional Practices.</p>
+        <p className="text-[11px]">© {new Date().getFullYear()} DocketsHQ. The Company Brain for Professional Practices.</p>
       </footer>
     </div>
   );

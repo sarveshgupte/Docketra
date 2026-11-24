@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './BubbleMenu.css';
 
 const DEFAULT_ITEMS = [
-  { label: 'Why', id: 'why', href: '/#why', ariaLabel: 'Why', description: 'Why firms trust Docketra' },
+  { label: 'Why', id: 'why', href: '/#why', ariaLabel: 'Why', description: 'Why firms trust DocketsHQ' },
   { label: 'Product', id: 'product', href: '/#product', ariaLabel: 'Product', description: 'Core capabilities & modules' },
   { label: 'Workflow', id: 'workflow', href: '/#workflow', ariaLabel: 'Workflow', description: 'Statutory compliance lifecycle' },
   { label: 'Pilot readiness', id: 'pilot-readiness', href: '/#pilot-readiness', ariaLabel: 'Pilot Readiness', description: 'Security & pilot criteria' },
@@ -136,7 +136,7 @@ export default function BubbleMenu({
         <div className="w-full max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
           {/* Brand Logo */}
           <div className="bubble-menu__brand">
-            {typeof logo === 'string' ? <img src={logo} alt="Docketra Logo" className="bubble-logo" /> : logo}
+            {typeof logo === 'string' ? <img src={logo} alt="DocketsHQ Logo" className="bubble-logo" /> : logo}
           </div>
 
           {/* Desktop Navigation Links (inline on large screens) */}
@@ -213,7 +213,7 @@ export default function BubbleMenu({
                   <span className="h-1.5 w-1.5 rounded-xs bg-slate-400 shrink-0" />
                   <div>
                     <p className="font-bold leading-none text-slate-900">vs. Excel & WhatsApp</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Why firms switch to Docketra</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Why firms switch to DocketsHQ</p>
                   </div>
                 </Link>
               </div>
@@ -376,7 +376,7 @@ export default function BubbleMenu({
                   <span className="h-1.5 w-1.5 rounded-xs bg-slate-400 shrink-0" />
                   <div>
                     <p className="font-bold leading-none text-slate-900">vs. Excel & WhatsApp</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Why firms switch to Docketra</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Why firms switch to DocketsHQ</p>
                   </div>
                 </Link>
               </div>

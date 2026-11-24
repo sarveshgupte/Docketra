@@ -126,14 +126,14 @@ export const LoginPage = () => {
   return (
     <div className="auth-wrapper find-workspace-page auth-public-page">
       <SeoHead
-        title="Sign In • Docketra"
+        title="Sign In • DocketsHQ"
         description="Secure access for platform oversight, firm setup, and operational controls."
       />
       <div className="find-workspace-page__shell">
         <section className="find-workspace-page__context" aria-label="Superadmin login context">
-          <h1 className="find-workspace-page__heading">Sign in to Docketra</h1>
+          <h1 className="find-workspace-page__heading">Sign in to DocketsHQ</h1>
           <p className="find-workspace-page__intro">
-            Secure access for platform oversight, firm setup, and the operational controls that keep Docketra tidy.
+            Secure access for platform oversight, firm setup, and the operational controls that keep DocketsHQ tidy.
           </p>
         </section>
 

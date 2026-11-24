@@ -108,6 +108,26 @@ export const motion = new Proxy(
   }
 );
 
+export const useReducedMotion = () => {
+  const [prefersReduced, setPrefersReduced] = useState(
+    () => typeof window !== 'undefined' && Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const listener = (e) => setPrefersReduced(Boolean(e.matches));
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
+    mediaQuery.addListener(listener);
+    return () => mediaQuery.removeListener(listener);
+  }, []);
+
+  return prefersReduced;
+};
+
 export const AnimatePresence = ({ children, mode = 'sync' }) => {
   const current = React.Children.only(children);
   const [rendered, setRendered] = useState(current);

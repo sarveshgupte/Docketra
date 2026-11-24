@@ -16,25 +16,25 @@ const FAQ_ITEMS = [
     id: 'migration-ease',
     question: 'How hard is it to migrate our existing client spreadsheet?',
     answer:
-      'Switching takes minutes. Docketra features a built-in Client Master Importer with dry-run validation for CIN, PAN, GSTIN, and TAN formats. You can either upload your existing CSV/Excel file or copy-paste tab-separated cells directly from spreadsheets. Any invalid rows generate an error report with exact line numbers for instant resolution.',
+      'Switching takes minutes. DocketsHQ features a built-in Client Master Importer with dry-run validation for CIN, PAN, GSTIN, and TAN formats. You can either upload your existing CSV/Excel file or copy-paste tab-separated cells directly from spreadsheets. Any invalid rows generate an error report with exact line numbers for instant resolution.',
   },
   {
     id: 'statutory-formats',
-    question: 'How does Docketra handle Indian statutory formats?',
+    question: 'How does DocketsHQ handle Indian statutory formats?',
     answer:
-      'Docketra is engineered specifically for Indian compliance practices. It natively validates 21-digit Corporate Identification Numbers (CIN), 10-digit PAN/TAN, 15-digit GSTIN, and DINs. It organizes MCA V3 annual filings (AOC-4, MGT-7), secretarial audits, board resolutions, and tax due dates into structured dockets with automatic statutory alerts.',
+      'DocketsHQ is engineered specifically for Indian compliance practices. It natively validates 21-digit Corporate Identification Numbers (CIN), 10-digit PAN/TAN, 15-digit GSTIN, and DINs. It organizes MCA V3 annual filings (AOC-4, MGT-7), secretarial audits, board resolutions, and tax due dates into structured dockets with automatic statutory alerts.',
   },
   {
     id: 'vs-generic-tools',
-    question: 'How does Docketra compare to generic tools like ClickUp, Notion, or Asana?',
+    question: 'How does DocketsHQ compare to generic tools like ClickUp, Notion, or Asana?',
     answer:
-      'Generic tools lack Indian statutory semantics: they have no concept of a CIN, 4-eye partner sign-offs, statutory filing penalties, or MCA compliance calendars. Setting them up requires months of custom consulting. Docketra is purpose-built and ready on day one with compliance workbaskets, client memory, and audit trails tailored for Indian CA and CS practices.',
+      'Generic tools lack Indian statutory semantics: they have no concept of a CIN, 4-eye partner sign-offs, statutory filing penalties, or MCA compliance calendars. Setting them up requires months of custom consulting. DocketsHQ is purpose-built and ready on day one with compliance workbaskets, client memory, and audit trails tailored for Indian CA and CS practices.',
   },
   {
     id: 'security-sovereignty',
     question: 'Where is our client data stored and how is it secured?',
     answer:
-      'We operate on enterprise-grade Indian cloud infrastructure ensuring data sovereignty. Furthermore, Docketra supports Bring-Your-Own-Storage (BYOS), allowing your client documents to be stored directly inside your own firm’s Google Drive or AWS S3 account with client-level folder isolation and zero vendor lock-in.',
+      'We operate on enterprise-grade Indian cloud infrastructure ensuring data sovereignty. Furthermore, DocketsHQ supports Bring-Your-Own-Storage (BYOS), allowing your client documents to be stored directly inside your own firm’s Google Drive or AWS S3 account with client-level folder isolation and zero vendor lock-in.',
   },
 ];
 
@@ -104,7 +104,7 @@ const MIGRATION_CARDS = [
   {
     num: '02',
     title: 'Quick Bulk Paste',
-    description: 'Copy tab-separated cells directly from Microsoft Excel or Google Sheets and paste them right into Docketra without exporting or downloading files.',
+    description: 'Copy tab-separated cells directly from Microsoft Excel or Google Sheets and paste them right into DocketsHQ without exporting or downloading files.',
     badge: '✓ Direct clipboard copy-paste',
     icon: (
       <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -136,7 +136,7 @@ const MIGRATION_CARDS = [
   },
 ];
 
-export const DocketraVsExcelWhatsAppPage = () => {
+export const DocketsHQVsExcelWhatsAppPage = () => {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [activeSandboxTab, setActiveSandboxTab] = useState('memory');
 
@@ -148,8 +148,8 @@ export const DocketraVsExcelWhatsAppPage = () => {
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25 font-sans">
       <SeoHead
         canonicalPath="/compare/docketra-vs-excel-whatsapp"
-        title="Docketra vs Excel & WhatsApp | 3-Month Free Pilot for Indian Compliance Firms"
-        description="Outgrow spreadsheet chaos and lost WhatsApp files. Switch to Docketra in minutes with built-in Excel/CSV importers and claim a 3-month free pilot."
+        title="DocketsHQ vs Excel & WhatsApp | 3-Month Free Pilot for Indian Compliance Firms"
+        description="Outgrow spreadsheet chaos and lost WhatsApp files. Switch to DocketsHQ in minutes with built-in Excel/CSV importers and claim a 3-month free pilot."
         jsonLd={FAQ_SCHEMA}
       />
 
@@ -157,7 +157,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
       <div className="border-b border-amber-200/90 bg-amber-50/70 px-4 py-2 text-center text-xs">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
           <span className="inline-flex items-center gap-1.5 rounded border border-amber-300 bg-amber-100/80 px-2 py-0.5 font-bold text-amber-900 font-mono text-[11px]">
-            🚀 Docketra Pilot Cohort Open
+            🚀 DocketsHQ Pilot Cohort Open
           </span>
           <span className="text-slate-700 font-medium">
             Exclusive for Indian CS, CA & Corporate Legal Practices • 3 Months Free Access • 0 Setup Fees
@@ -291,7 +291,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                     <span className="h-2 w-2 rounded-full bg-emerald-500" />
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-900">The Modern Operating System</span>
                   </div>
-                  <span className="text-[11px] font-bold text-amber-700 font-mono">Docketra</span>
+                  <span className="text-[11px] font-bold text-amber-700 font-mono">DocketsHQ</span>
                 </div>
 
                 <div className="space-y-3">
@@ -336,7 +336,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">The Cold Reality</div>
             <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Excel & WhatsApp vs. Docketra
+              Excel & WhatsApp vs. DocketsHQ
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
               See why spreadsheets break as soon as your firm handles more than 25 corporate entities.
@@ -353,7 +353,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                     Excel & WhatsApp (The Fragile Stack)
                   </th>
                   <th scope="col" className="py-3.5 px-5 text-slate-900 w-[37%] bg-emerald-50/40">
-                    Docketra (The Company Brain)
+                    DocketsHQ (The Company Brain)
                   </th>
                 </tr>
               </thead>
@@ -406,7 +406,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                 </div>
                 <div className="rounded border border-emerald-200 bg-emerald-50/50 p-3 text-xs text-emerald-950">
                   <p className="font-bold text-emerald-800 mb-1 flex items-center gap-1.5">
-                    <span>✓</span> Docketra:
+                    <span>✓</span> DocketsHQ:
                   </p>
                   <p className="leading-relaxed text-slate-800 font-medium">{row.docketra}</p>
                 </div>
@@ -461,7 +461,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </div>
 
               <div className="rounded border border-amber-100 bg-amber-50/60 p-3 text-xs text-slate-700">
-                <span className="font-bold text-amber-800">The Docketra Fix:</span> Institutional Client Memory. Every entity’s master data (CIN, DIN, PAN, registered office, statutory records, past resolutions) is indexed and searchable across the entire firm in 1 click.
+                <span className="font-bold text-amber-800">The DocketsHQ Fix:</span> Institutional Client Memory. Every entity’s master data (CIN, DIN, PAN, registered office, statutory records, past resolutions) is indexed and searchable across the entire firm in 1 click.
               </div>
             </div>
 
@@ -495,7 +495,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </div>
 
               <div className="rounded border border-amber-100 bg-amber-50/60 p-3 text-xs text-slate-700">
-                <span className="font-bold text-amber-800">The Docketra Fix:</span> 4-Eye Review Gates. Dockets cannot advance to filing until assigned managers or partners approve the work in dedicated QC Baskets with complete revision history.
+                <span className="font-bold text-amber-800">The DocketsHQ Fix:</span> 4-Eye Review Gates. Dockets cannot advance to filing until assigned managers or partners approve the work in dedicated QC Baskets with complete revision history.
               </div>
             </div>
 
@@ -529,7 +529,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </div>
 
               <div className="rounded border border-amber-100 bg-amber-50/60 p-3 text-xs text-slate-700">
-                <span className="font-bold text-amber-800">The Docketra Fix:</span> Firm-Owned Shared Queues. Work does not belong to individual inboxes. It lives in firm-controlled workbaskets. Reassigning 50 dockets to a new associate takes exactly 5 seconds.
+                <span className="font-bold text-amber-800">The DocketsHQ Fix:</span> Firm-Owned Shared Queues. Work does not belong to individual inboxes. It lives in firm-controlled workbaskets. Reassigning 50 dockets to a new associate takes exactly 5 seconds.
               </div>
             </div>
 
@@ -569,7 +569,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </div>
 
               <div className="rounded border border-amber-100 bg-amber-50/60 p-3 text-xs text-slate-700">
-                <span className="font-bold text-amber-800">The Docketra Fix:</span> Live Partner Telemetry. Instant breakdown of open dockets by fee-earner, stage distribution, SLA countdown, and overdue risk metrics across your entire team.
+                <span className="font-bold text-amber-800">The DocketsHQ Fix:</span> Live Partner Telemetry. Instant breakdown of open dockets by fee-earner, stage distribution, SLA countdown, and overdue risk metrics across your entire team.
               </div>
             </div>
           </div>
@@ -585,7 +585,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               Switching from Excel Takes Minutes
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              You don’t have to manually re-type client data. Docketra is equipped with 4 automated spreadsheet ingestion engines built right into the platform.
+              You don’t have to manually re-type client data. DocketsHQ is equipped with 4 automated spreadsheet ingestion engines built right into the platform.
             </p>
           </div>
 
@@ -630,7 +630,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
                 Experience the Company Brain in Action
               </h2>
               <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Interactive preview: see how Docketra organizes client entity memory, review gates, and live workbaskets.
+                Interactive preview: see how DocketsHQ organizes client entity memory, review gates, and live workbaskets.
               </p>
 
               {/* Interactive Tab Switcher */}
@@ -847,7 +847,7 @@ export const DocketraVsExcelWhatsAppPage = () => {
               </span>
               <h3 className="text-sm font-bold text-slate-950">Direct Founder Hotline</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Direct WhatsApp and Slack channels with Docketra’s core product engineering team to request custom compliance workflows and statutory form templates.
+                Direct WhatsApp and Slack channels with DocketsHQ’s core product engineering team to request custom compliance workflows and statutory form templates.
               </p>
             </div>
           </div>
@@ -938,4 +938,5 @@ export const DocketraVsExcelWhatsAppPage = () => {
   );
 };
 
-export default DocketraVsExcelWhatsAppPage;
+export const DocketraVsExcelWhatsAppPage = DocketsHQVsExcelWhatsAppPage;
+export default DocketsHQVsExcelWhatsAppPage;

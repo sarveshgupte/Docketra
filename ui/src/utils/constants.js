@@ -4,7 +4,7 @@ import { safeConsole } from './safeConsole.js';
  * Application Constants
  */
 
-export const APP_NAME = 'Docketra';
+export const APP_NAME = 'DocketsHQ';
 export const APP_VERSION = '1.1';
 
 /**

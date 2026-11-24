@@ -21,7 +21,7 @@ export const SecurityPage = () => {
   return (
     <LegalLayout
       title="Data & Security Overview"
-      description="A practical overview of how Docketra thinks about firm-owned data, storage direction, AI controls, and authenticated access."
+      description="A practical overview of how DocketsHQ thinks about firm-owned data, storage direction, AI controls, and authenticated access."
       sections={SECTIONS}
       kicker="Trust architecture"
       highlights={['Firm-owned data model', 'BYOS and BYOAI direction', 'Role-based access controls']}
@@ -29,7 +29,7 @@ export const SecurityPage = () => {
       <section id="about-this-page">
         <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. About This Page</h2>
         <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-          This page is a product overview, not a legal contract. It explains how Docketra currently
+          This page is a product overview, not a legal contract. It explains how DocketsHQ currently
           handles data and security in early-stage testing.
         </p>
       </section>
@@ -37,7 +37,7 @@ export const SecurityPage = () => {
       <section id="data-ownership-model">
         <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Data Ownership Model</h2>
         <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-          Firms own their workspace data. Docketra processes that data to provide core product
+          Firms own their workspace data. DocketsHQ processes that data to provide core product
           workflows and maintain service operations.
         </p>
       </section>
@@ -45,10 +45,10 @@ export const SecurityPage = () => {
       <section id="byos-model">
         <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Sovereign BYOS Architecture</h2>
         <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-          Docketra operates on a Sovereign Bring Your Own Storage (BYOS) model. When your firm connects Google Drive,
+          DocketsHQ operates on a Sovereign Bring Your Own Storage (BYOS) model. When your firm connects Google Drive,
           authentication is restricted strictly to Google's <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">drive.file</code> OAuth scope.
-          Under this restricted scope, Docketra creates its own dedicated firm folder and can strictly <em>only</em> access files
-          and folders that Docketra itself created. Docketra has zero ability to view, search, index, or touch any pre-existing
+          Under this restricted scope, DocketsHQ creates its own dedicated firm folder and can strictly <em>only</em> access files
+          and folders that DocketsHQ itself created. DocketsHQ has zero ability to view, search, index, or touch any pre-existing
           client archives, private documents, or personal folders in your Google Drive.
         </p>
         <p className="mt-2 text-sm text-gray-600 leading-relaxed">
@@ -77,21 +77,21 @@ export const SecurityPage = () => {
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Google Drive Folder Tamper &amp; Deletion Guard</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
         A common fear among managing partners is that a trainee or clerk might accidentally move, drag, or trash a synchronized
-        folder inside Google Drive. Docketra safeguards against this through automated cloud metadata synchronization:
+        folder inside Google Drive. DocketsHQ safeguards against this through automated cloud metadata synchronization:
       </p>
       <ul className="mt-3 space-y-2 text-sm text-gray-600 list-disc list-inside leading-relaxed">
         <li>
           <strong>Persistent Resource ID Tracking:</strong> Folders in Google Drive are mapped by persistent, immutable resource IDs
-          rather than fragile directory path strings. If a team member drags or renames a folder in Drive, Docketra’s metadata
+          rather than fragile directory path strings. If a team member drags or renames a folder in Drive, DocketsHQ’s metadata
           engine maintains continuous link integrity without breaking active dockets.
         </li>
         <li>
           <strong>Root Manifest Verification:</strong> Every firm root folder contains an encrypted identity manifest (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded">.docketra_storage_root.json</code>).
-          Docketra verifies this manifest on every health check to prevent folder misdirection or accidental unlinking.
+          DocketsHQ verifies this manifest on every health check to prevent folder misdirection or accidental unlinking.
         </li>
         <li>
           <strong>Trashed Folder Detection &amp; 1-Click Recovery:</strong> If a synchronized folder is accidentally moved to the Google Drive
-          Trash, Docketra’s telemetry immediately detects the event (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded">STORAGE_ROOT_MISSING</code>),
+          Trash, DocketsHQ’s telemetry immediately detects the event (<code className="text-xs bg-gray-100 px-1 py-0.5 rounded">STORAGE_ROOT_MISSING</code>),
           notifies the Primary Admin, and provides 1-click folder restoration and re-sync from immutable audit history.
         </li>
       </ul>
@@ -118,7 +118,7 @@ export const SecurityPage = () => {
     <section id="backups-responsibility">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Backups &amp; Responsibility</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra maintains operational safeguards for service continuity. Firms remain responsible
+        DocketsHQ maintains operational safeguards for service continuity. Firms remain responsible
         for their own internal retention, backup, and recovery decisions, especially in BYOS setups
         where firm-managed storage controls apply.
       </p>

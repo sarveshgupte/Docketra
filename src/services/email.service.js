@@ -1,5 +1,5 @@
 /**
- * Email Service for Docketra
+ * Email Service for DocketsHQ
  * 
  * Sends transactional emails for authentication and user management
  * Uses Brevo Transactional Email API in production, console logging in development
@@ -61,7 +61,7 @@ const parseSender = (mailFrom) => {
   // Format: just "email@domain"
   if (trimmed.includes('@')) {
     return {
-      name: process.env.APP_NAME || 'Docketra',
+      name: process.env.APP_NAME || 'DocketsHQ',
       email: trimmed
     };
   }
@@ -351,8 +351,8 @@ const sendPasswordSetupEmail = async ({
   const isAdminInvite = normalizedRole === 'ADMIN';
 
   const subject = isAdminInvite
-    ? 'Set up your Docketra Admin Account'
-    : "You're invited to join your firm on Docketra";
+    ? 'Set up your DocketsHQ Admin Account'
+    : "You're invited to join your firm on DocketsHQ";
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -369,7 +369,7 @@ const sendPasswordSetupEmail = async ({
       <p style="color: #666; font-size: 14px;">Or copy this link: ${setupLink}</p>
       ${firmLoginUrl ? `<p><strong>Your Firm Login URL:</strong> <a href="${firmLoginUrl}" style="color: #2196F3; text-decoration: none;">${firmLoginUrl}</a></p>` : ''}
       <p style="color: #d32f2f;">⚠️ This link will expire in 48 hours for security reasons.</p>
-      <p>Best regards,<br>Docketra Team</p>
+      <p>Best regards,<br>DocketsHQ Team</p>
     </div>
   `;
 
@@ -392,7 +392,7 @@ ${firmLoginUrl}
 ` : ''}⚠️ This link will expire in 48 hours for security reasons.
 
 Best regards,
-Docketra Team
+DocketsHQ Team
   `.trim();
 
   return await sendDirectAuthEmail({
@@ -439,11 +439,11 @@ const sendPasswordSetupReminderEmail = async ({
 const sendPasswordResetEmail = async (email, name, token, frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000') => {
   const resetLink = `${frontendUrl}/reset-password?token=${token}`;
   
-  const subject = 'Password Reset Required for your Docketra account';
+  const subject = 'Password Reset Required for your DocketsHQ account';
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>Hello ${name},</h2>
-      <p>You have successfully logged in to your Docketra account.</p>
+      <p>You have successfully logged in to your DocketsHQ account.</p>
       <p>For security reasons, you are required to reset your password.</p>
       <p>Please reset your password by clicking the link below:</p>
       <p style="margin: 20px 0;">
@@ -452,14 +452,14 @@ const sendPasswordResetEmail = async (email, name, token, frontendUrl = process.
       <p style="color: #666; font-size: 14px;">Or copy this link: ${resetLink}</p>
       <p style="color: #d32f2f;">This link will expire in 24 hours.</p>
       <p>If you did not attempt to log in, please contact your administrator immediately.</p>
-      <p>Best regards,<br>Docketra Team</p>
+      <p>Best regards,<br>DocketsHQ Team</p>
     </div>
   `;
   
   const textContent = `
 Hello ${name},
 
-You have successfully logged in to your Docketra account.
+You have successfully logged in to your DocketsHQ account.
 For security reasons, you are required to reset your password.
 
 Please reset your password by clicking the link below:
@@ -470,7 +470,7 @@ This link will expire in 24 hours.
 If you did not attempt to log in, please contact your administrator immediately.
 
 Best regards,
-Docketra Team
+DocketsHQ Team
   `.trim();
   
   return await sendDirectAuthEmail({
@@ -492,11 +492,11 @@ Docketra Team
 const sendForgotPasswordEmail = async (email, name, token, frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000') => {
   const resetLink = `${frontendUrl}/reset-password?token=${token}`;
   
-  const subject = 'Reset your Docketra password';
+  const subject = 'Reset your DocketsHQ password';
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>Hello ${name},</h2>
-      <p>We received a request to reset your password for your Docketra account.</p>
+      <p>We received a request to reset your password for your DocketsHQ account.</p>
       <p>Please reset your password by clicking the link below:</p>
       <p style="margin: 20px 0;">
         <a href="${resetLink}" style="background-color: #2196F3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Reset Password</a>
@@ -504,14 +504,14 @@ const sendForgotPasswordEmail = async (email, name, token, frontendUrl = process
       <p style="color: #666; font-size: 14px;">Or copy this link: ${resetLink}</p>
       <p style="color: #d32f2f;">This link will expire in 30 minutes for security reasons.</p>
       <p>If you did not request a password reset, please ignore this email and your password will remain unchanged.</p>
-      <p>Best regards,<br>Docketra Team</p>
+      <p>Best regards,<br>DocketsHQ Team</p>
     </div>
   `;
   
   const textContent = `
 Hello ${name},
 
-We received a request to reset your password for your Docketra account.
+We received a request to reset your password for your DocketsHQ account.
 
 Please reset your password by clicking the link below:
 ${resetLink}
@@ -521,7 +521,7 @@ This link will expire in 30 minutes for security reasons.
 If you did not request a password reset, please ignore this email and your password will remain unchanged.
 
 Best regards,
-Docketra Team
+DocketsHQ Team
   `.trim();
   
   return await sendDirectAuthEmail({
@@ -540,11 +540,11 @@ Docketra Team
 const sendTestEmail = async (email) => {
   const isProduction = process.env.NODE_ENV === 'production';
   const fromAddress = resolveMailFrom() || 'Not configured';
-  const subject = 'Docketra Email Service Test';
+  const subject = 'DocketsHQ Email Service Test';
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>Email Configuration Test</h2>
-      <p>This is a test email from your Docketra application.</p>
+      <p>This is a test email from your DocketsHQ application.</p>
       <p>If you received this email, your email service is working correctly!</p>
       <p><strong>Configuration Details:</strong></p>
       <ul>
@@ -553,14 +553,14 @@ const sendTestEmail = async (email) => {
         <li>From Address: ${fromAddress}</li>
       </ul>
       <p>Timestamp: ${new Date().toISOString()}</p>
-      <p>Best regards,<br>Docketra Team</p>
+      <p>Best regards,<br>DocketsHQ Team</p>
     </div>
   `;
   
   const textContent = `
 Email Configuration Test
 
-This is a test email from your Docketra application.
+This is a test email from your DocketsHQ application.
 If you received this email, your email service is working correctly!
 
 Configuration Details:
@@ -571,7 +571,7 @@ Configuration Details:
 Timestamp: ${new Date().toISOString()}
 
 Best regards,
-Docketra Team
+DocketsHQ Team
   `.trim();
   
   return await sendEmail({
@@ -620,7 +620,7 @@ const sendFirmCreatedEmail = async (superadminEmail, data, context = null) => {
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>✅ Firm Created Successfully</h2>
-        <p>A new firm has been provisioned in the Docketra system.</p>
+        <p>A new firm has been provisioned in the DocketsHQ system.</p>
         <p><strong>Firm Details:</strong></p>
         <ul>
           <li><strong>Firm ID:</strong> ${data.firmId}</li>
@@ -636,14 +636,14 @@ const sendFirmCreatedEmail = async (superadminEmail, data, context = null) => {
         </ul>
         <p>The firm is now operational. The admin will receive credentials via email.</p>
         <p>Timestamp: ${new Date().toISOString()}</p>
-        <p>Best regards,<br>Docketra Platform</p>
+        <p>Best regards,<br>DocketsHQ Platform</p>
       </div>
     `;
     
     const textContent = `
 ✅ Firm Created Successfully
 
-A new firm has been provisioned in the Docketra system.
+A new firm has been provisioned in the DocketsHQ system.
 
 Firm Details:
 - Firm ID: ${data.firmId}
@@ -661,7 +661,7 @@ The firm is now operational. The admin will receive credentials via email.
 Timestamp: ${new Date().toISOString()}
 
 Best regards,
-Docketra Platform
+DocketsHQ Platform
     `.trim();
     
     return await sendEmail({
@@ -695,7 +695,7 @@ const sendFirmCreationFailedEmail = async (superadminEmail, data) => {
         <p>The transaction was rolled back. No partial data was created.</p>
         <p><strong>Action Required:</strong> Investigate the error and retry firm creation.</p>
         <p>Timestamp: ${new Date().toISOString()}</p>
-        <p>Best regards,<br>Docketra Platform</p>
+        <p>Best regards,<br>DocketsHQ Platform</p>
       </div>
     `;
     
@@ -715,7 +715,7 @@ Action Required: Investigate the error and retry firm creation.
 Timestamp: ${new Date().toISOString()}
 
 Best regards,
-Docketra Platform
+DocketsHQ Platform
     `.trim();
     
     return await sendEmail({
@@ -791,7 +791,7 @@ const sendSystemIntegrityEmail = async (superadminEmail, violations) => {
         <p><strong>Action Required:</strong> Run data migration to fix hierarchy.</p>
         <p>The system is still operational but may exhibit unexpected behavior.</p>
         <p>Timestamp: ${new Date().toISOString()}</p>
-        <p>Best regards,<br>Docketra Platform</p>
+        <p>Best regards,<br>DocketsHQ Platform</p>
       </div>
     `;
     
@@ -809,7 +809,7 @@ The system is still operational but may exhibit unexpected behavior.
 Timestamp: ${new Date().toISOString()}
 
 Best regards,
-Docketra Platform
+DocketsHQ Platform
     `.trim();
     
     return await sendEmail({
@@ -854,11 +854,11 @@ const sendAdminPasswordResetEmail = async ({
   const resetLink = `${frontendUrl}/setup-password?token=${token}`;
   const firmLoginUrl = `${frontendUrl}/${normalizedFirmSlug}/login`;
 
-  const subject = 'Reset your Docketra Admin Account Password';
+  const subject = 'Reset your DocketsHQ Admin Account Password';
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>Hello ${name},</h2>
-      <p>Your Docketra admin account password reset has been requested by your platform administrator.</p>
+      <p>Your DocketsHQ admin account password reset has been requested by your platform administrator.</p>
       <p><strong>Your Employee ID (xID):</strong> ${xID}</p>
       <p>Please reset your password using the link below:</p>
       <p style="margin: 20px 0;">
@@ -873,14 +873,14 @@ const sendAdminPasswordResetEmail = async ({
       </div>
       <p style="color: #d32f2f;">⚠️ This link will expire in 24 hours for security reasons.</p>
       <p>If you did not expect this email, please contact your administrator.</p>
-      <p>Best regards,<br>Docketra Team</p>
+      <p>Best regards,<br>DocketsHQ Team</p>
     </div>
   `;
 
   const textContent = `
 Hello ${name},
 
-Your Docketra admin account password reset has been requested by your platform administrator.
+Your DocketsHQ admin account password reset has been requested by your platform administrator.
 
 Your Employee ID (xID): ${xID}
 
@@ -895,7 +895,7 @@ ${firmLoginUrl}
 If you did not expect this email, please contact your administrator.
 
 Best regards,
-Docketra Team
+DocketsHQ Team
   `.trim();
 
   return await sendDirectAuthEmail({
@@ -924,7 +924,7 @@ const sendEnterpriseInquiryNotification = async ({
   if (!to) {
     throw new Error('Cannot send enterprise inquiry notification: SUPERADMIN_EMAIL environment variable is not configured');
   }
-  const subject = 'New Enterprise Inquiry - Docketra';
+  const subject = 'New Enterprise Inquiry - DocketsHQ';
   const resolvedContactPerson = contactPerson || name || 'N/A';
   const resolvedMessage = message || requirements || 'N/A';
   const resolvedTimestamp = timestamp || new Date().toISOString();
@@ -980,19 +980,19 @@ const sendFirmSetupEmail = async ({
   const loginInstruction = isGoogle
     ? 'Use your Google account (or your xID) to sign in to your firm account.'
     : 'Use your xID and password to sign in to your firm account.';
-  const subject = 'Your Docketra firm account is ready';
+  const subject = 'Your DocketsHQ firm account is ready';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
-      <h2>Welcome to Docketra, ${name}!</h2>
+      <h2>Welcome to DocketsHQ, ${name}!</h2>
       <p>Your firm account has been created successfully.</p>
       <p><strong>Firm name:</strong> ${firmName}</p>
       <p><strong>User xID:</strong> ${resolvedXid}</p>
       <p><strong>Login URL:</strong> <a href="${resolvedLoginUrl}">${resolvedLoginUrl}</a></p>
       <p>${loginInstruction}</p>
-      <p>Best regards,<br/>Docketra Team</p>
+      <p>Best regards,<br/>DocketsHQ Team</p>
     </div>
   `;
-  const text = `Welcome to Docketra, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\n${loginInstruction}\n\nBest regards,\nDocketra Team`;
+  const text = `Welcome to DocketsHQ, ${name}!\n\nYour firm account has been created successfully.\nFirm name: ${firmName}\nUser xID: ${resolvedXid}\nLogin URL: ${resolvedLoginUrl}\n${loginInstruction}\n\nBest regards,\nDocketsHQ Team`;
 
   return sendDirectAuthEmail({ to: email, subject, html, text });
 };
@@ -1012,7 +1012,7 @@ const sendLoginOtpEmail = async ({
   }
 
   const greetingName = String(name || '').trim() || 'there';
-  const subject = 'Your Docketra Login OTP';
+  const subject = 'Your DocketsHQ Login OTP';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
       <h2>Hello ${greetingName},</h2>
@@ -1020,10 +1020,10 @@ const sendLoginOtpEmail = async ({
       <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${resolvedOtp}</p>
       <p>This code expires in ${expiryMinutes} minutes.</p>
       <p>If you did not request this login, please ignore this email.</p>
-      <p>Best regards,<br/>Docketra Team</p>
+      <p>Best regards,<br/>DocketsHQ Team</p>
     </div>
   `;
-  const text = `Hello ${greetingName},\n\nYour one-time login code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not request this login, please ignore this email.\n\nBest regards,\nDocketra Team`;
+  const text = `Hello ${greetingName},\n\nYour one-time login code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not request this login, please ignore this email.\n\nBest regards,\nDocketsHQ Team`;
 
   return sendDirectAuthEmail({
     to: email,
@@ -1047,7 +1047,7 @@ const sendSecurityAuthorizationOtpEmail = async ({
   }
 
   const greetingName = String(name || '').trim() || 'Partner';
-  const subject = '[Docketra] Security Verification Code';
+  const subject = '[DocketsHQ] Security Verification Code';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; line-height: 1.6; color: #1e293b;">
       <h2 style="color: #0f172a;">Hello ${greetingName},</h2>
@@ -1056,10 +1056,10 @@ const sendSecurityAuthorizationOtpEmail = async ({
       <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #2563eb; margin: 20px 0;">${resolvedOtp}</p>
       <p>This code expires in ${expiryMinutes} minutes.</p>
       <p>If you did not initiate this change, please check your firm security settings immediately.</p>
-      <p style="margin-top: 24px; color: #64748b;">Warm regards,<br/>Docketra Security</p>
+      <p style="margin-top: 24px; color: #64748b;">Warm regards,<br/>DocketsHQ Security</p>
     </div>
   `;
-  const text = `Hello ${greetingName},\n\nA request was made to ${actionDescription} for your firm.\n\nYour one-time authorization code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not initiate this change, please check your firm security settings immediately.\n\nWarm regards,\nDocketra Security`;
+  const text = `Hello ${greetingName},\n\nA request was made to ${actionDescription} for your firm.\n\nYour one-time authorization code is:\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nIf you did not initiate this change, please check your firm security settings immediately.\n\nWarm regards,\nDocketsHQ Security`;
 
   return sendDirectAuthEmail({
     to: email,
@@ -1093,20 +1093,20 @@ const sendForgotPasswordOtpEmail = async ({
   const firmContextText = resolvedFirmName || resolvedFirmSlug
     ? `Firm: ${resolvedFirmName || resolvedFirmSlug}${resolvedFirmSlug ? ` (${resolvedFirmSlug})` : ''}\n\n`
     : '';
-  const subject = 'Your Docketra password reset OTP';
+  const subject = 'Your DocketsHQ password reset OTP';
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
       <h2>Hello ${greetingName},</h2>
-      <p>We received a forgot-password request for your Docketra account.</p>
+      <p>We received a forgot-password request for your DocketsHQ account.</p>
       <p>Your one-time password reset code is:</p>
       <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${resolvedOtp}</p>
       <p>This password reset OTP expires in ${expiryMinutes} minutes.</p>
       ${firmContextLine}
       <p>If you did not request a password reset, please ignore this email.</p>
-      <p>Best regards,<br/>Docketra Team</p>
+      <p>Best regards,<br/>DocketsHQ Team</p>
     </div>
   `;
-  const text = `Hello ${greetingName},\n\nWe received a forgot-password request for your Docketra account.\n\nYour one-time password reset code is:\n\n${resolvedOtp}\n\nThis password reset OTP expires in ${expiryMinutes} minutes.\n\n${firmContextText}If you did not request a password reset, please ignore this email.\n\nBest regards,\nDocketra Team`;
+  const text = `Hello ${greetingName},\n\nWe received a forgot-password request for your DocketsHQ account.\n\nYour one-time password reset code is:\n\n${resolvedOtp}\n\nThis password reset OTP expires in ${expiryMinutes} minutes.\n\n${firmContextText}If you did not request a password reset, please ignore this email.\n\nBest regards,\nDocketsHQ Team`;
 
   return sendDirectAuthEmail({
     to: email,
@@ -1131,8 +1131,8 @@ const sendSignupOtpEmail = async ({
 
   const greetingName = String(name || '').trim() || 'there';
   const subject = isResend
-    ? 'Docketra Signup – Your New Verification Code'
-    : 'Docketra Signup – Verify Your Email';
+    ? 'DocketsHQ Signup – Your New Verification Code'
+    : 'DocketsHQ Signup – Verify Your Email';
   const introLine = isResend
     ? 'Your new verification code is:'
     : 'Your verification code is:';
@@ -1143,10 +1143,10 @@ const sendSignupOtpEmail = async ({
       <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1976D2; margin: 20px 0;">${resolvedOtp}</p>
       <p>This code expires in ${expiryMinutes} minutes.</p>
       <p>If you did not request this, please ignore this email.</p>
-      <p>Best regards,<br>Docketra Team</p>
+      <p>Best regards,<br>DocketsHQ Team</p>
     </div>
   `;
-  const text = `Hello ${greetingName},\n\n${introLine}\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nBest regards,\nDocketra Team`;
+  const text = `Hello ${greetingName},\n\n${introLine}\n\n${resolvedOtp}\n\nThis code expires in ${expiryMinutes} minutes.\n\nBest regards,\nDocketsHQ Team`;
 
   return sendDirectAuthEmail({
     to: email,

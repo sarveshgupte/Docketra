@@ -191,7 +191,7 @@ export const PlatformSettingsPage = () => {
                 </span>
               </div>
               <div className="settings-summary-card__title">
-                {isStorageDrive ? 'Google Drive Active' : 'Docketra Cloud Storage'}
+                {isStorageDrive ? 'Google Drive Active' : 'DocketsHQ Cloud Storage'}
               </div>
               <div className="settings-summary-card__meta">
                 <span className="font-mono text-emerald-800 font-semibold">drive.file</span>

@@ -68,7 +68,7 @@ test('index.html contains enhanced metadata and JSON-LD structured data', () => 
   const content = fs.readFileSync(indexPath, 'utf8');
 
   // Title & description
-  assert.ok(content.includes('<title>Docketra — The Company Brain for Indian Professional Firms</title>'), 'index.html title must match');
+  assert.ok(content.includes('<title>DocketsHQ — The Company Brain for Indian Professional Firms</title>'), 'index.html title must match');
   assert.match(content, /<meta\s+name="description"\s+content="[^"]*CS, CA, and legal firms[^"]*"/, 'index.html description must mention CS, CA, and legal firms');
   assert.ok(content.includes('<link rel="canonical" href="https://docketra.in/" />'), 'index.html must have canonical link');
 

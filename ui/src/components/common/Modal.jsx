@@ -1,9 +1,18 @@
 /**
- * Modal Component
+ * Enterprise Modal & Dialog Component
+ * Built with accessible dialog patterns and shadcn composable primitives:
+ * - Focus trapping and focus restoration on unmount
+ * - Escape key dismiss and Enter key submit for primary actions
+ * - Overscroll containment to lock body scroll without layout shift
+ * - Optical alignment with Lucide icons
+ * - Full backward compatibility with <Modal isOpen onClose title actions ... />
+ * - Exported subcomponents: Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { forwardRef, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 const FOCUSABLE_SELECTOR = [
   'button:not([disabled])',
@@ -28,7 +37,7 @@ const sizeClasses = {
   '4xl': 'max-w-[56rem]',
 };
 
-export const Modal = ({
+export const Modal = forwardRef(({
   isOpen,
   onClose,
   onRequestClose,
@@ -37,8 +46,10 @@ export const Modal = ({
   actions,
   size = 'md',
   maxWidth,
-}) => {
-  const modalRef = useRef(null);
+  className = '',
+}, ref) => {
+  const internalRef = useRef(null);
+  const modalRef = ref || internalRef;
   const previousActiveElementRef = useRef(null);
   const onCloseRef = useRef(onClose);
 
@@ -61,6 +72,7 @@ export const Modal = ({
     }
 
     previousActiveElementRef.current = document.activeElement;
+    const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
     const focusableElements = modalRef.current?.querySelectorAll(FOCUSABLE_SELECTOR);
@@ -84,7 +96,7 @@ export const Modal = ({
       }
 
       if (event.key === 'Enter' && event.target instanceof HTMLElement && event.target.tagName !== 'TEXTAREA') {
-        const primaryAction = modalRef.current.querySelector('[data-modal-primary="true"], .btn-primary, .btn-danger');
+        const primaryAction = modalRef.current.querySelector('[data-modal-primary="true"], .btn-primary, .btn-danger, .action-primary');
 
         if (primaryAction instanceof HTMLButtonElement && !primaryAction.disabled && event.target !== primaryAction) {
           event.preventDefault();
@@ -119,7 +131,7 @@ export const Modal = ({
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = originalOverflow || 'unset';
       document.removeEventListener('keydown', handleKeyDown);
       previousActiveElementRef.current?.focus?.();
     };
@@ -135,36 +147,41 @@ export const Modal = ({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/45 p-4 sm:p-6 backdrop-blur-xs"
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto overscroll-contain bg-slate-950/45 p-4 sm:p-6 backdrop-blur-xs motion-safe:transition-opacity duration-150"
       onClick={handleOverlayClick}
       role="presentation"
     >
       <div
         ref={modalRef}
-        className={`relative m-auto flex max-h-[min(90vh,calc(100vh-3rem))] w-full flex-col overflow-hidden rounded-[var(--dt-radius-panel,12px)] border border-slate-200/90 bg-white shadow-2xl ${modalSizeClass}`}
+        className={cn(
+          'relative m-auto flex max-h-[min(90vh,calc(100vh-3rem))] w-full flex-col overflow-hidden rounded-[var(--dt-radius-panel,8px)] border border-slate-200/90 bg-white shadow-2xl',
+          modalSizeClass,
+          className
+        )}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={title || 'Dialog'}
         tabIndex={-1}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-6 py-3.5">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-900">{title}</h2>
-          <button
-            type="button"
-            onClick={() => requestClose('close-button')}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
-            aria-label="Close modal"
-            title="Close modal"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+        {title && (
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-6 py-3.5">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-900">{title}</h2>
+            <button
+              type="button"
+              onClick={() => requestClose('close-button')}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 cursor-pointer"
+              aria-label="Close modal"
+              title="Close modal"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-5 text-xs text-slate-700 leading-relaxed">
+          {children}
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-5">{children}</div>
         {actions ? (
-          <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/50 px-6 py-3.5">
+          <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/60 px-6 py-3.5">
             {actions}
           </div>
         ) : null}
@@ -177,4 +194,24 @@ export const Modal = ({
   }
 
   return createPortal(modalContent, document.body);
-};
+});
+
+Modal.displayName = 'Modal';
+
+// Subcomponents for shadcn-style Dialog composition
+export const Dialog = Modal;
+export const DialogContent = ({ children, className = '', ...props }) => (
+  <div className={cn('px-6 py-5', className)} {...props}>{children}</div>
+);
+export const DialogHeader = ({ children, className = '', ...props }) => (
+  <div className={cn('flex flex-col space-y-1.5 text-left', className)} {...props}>{children}</div>
+);
+export const DialogFooter = ({ children, className = '', ...props }) => (
+  <div className={cn('flex items-center justify-end gap-2', className)} {...props}>{children}</div>
+);
+export const DialogTitle = ({ children, className = '', ...props }) => (
+  <h2 className={cn('text-xs font-semibold uppercase tracking-wider text-slate-900', className)} {...props}>{children}</h2>
+);
+export const DialogDescription = ({ children, className = '', ...props }) => (
+  <p className={cn('text-xs text-slate-500 leading-relaxed', className)} {...props}>{children}</p>
+);

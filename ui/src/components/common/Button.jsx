@@ -1,10 +1,16 @@
 /**
  * Enterprise Button Component
- * Variants: primary, secondary, outline, danger
- * States: default, hover, active, disabled, loading
+ * Built with CVA and modern shadcn design-system architecture.
+ * Strict compliance with /better-ui, /better-interface, and emil-design-eng:
+ * - Optical alignment with SVG icons
+ * - Motion-safe active press with enabled: guard (motion-safe:enabled:active:scale-[0.98])
+ * - Explicit transition properties (no transition-all)
+ * - Strict contract preservation for legacy aliases (small->sm, medium->md, warning->danger)
  */
 
-import React from 'react';
+import React, { forwardRef } from 'react';
+import { cva } from 'class-variance-authority';
+import { cn } from '../../lib/utils';
 
 const LAYOUT_CLASS_PATTERNS = [
   /^(m|mx|my|mt|mr|mb|ml)-/, // margin utilities
@@ -45,7 +51,37 @@ const normalizeVariant = (variant) => {
   return aliases[variant] || variant;
 };
 
-export const Button = ({
+export const buttonVariants = cva(
+  'inline-flex items-center justify-center select-none rounded-[var(--dt-radius-control,2px)] font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40 motion-safe:enabled:active:scale-[0.98]',
+  {
+    variants: {
+      variant: {
+        primary:
+          'action-primary btn-primary border border-transparent bg-slate-900 text-white shadow-none hover:bg-slate-800 active:bg-slate-950 focus-visible:ring-slate-900',
+        secondary:
+          'border-0 bg-transparent text-slate-600 hover:text-slate-900 underline-offset-4 hover:underline focus-visible:ring-slate-900 shadow-none',
+        outline:
+          'border border-slate-200 bg-white text-slate-800 shadow-none hover:bg-slate-50 hover:border-slate-300 focus-visible:ring-slate-900',
+        danger:
+          'border-0 bg-transparent text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100 focus-visible:ring-rose-600 shadow-none',
+        ghost:
+          'border-0 bg-transparent text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 focus-visible:ring-slate-900 shadow-none',
+      },
+      size: {
+        xs: 'min-h-6 text-[11px] leading-4 px-2 py-0.5 gap-1',
+        sm: 'min-h-7 text-xs leading-4 px-2.5 py-1 gap-1.5',
+        md: 'min-h-8 text-xs leading-5 px-3 py-1.5 gap-2',
+        lg: 'min-h-9 text-sm leading-5 px-4 py-2 gap-2',
+      },
+    },
+    defaultVariants: {
+      variant: 'secondary',
+      size: 'md',
+    },
+  }
+);
+
+export const Button = forwardRef(({
   children,
   onClick,
   type = 'button',
@@ -58,46 +94,33 @@ export const Button = ({
   allowUnsafeClassName = false,
   'data-primary': dataPrimaryProp,
   ...props
-}) => {
+}, ref) => {
   const normalizedSize = normalizeButtonSize(size);
   const normalizedVariant = normalizeVariant(variant);
   const isPrimary = normalizedVariant === 'primary';
   const dataPrimary = dataPrimaryProp ?? (isPrimary ? 'true' : undefined);
-
-  const baseClassesBySize = {
-    xs: 'inline-flex min-h-6 items-center justify-center rounded-[var(--dt-radius-control)] font-medium leading-4 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 text-[11px] px-2 py-0.5',
-    sm: 'inline-flex min-h-7 items-center justify-center rounded-[var(--dt-radius-control)] font-medium leading-4 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 text-xs px-2.5 py-1',
-    md: 'inline-flex min-h-8 items-center justify-center rounded-[var(--dt-radius-control)] font-medium leading-5 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 text-xs px-3 py-1.5 active:scale-[0.99]',
-    lg: 'inline-flex min-h-9 items-center justify-center rounded-[var(--dt-radius-control)] font-medium leading-5 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 text-sm px-4 py-2 active:scale-[0.99]',
-  };
-
-  const variantClasses = {
-    primary:
-      'action-primary btn-primary border-0 bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 focus-visible:ring-slate-900 shadow-none',
-    secondary:
-      'border-0 bg-transparent text-slate-600 hover:text-slate-900 underline-offset-4 hover:underline focus-visible:ring-slate-900 shadow-none',
-    outline:
-      'border border-slate-200 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-300 focus-visible:ring-slate-900 shadow-none',
-    danger: 'border-0 bg-transparent text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100 focus-visible:ring-rose-600 shadow-none',
-    ghost: 'border-0 bg-transparent text-slate-600 hover:bg-slate-100/70 hover:text-slate-900 focus-visible:ring-slate-900 shadow-none',
-  };
 
   const isDisabled = disabled || loading;
   const layoutClassName = allowUnsafeClassName ? className : sanitizeLayoutClasses(className);
 
   return (
     <button
+      ref={ref}
       type={type}
       onClick={onClick}
       disabled={isDisabled}
       aria-busy={loading || undefined}
       data-primary={dataPrimary}
-      className={`${baseClassesBySize[normalizedSize]} ${fullWidth ? 'w-full' : ''} ${variantClasses[normalizedVariant] || variantClasses.secondary} ${layoutClassName}`}
+      className={cn(
+        buttonVariants({ variant: normalizedVariant, size: normalizedSize }),
+        fullWidth && 'w-full',
+        layoutClassName
+      )}
       {...props}
     >
       {loading && (
         <svg
-          className="-ml-1 mr-2 inline-block h-4 w-4 animate-spin"
+          className="-ml-0.5 inline-block h-3.5 w-3.5 animate-spin"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -114,4 +137,6 @@ export const Button = ({
       {children}
     </button>
   );
-};
+});
+
+Button.displayName = 'Button';

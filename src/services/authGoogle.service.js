@@ -70,6 +70,14 @@ const parseGoogleState = (rawState) => {
 };
 
 const KNOWN_FRONTEND_HOSTS = [
+  'docketshq.com',
+  'www.docketshq.com',
+  'app.docketshq.com',
+  'cug.docketshq.com',
+  'docketshq-cug.web.app',
+  'docketshq-cug.firebaseapp.com',
+  'docketshq-prod.web.app',
+  'docketshq-prod.firebaseapp.com',
   'docketra-cug.web.app',
   'docketra-cug.firebaseapp.com',
   'cug.docketra.in',
@@ -81,6 +89,8 @@ const KNOWN_FRONTEND_HOSTS = [
 ];
 
 const KNOWN_BACKEND_HOSTS = [
+  'api.docketshq.com',
+  'cug-api.docketshq.com',
   'docketra-api-cug-1078507569854.us-central1.run.app',
   'docketra-api-1078507569854.us-central1.run.app',
   'api.docketra.in',
@@ -167,7 +177,12 @@ const resolveAllowedBackendOrigin = (candidate) => {
 const getTargetBackendForOrigin = (frontendOrigin) => {
   if (!frontendOrigin || typeof frontendOrigin !== 'string') return null;
   const lower = frontendOrigin.toLowerCase();
-  if (lower.includes('docketra-cug') || lower.includes('cug.docketra.in')) {
+  if (
+    lower.includes('docketra-cug')
+    || lower.includes('cug.docketra.in')
+    || lower.includes('docketshq-cug')
+    || lower.includes('cug.docketshq.com')
+  ) {
     return 'https://docketra-api-cug-1078507569854.us-central1.run.app';
   }
   return null;

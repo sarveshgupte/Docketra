@@ -120,7 +120,7 @@ const HeroSection = ({ onOpenTour }) => (
 
           {/* Plain English Lede */}
           <p className="text-base sm:text-lg font-normal leading-relaxed text-slate-300 max-w-xl [text-wrap:pretty]">
-            Docketra is built for Indian professional firms: CS, CA, law, and compliance teams. It reminds you of every GST, ROC, and tax filing before it’s late, collects client documents with 1-click drop links, and enforces partner sign-off before submission.
+            DocketsHQ is built for Indian professional firms: CS, CA, law, and compliance teams. It reminds you of every GST, ROC, and tax filing before it’s late, collects client documents with 1-click drop links, and enforces partner sign-off before submission.
           </p>
 
           {/* Practice Quick-Navigation Strip */}
@@ -278,10 +278,10 @@ const ProblemSection = () => (
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Without Docketra */}
+        {/* Without DocketsHQ */}
         <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-8">
           <p className="mb-6 font-mono text-xs uppercase tracking-widest text-slate-500 font-bold">
-            Without Docketra
+            Without DocketsHQ
           </p>
           <ul className="space-y-4">
             <li className="flex items-start gap-3 text-sm text-slate-700 leading-relaxed">
@@ -299,10 +299,10 @@ const ProblemSection = () => (
           </ul>
         </div>
 
-        {/* With Docketra */}
+        {/* With DocketsHQ */}
         <div className="rounded-2xl border border-slate-800 bg-[#111215] p-8 text-white shadow-xl">
           <p className="mb-6 font-mono text-xs uppercase tracking-widest text-amber-400 font-bold">
-            With Docketra
+            With DocketsHQ
           </p>
           <ul className="space-y-4">
             <li className="flex items-start gap-3 text-sm text-slate-200 leading-relaxed">
@@ -347,7 +347,7 @@ const HowItWorksSection = () => (
           {
             step: '02',
             title: 'Add your clients',
-            desc: 'Enter PAN, CIN or GSTIN. Docketra sets up client memory cards and statutory filing calendars automatically.',
+            desc: 'Enter PAN, CIN or GSTIN. DocketsHQ sets up client memory cards and statutory filing calendars automatically.',
           },
           {
             step: '03',
@@ -460,7 +460,7 @@ const TrustSection = ({ onOpenCertificate }) => (
             Client confidentiality, built in.
           </h2>
           <p className="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed">
-            Your clients trust you with sensitive financial records. Docketra is engineered with Bring-Your-Own-Storage so working papers never leave your custody.
+            Your clients trust you with sensitive financial records. DocketsHQ is engineered with Bring-Your-Own-Storage so working papers never leave your custody.
           </p>
           <div className="mt-8 pt-6 border-t border-slate-800">
             <button
@@ -481,7 +481,7 @@ const TrustSection = ({ onOpenCertificate }) => (
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors hover:border-slate-700">
             <h3 className="text-lg font-bold text-white">Files stay in your Google Drive</h3>
             <p className="mt-1.5 text-sm text-slate-300 leading-relaxed">
-              We never store your client documents on third-party servers. If you ever cancel Docketra, 100% of your folder hierarchy remains intact in your own Google Drive.
+              We never store your client documents on third-party servers. If you ever cancel DocketsHQ, 100% of your folder hierarchy remains intact in your own Google Drive.
             </p>
           </div>
 
@@ -495,7 +495,7 @@ const TrustSection = ({ onOpenCertificate }) => (
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors hover:border-slate-700">
             <h3 className="text-lg font-bold text-white">Accidental deletes are restored</h3>
             <p className="mt-1.5 text-sm text-slate-300 leading-relaxed">
-              If an intern or staff member accidentally renames or deletes a folder in Google Drive, Docketra detects it immediately and restores folder links automatically.
+              If an intern or staff member accidentally renames or deletes a folder in Google Drive, DocketsHQ detects it immediately and restores folder links automatically.
             </p>
           </div>
         </div>
@@ -587,7 +587,7 @@ const FinalCtaSection = () => (
 
       <div className="relative mx-auto max-w-3xl space-y-5">
         <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-          Try Docketra free with 5 clients.
+          Try DocketsHQ free with 5 clients.
         </h2>
         <p className="mx-auto max-w-xl text-base sm:text-lg text-slate-300 leading-relaxed">
           See every deadline for your firm on one screen — set up in minutes with zero credit card required.
@@ -633,7 +633,7 @@ export const MarketingFooter = () => (
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 text-white font-semibold">
             <span className="h-2 w-2 rounded-full bg-amber-400" aria-hidden="true" />
-            <span className="text-base font-bold tracking-tight">Docketra</span>
+            <span className="text-base font-bold tracking-tight">DocketsHQ</span>
             <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-amber-500 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-900">
               The Company Brain
             </span>
@@ -665,7 +665,7 @@ export const MarketingFooter = () => (
 
       <div className="pt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs text-slate-500">
         <p className="leading-relaxed">
-          &copy; {new Date().getFullYear()} Docketra. Made in India for professional firms. 100% Google Drive BYOS.
+          &copy; {new Date().getFullYear()} DocketsHQ. Made in India for professional firms. 100% Google Drive BYOS.
         </p>
 
         <nav aria-label="Footer legal navigation" className="flex flex-wrap items-center gap-x-6 gap-y-1 font-medium">
@@ -747,7 +747,7 @@ export const LandingPageContent = () => {
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25">
       <SeoHead
         canonicalPath="/"
-        title="Docketra — The Company Brain for Indian Professional Firms"
+        title="DocketsHQ — The Company Brain for Indian Professional Firms"
         description="Streamline client dockets, MCA deadlines, and team tasks with The Company Brain. Purpose-built for Indian CS, CA, and legal firms. 100% Google Drive BYOS. Start your free pilot."
       />
       <PublicMarketingHeader />

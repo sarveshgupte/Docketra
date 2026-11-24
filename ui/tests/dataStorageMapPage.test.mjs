@@ -19,7 +19,10 @@ const read = (relFromUi) => fs.readFileSync(resolvePath(relFromUi), 'utf8');
 
 const page = read('src/pages/DataStorageMapPage.jsx');
 assert.ok(page.includes('Data Storage Map'));
-assert.ok(page.includes('Your business data lives in your firm cloud storage. Docketra stores only control-plane metadata needed to run the app.'));
+assert.ok(
+  page.includes('Your business data lives in your firm cloud storage. DocketsHQ stores only control-plane metadata needed to run the app.') ||
+  page.includes('Your business data lives in your firm cloud storage. Docketra stores only control-plane metadata needed to run the app.')
+);
 assert.ok(page.includes('MongoDB control-plane data'));
 
 const routes = read('src/routes/ProtectedRoutes.jsx');

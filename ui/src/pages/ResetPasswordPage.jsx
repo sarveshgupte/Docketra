@@ -80,7 +80,7 @@ export const ResetPasswordPage = () => {
               <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
             </svg>
-            Docketra
+            DocketsHQ
           </Link>
           <p className="mt-10 text-sm font-bold uppercase text-amber-700">Password reset</p>
           <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
@@ -105,10 +105,10 @@ export const ResetPasswordPage = () => {
               <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
             </svg>
-            Docketra
+            DocketsHQ
           </Link>
           <div className="auth-header text-center">
-            <p className="auth-kicker">Docketra · Secure access</p>
+            <p className="auth-kicker">DocketsHQ · Secure access</p>
             <h1 className="text-3xl font-black text-slate-950 md:text-4xl">Reset Password</h1>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">Use a strong password to secure your workspace account.</p>
           </div>

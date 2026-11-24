@@ -1120,7 +1120,7 @@ export const HierarchyPage = () => {
 
                 {/* Drawer Footer */}
                 <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/80 flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Docketra Governance Engine</span>
+                  <span className="text-xs text-slate-400">DocketsHQ Governance Engine</span>
                   <Button variant="outline" size="sm" onClick={() => setSelectedUser(null)}>
                     Close
                   </Button>

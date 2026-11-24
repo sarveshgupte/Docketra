@@ -32,20 +32,20 @@ const getStepCopy = (step) => {
     return {
       title: 'Verify the recovery code',
       description: 'Enter the latest 6-digit OTP from your email so we can unlock password reset.',
-      kicker: 'Docketra · Email verification',
+      kicker: 'DocketsHQ · Email verification',
     };
   }
   if (step === 3) {
     return {
       title: 'Set a stronger password',
       description: 'Choose a new password before returning to your workspace login.',
-      kicker: 'Docketra · Password reset',
+      kicker: 'DocketsHQ · Password reset',
     };
   }
   return {
     title: 'Recover workspace access',
     description: "We'll send a verification code if the account exists.",
-    kicker: 'Docketra · Secure access',
+    kicker: 'DocketsHQ · Secure access',
   };
 };
 
@@ -287,7 +287,7 @@ export const ForgotPasswordPage = () => {
 
   return (
     <div className="auth-wrapper min-h-screen bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_44%,#e0f2fe_100%)] px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-      <SeoHead title="Reset Password • Docketra" description="Recover your Docketra workspace access safely." />
+      <SeoHead title="Reset Password • DocketsHQ" description="Recover your DocketsHQ workspace access safely." />
       <div className="grid w-full max-w-7xl items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="hidden lg:block" aria-label="Password recovery context">
           <Link to="/" className="inline-flex items-center gap-2 text-lg font-extrabold text-slate-950">
@@ -296,7 +296,7 @@ export const ForgotPasswordPage = () => {
               <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
             </svg>
-            Docketra
+            DocketsHQ
           </Link>
           <p className="mt-10 text-sm font-bold uppercase text-amber-700">Account recovery</p>
           <h1 className="mt-3 max-w-xl text-5xl font-black leading-[0.98] tracking-normal text-slate-950">
@@ -326,7 +326,7 @@ export const ForgotPasswordPage = () => {
               <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
             </svg>
-            Docketra
+            DocketsHQ
           </Link>
           <div className="auth-header text-center">
             <p className="auth-kicker">{stepCopy.kicker}</p>

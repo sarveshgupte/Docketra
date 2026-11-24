@@ -10,19 +10,19 @@ const FAQ_ITEMS = [
     id: 'trainee-permissions',
     question: 'How do role-based permissions work for article trainees and audit staff?',
     answer:
-      'Docketra provides strict Role-Based Access Control (RBAC) designed specifically for CA firms. Partners can scope article assistants, paid assistants, and audit seniors strictly to assigned client entities or specific workbaskets (e.g., GST or Statutory Audit). Trainees cannot access confidential partner billing rates, other partners’ clients, or submit final filings without mandatory partner sign-off.',
+      'DocketsHQ provides strict Role-Based Access Control (RBAC) designed specifically for CA firms. Partners can scope article assistants, paid assistants, and audit seniors strictly to assigned client entities or specific workbaskets (e.g., GST or Statutory Audit). Trainees cannot access confidential partner billing rates, other partners’ clients, or submit final filings without mandatory partner sign-off.',
   },
   {
     id: 'data-residency-sovereignty',
     question: 'Where is client financial data stored and how is domestic data residency handled?',
     answer:
-      'All client financial data, audit working papers, and tax documents are hosted exclusively on Tier-IV cloud infrastructure located physically within India (Mumbai and Hyderabad). We enforce TLS 1.3 encryption in transit, AES-256 encryption at rest, and zero third-party AI model training. Furthermore, Docketra supports Bring-Your-Own-Storage (BYOS)—allowing your firm to vault working papers directly into your own firm’s Google Drive or AWS S3 account with zero vendor lock-in.',
+      'All client financial data, audit working papers, and tax documents are hosted exclusively on Tier-IV cloud infrastructure located physically within India (Mumbai and Hyderabad). We enforce TLS 1.3 encryption in transit, AES-256 encryption at rest, and zero third-party AI model training. Furthermore, DocketsHQ supports Bring-Your-Own-Storage (BYOS)—allowing your firm to vault working papers directly into your own firm’s Google Drive or AWS S3 account with zero vendor lock-in.',
   },
   {
     id: 'unrestricted-data-export',
     question: 'Can we export our firm’s complete data if we choose not to renew after the 3-month free pilot?',
     answer:
-      'Yes, 100%. Docketra gives you complete data ownership with zero lock-in. You can export your entire client master list, historical docket audit trails, statutory registers, and work papers in clean Excel/CSV formats and organized ZIP archives anytime with a single click. We never hold your firm data hostage and charge zero export fees.',
+      'Yes, 100%. DocketsHQ gives you complete data ownership with zero lock-in. You can export your entire client master list, historical docket audit trails, statutory registers, and work papers in clean Excel/CSV formats and organized ZIP archives anytime with a single click. We never hold your firm data hostage and charge zero export fees.',
   },
 ];
 
@@ -89,7 +89,7 @@ export const CharteredAccountantsSolutionPage = () => {
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25 font-sans">
       <SeoHead
         canonicalPath="/solutions/chartered-accountants"
-        title="Practice Management Software for Chartered Accountants | Docketra"
+        title="Practice Management Software for Chartered Accountants | DocketsHQ"
         description="Operating engine for high-velocity CA firms: tax filings, statutory audits, client dossiers, and automated task assignments. Claim 3 months free."
         jsonLd={FAQ_SCHEMA}
       />
@@ -316,10 +316,10 @@ export const CharteredAccountantsSolutionPage = () => {
               Why Spreadsheets Fail CA Practices
             </div>
             <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Excel & WhatsApp vs. The Docketra CA Operating System
+              Excel & WhatsApp vs. The DocketsHQ CA Operating System
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              When your practice expands across hundreds of audits and tax clients, manual trackers break. Here is how Docketra shields your firm from missed deadlines and unreviewed returns.
+              When your practice expands across hundreds of audits and tax clients, manual trackers break. Here is how DocketsHQ shields your firm from missed deadlines and unreviewed returns.
             </p>
           </div>
 
@@ -336,7 +336,7 @@ export const CharteredAccountantsSolutionPage = () => {
                       Spreadsheets & WhatsApp (Old Way)
                     </th>
                     <th scope="col" className="p-3.5 font-bold uppercase tracking-wider text-emerald-900 bg-emerald-50/40 w-3/8">
-                      Docketra CA Platform (Modern Way)
+                      DocketsHQ CA Platform (Modern Way)
                     </th>
                   </tr>
                 </thead>
@@ -718,7 +718,7 @@ export const CharteredAccountantsSolutionPage = () => {
               Why Join the 3-Month CA Pilot Program?
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Partner with Docketra to eliminate spreadsheet anxiety and run a calm, audit-proof Chartered Accountancy practice.
+              Partner with DocketsHQ to eliminate spreadsheet anxiety and run a calm, audit-proof Chartered Accountancy practice.
             </p>
           </div>
 
@@ -749,7 +749,7 @@ export const CharteredAccountantsSolutionPage = () => {
               </span>
               <h3 className="text-sm font-bold text-slate-950">Direct Product Priority</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Direct WhatsApp and phone line with Docketra’s product team to request custom tax schedules, audit checklists, and practice reports.
+                Direct WhatsApp and phone line with DocketsHQ’s product team to request custom tax schedules, audit checklists, and practice reports.
               </p>
             </div>
           </div>
@@ -818,7 +818,7 @@ export const CharteredAccountantsSolutionPage = () => {
               Upgrade your CA practice ahead of the next filing cycle.
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
-              Join leading Indian CA practices running structured, error-free compliance and audit management on Docketra. Onboard your firm in under 15 minutes.
+              Join leading Indian CA practices running structured, error-free compliance and audit management on DocketsHQ. Onboard your firm in under 15 minutes.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link

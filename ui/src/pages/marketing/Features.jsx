@@ -38,8 +38,8 @@ export const FeaturesPage = () => (
   <Section>
     <SeoHead
       canonicalPath="/features"
-      title="Platform Features | Docketra - The Company Brain"
-      description="Explore Docketra features: centralized firm dashboard, granular access controls, automated audit trails, and Google Drive BYOS storage."
+      title="Platform Features | DocketsHQ - The Company Brain"
+      description="Explore DocketsHQ features: centralized firm dashboard, granular access controls, automated audit trails, and Google Drive BYOS storage."
     />
     <div className="mx-auto w-full max-w-3xl min-w-0 text-center">
       <h1 className="type-section text-gray-900 mx-auto w-full">Platform Features</h1>

@@ -1,8 +1,21 @@
 import React from 'react';
+import { cn } from '../../lib/utils';
 import './Skeleton.css';
 
+export const Skeleton = ({ className = '', style = {}, ...props }) => (
+  <div
+    className={cn(
+      'rounded-[var(--dt-radius-control,2px)] bg-slate-200/70 dark:bg-slate-800 animate-pulse motion-reduce:animate-none motion-reduce:opacity-60',
+      className
+    )}
+    style={style}
+    aria-hidden="true"
+    {...props}
+  />
+);
+
 export const SkeletonBlock = ({ className = '', style = {} }) => (
-  <div className={`skeleton-block ${className}`.trim()} style={style} aria-hidden="true" />
+  <div className={cn('skeleton-block motion-reduce:animate-none motion-reduce:opacity-60', className)} style={style} aria-hidden="true" />
 );
 
 const TableGridSkeleton = ({ rows = 5 }) => (

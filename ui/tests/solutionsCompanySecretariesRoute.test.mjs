@@ -81,6 +81,7 @@ test('CompanySecretariesSolutionPage contains all required CRO and SEO sections'
 
   // Pilot Eyebrow Banner
   assert.ok(
+    pageContent.includes('🚀 DocketsHQ Pilot Cohort for CS Practices') ||
     pageContent.includes('🚀 Docketra Pilot Cohort for CS Practices'),
     'Pilot banner badge must be present',
   );
@@ -132,10 +133,13 @@ test('CompanySecretariesSolutionPage contains all required CRO and SEO sections'
 
   // Interactive FAQ Accordion
   assert.ok(
-    pageContent.includes('How does Docketra support event-based MCA filings alongside regular annual compliance?'),
+    pageContent.includes('How does DocketsHQ support event-based MCA filings alongside regular annual compliance?') ||
+    pageContent.includes('How does Docketra support event-based MCA filings alongside regular annual compliance?') ||
+    pageContent.includes('How does DocketsHQ handle both annual and event-based MCA V3 filings?'),
     'FAQ 1 must be present',
   );
   assert.ok(
+    pageContent.includes('How is sensitive promoter and board confidentiality protected on DocketsHQ?') ||
     pageContent.includes('How is sensitive promoter and board confidentiality protected on Docketra?'),
     'FAQ 2 must be present',
   );

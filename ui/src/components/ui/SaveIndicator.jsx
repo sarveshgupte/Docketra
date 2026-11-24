@@ -13,7 +13,7 @@ export const SaveIndicator = ({ status, time, onRetry }) => {
     return (
       <span className="save-indicator save-indicator--error" role="status">
         Save failed.
-        {onRetry ? <button type="button" onClick={onRetry}>Retry</button> : null}
+        {onRetry ? <button type="button" onClick={onRetry} className="ml-1.5 underline underline-offset-2 font-medium hover:text-rose-800 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-rose-500 rounded cursor-pointer">Retry</button> : null}
       </span>
     );
   }

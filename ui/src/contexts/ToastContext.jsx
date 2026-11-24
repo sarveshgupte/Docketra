@@ -6,16 +6,33 @@
 
 import React, { createContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { SESSION_KEYS } from '../utils/constants';
+import { cn } from '../lib/utils';
 
 export const ToastContext = createContext(null);
 
 const TOAST_META = {
-  success: { icon: '✓', iconClass: 'text-green-500' },
-  warning: { icon: '!', iconClass: 'text-amber-500' },
-  info: { icon: 'i', iconClass: 'text-blue-500' },
-  danger: { icon: '!', iconClass: 'text-red-500' },
-  error: { icon: '!', iconClass: 'text-red-500' },
+  success: {
+    icon: <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />,
+    className: 'bg-white border-emerald-200/90 text-slate-800 shadow-lg dark:bg-slate-900 dark:border-emerald-800/60 dark:text-slate-100',
+  },
+  warning: {
+    icon: <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />,
+    className: 'bg-white border-amber-200/90 text-slate-800 shadow-lg dark:bg-slate-900 dark:border-amber-800/60 dark:text-slate-100',
+  },
+  info: {
+    icon: <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />,
+    className: 'bg-white border-blue-200/90 text-slate-800 shadow-lg dark:bg-slate-900 dark:border-blue-800/60 dark:text-slate-100',
+  },
+  danger: {
+    icon: <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" aria-hidden="true" />,
+    className: 'bg-white border-rose-200/90 text-slate-800 shadow-lg dark:bg-slate-900 dark:border-rose-800/60 dark:text-slate-100',
+  },
+  error: {
+    icon: <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" aria-hidden="true" />,
+    className: 'bg-white border-rose-200/90 text-slate-800 shadow-lg dark:bg-slate-900 dark:border-rose-800/60 dark:text-slate-100',
+  },
 };
 
 export const ToastProvider = ({ children }) => {
@@ -128,31 +145,31 @@ const ToastContainer = ({ toasts, removeToast }) => {
   if (toasts.length === 0 || typeof document === 'undefined') return null;
 
   return createPortal((
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">
+    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full">
       {toasts.map((toast) => {
         const meta = TOAST_META[toast.type] || TOAST_META.info;
 
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-xl border p-4 shadow-lg transition-all duration-300 ease-in-out ${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : (toast.type === 'danger' || toast.type === 'error') ? 'bg-red-50 border-red-200 text-red-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}
+            className={cn(
+              'pointer-events-auto flex w-full items-start gap-2.5 rounded-[var(--dt-radius-card,8px)] border p-3 shadow-lg transition-[transform,opacity] duration-200 ease-out',
+              meta.className
+            )}
             role="status"
             aria-live="polite"
           >
-            <span
-              aria-hidden="true"
-              className={`inline-flex h-5 w-5 items-center justify-center text-sm font-semibold leading-none ${meta.iconClass}`}
-            >
+            <span aria-hidden="true" className="shrink-0 mt-0.5">
               {meta.icon}
             </span>
-            <span className="flex-1 break-words text-sm font-medium">{toast.message}</span>
+            <span className="flex-1 break-words text-xs font-medium leading-relaxed">{toast.message}</span>
             <button
               type="button"
               onClick={() => removeToast(toast.id)}
-              className="text-gray-400 transition-colors hover:text-gray-600"
+              className="text-slate-400 transition-colors hover:text-slate-700 p-0.5 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 cursor-pointer"
               aria-label="Close notification"
             >
-              ×
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
         );

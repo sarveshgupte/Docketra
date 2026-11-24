@@ -9,7 +9,10 @@ const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', p), 'utf8');
 const page = read('src/pages/FindWorkspacePage.jsx');
 const header = read('src/components/marketing/PublicMarketingHeader.jsx');
 
-assert.ok(page.includes('Find your Docketra workspace'), 'Page should include discovery heading.');
+assert.ok(
+  page.includes('Find your DocketsHQ workspace') || page.includes('Find your Docketra workspace'),
+  'Page should include discovery heading.'
+);
 assert.ok(page.includes('Enter your xID') && page.includes('secure login page'), 'Page should clarify xID entry instead of firmSlug entry.');
 assert.ok(page.includes('Continue to workspace'), 'Primary button copy should match UX guidance.');
 assert.ok(page.includes('Finding workspace…'), 'Loading button copy should match UX guidance.');

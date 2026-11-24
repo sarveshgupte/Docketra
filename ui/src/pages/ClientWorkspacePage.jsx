@@ -728,7 +728,7 @@ export const ClientWorkspacePage = () => {
             </div>
           )}
 
-          {currentTab === 'documents' && <Card><p>Documents and references</p><p>Linked documents and references will appear here as client files are connected through Docketra.</p></Card>}
+          {currentTab === 'documents' && <Card><p>Documents and references</p><p>Linked documents and references will appear here as client files are connected through DocketsHQ.</p></Card>}
 
           {currentTab === 'dockets' && (
             <Card>

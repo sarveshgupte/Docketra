@@ -62,7 +62,7 @@ export default function PublicMarketingHeader() {
             <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
           </svg>
           <div className="flex flex-col leading-none text-left">
-            <span className="text-lg font-black text-slate-900 tracking-tight">Docketra</span>
+            <span className="text-lg font-black text-slate-900 tracking-tight">Dockets<span className="text-amber-600">HQ</span></span>
             <span className="text-[8px] font-bold text-amber-700 tracking-wider uppercase mt-0.5">The Company Brain</span>
           </div>
         </Link>

@@ -19,7 +19,7 @@ export const ExportModal = ({
   loading,
 }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Export Docketra Report">
+    <Modal isOpen={isOpen} onClose={onClose} title="Export DocketsHQ Report">
       <div className="export-modal">
         <div className="export-modal__content">
           <p className="export-modal__text">

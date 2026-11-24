@@ -64,7 +64,7 @@ export const PilotAgreementModal = ({
               </span>
             </div>
             <h2 id="pilot-modal-title" className="mt-2 text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
-              Docketra Legal &amp; Pilot Evaluation Agreement
+              DocketsHQ Legal &amp; Pilot Evaluation Agreement
             </h2>
             <p className="mt-1 text-xs text-slate-600">
               Platform Operator: <strong className="text-slate-900">{OPERATOR_LEGAL_NAME}</strong> ({OPERATOR_CAPACITY} • {OPERATOR_LOCATION})
@@ -113,14 +113,14 @@ export const PilotAgreementModal = ({
                   Sole Founder Pre-Incorporation Operator Notice
                 </h4>
                 <p className="mt-1 text-xs text-amber-900 leading-normal">
-                  The Docketra platform (&quot;Docketra&quot; or the &quot;Software&quot;) is developed and operated by <strong>Sarvesh Gupte</strong>, an individual resident of Maharashtra, India (&quot;Operator&quot;), in an individual / sole proprietor capacity pending corporate incorporation. By registering, you acknowledge and agree that this agreement constitutes a binding legal agreement between your participating firm and the Operator. Any successor incorporated legal entity formed by the Operator shall automatically assume all rights and obligations hereunder.
+                  The DocketsHQ platform (&quot;DocketsHQ&quot; or the &quot;Software&quot;) is developed and operated by <strong>Sarvesh Gupte</strong>, an individual resident of Maharashtra, India (&quot;Operator&quot;), in an individual / sole proprietor capacity pending corporate incorporation. By registering, you acknowledge and agree that this agreement constitutes a binding legal agreement between your participating firm and the Operator. Any successor incorporated legal entity formed by the Operator shall automatically assume all rights and obligations hereunder.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-base font-bold text-slate-950">1. Pilot Cohort &amp; 3-Month Free Evaluation License</h3>
                 <p className="mt-2 text-slate-600">
-                  Subject to your adherence to these terms, the Operator grants your firm a limited, non-exclusive, revocable, non-transferable, and royalty-free evaluation license to access and use the Docketra platform for a duration of <strong>three (3) consecutive months</strong> starting on the date of workspace verification (&quot;Pilot Period&quot;).
+                  Subject to your adherence to these terms, the Operator grants your firm a limited, non-exclusive, revocable, non-transferable, and royalty-free evaluation license to access and use the DocketsHQ platform for a duration of <strong>three (3) consecutive months</strong> starting on the date of workspace verification (&quot;Pilot Period&quot;).
                 </p>
                 <ul className="mt-2 list-disc pl-5 space-y-1 text-slate-600">
                   <li><strong>Zero Cost:</strong> No subscription fees, platform licensing fees, or credit card commitments are required during the Pilot Period.</li>
@@ -132,7 +132,7 @@ export const PilotAgreementModal = ({
               <div>
                 <h3 className="text-base font-bold text-slate-950">2. Intellectual Property &amp; Firm Data Ownership</h3>
                 <p className="mt-2 text-slate-600">
-                  <strong>Operator IP:</strong> The Operator retains all right, title, interest, and intellectual property rights in and to the Software, user interfaces, database designs, system architecture, trade secrets, documentation, and the &quot;Docketra&quot; brand.
+                  <strong>Operator IP:</strong> The Operator retains all right, title, interest, and intellectual property rights in and to the Software, user interfaces, database designs, system architecture, trade secrets, documentation, and the &quot;DocketsHQ&quot; brand.
                 </p>
                 <p className="mt-2 text-slate-600">
                   <strong>Your Practice Data:</strong> Your firm retains complete and exclusive ownership of all confidential client lists, case notes, attachments, and proprietary business data uploaded to your workspace. The Operator processes this data solely to provide and maintain the service for your firm.
@@ -142,7 +142,7 @@ export const PilotAgreementModal = ({
               <div>
                 <h3 className="text-base font-bold text-slate-950">3. Feedback &amp; Improvements</h3>
                 <p className="mt-2 text-slate-600">
-                  Any feedback, suggestions, feature ideas, error logs, or usability critiques provided by your firm during the pilot may be freely implemented and commercialized by the Operator to refine Docketra without compensation, royalty, or attribution obligations.
+                  Any feedback, suggestions, feature ideas, error logs, or usability critiques provided by your firm during the pilot may be freely implemented and commercialized by the Operator to refine DocketsHQ without compensation, royalty, or attribution obligations.
                 </p>
               </div>
 
@@ -162,10 +162,10 @@ export const PilotAgreementModal = ({
                   ⚠️ Critical Statutory &amp; Professional Liability Disclaimer
                 </h4>
                 <p className="mt-2 text-xs font-medium text-rose-900 leading-relaxed">
-                  <strong>NO LEGAL, COMPLIANCE, SECRETARIAL, OR ACCOUNTING ADVICE:</strong> Docketra is an administrative workflow, docket tracking, and office management software utility. <strong>The Operator (Sarvesh Gupte) is not a law firm, company secretary practice, chartered accountancy firm, or registered tax advisory firm.</strong> Docketra does NOT review, certify, validate, or provide professional opinions on statutory documents or regulatory submissions.
+                  <strong>NO LEGAL, COMPLIANCE, SECRETARIAL, OR ACCOUNTING ADVICE:</strong> DocketsHQ is an administrative workflow, docket tracking, and office management software utility. <strong>The Operator (Sarvesh Gupte) is not a law firm, company secretary practice, chartered accountancy firm, or registered tax advisory firm.</strong> DocketsHQ does NOT review, certify, validate, or provide professional opinions on statutory documents or regulatory submissions.
                 </p>
                 <p className="mt-2 text-xs font-medium text-rose-900 leading-relaxed">
-                  <strong>FIRM&apos;S SOLE AND EXCLUSIVE RESPONSIBILITY:</strong> Participating professionals, partners, and firms retain 100% sole responsibility for verifying all MCA/ROC due dates, GST returns, Income Tax filings, TDS reconciliation, court listings, and statutory deadlines. Under no circumstances shall Docketra or Sarvesh Gupte be liable for missed deadlines, late filing penalties, statutory fees, notices, regulatory prosecution, disciplinary inquiries, or loss of client goodwill.
+                  <strong>FIRM&apos;S SOLE AND EXCLUSIVE RESPONSIBILITY:</strong> Participating professionals, partners, and firms retain 100% sole responsibility for verifying all MCA/ROC due dates, GST returns, Income Tax filings, TDS reconciliation, court listings, and statutory deadlines. Under no circumstances shall DocketsHQ or Sarvesh Gupte be liable for missed deadlines, late filing penalties, statutory fees, notices, regulatory prosecution, disciplinary inquiries, or loss of client goodwill.
                 </p>
               </div>
 
@@ -196,7 +196,7 @@ export const PilotAgreementModal = ({
               <div>
                 <h3 className="text-base font-bold text-slate-950">4. Governing Law &amp; Dispute Jurisdiction</h3>
                 <p className="mt-2 text-slate-600">
-                  This Agreement and any dispute arising out of or related to Docketra shall be governed by and construed in accordance with the substantive laws of the Republic of India, without regard to conflicts of law principles.
+                  This Agreement and any dispute arising out of or related to DocketsHQ shall be governed by and construed in accordance with the substantive laws of the Republic of India, without regard to conflicts of law principles.
                 </p>
                 <p className="mt-2 text-slate-600">
                   Any legal proceeding, lawsuit, or arbitration controversy arising hereunder shall be submitted to the exclusive jurisdiction of the competent courts located in <strong>Mumbai / Thane, Maharashtra, India</strong>.
@@ -212,7 +212,7 @@ export const PilotAgreementModal = ({
                   India Data Residency &amp; Tenant Sovereignty Posture
                 </h4>
                 <p className="mt-1 text-xs text-sky-900 leading-normal">
-                  Docketra is architected for Indian compliance professionals. Your tenant workspace is provisioned with India-based cloud storage posture and strict logical tenant isolation at every layer.
+                  DocketsHQ is architected for Indian compliance professionals. Your tenant workspace is provisioned with India-based cloud storage posture and strict logical tenant isolation at every layer.
                 </p>
               </div>
 
@@ -226,7 +226,7 @@ export const PilotAgreementModal = ({
               <div>
                 <h3 className="text-base font-bold text-slate-950">2. Bring Your Own Storage (BYOS) Integration</h3>
                 <p className="mt-2 text-slate-600">
-                  For firms with stringent enterprise client confidentiality requirements, Docketra supports direct cloud drive integration (Google Drive, Microsoft OneDrive, or AWS S3). When BYOS is enabled, all document binaries reside directly inside your firm&apos;s cloud drive, with Docketra retaining only pointer metadata.
+                  For firms with stringent enterprise client confidentiality requirements, DocketsHQ supports direct cloud drive integration (Google Drive, Microsoft OneDrive, or AWS S3). When BYOS is enabled, all document binaries reside directly inside your firm&apos;s cloud drive, with DocketsHQ retaining only pointer metadata.
                 </p>
               </div>
 
@@ -240,7 +240,7 @@ export const PilotAgreementModal = ({
               <div>
                 <h3 className="text-base font-bold text-slate-950">4. Immutable Clickwrap Audit Trail</h3>
                 <p className="mt-2 text-slate-600">
-                  In accordance with the Information Technology Act, 2000 and Indian evidence standards, when you register a firm, Docketra records an immutable cryptographic audit record of your clickwrap consent, including:
+                  In accordance with the Information Technology Act, 2000 and Indian evidence standards, when you register a firm, DocketsHQ records an immutable cryptographic audit record of your clickwrap consent, including:
                 </p>
                 <ul className="mt-2 list-disc pl-5 space-y-1 text-slate-600">
                   <li>UTC &amp; IST timestamp of consent execution (`agreedAt`)</li>

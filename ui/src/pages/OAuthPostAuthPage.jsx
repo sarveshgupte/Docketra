@@ -90,7 +90,7 @@ export const OAuthPostAuthPage = () => {
       return;
     }
     if (!agreedToPilotTerms) {
-      setFormError('You must agree to the Docketra Pilot Evaluation Terms to proceed.');
+      setFormError('You must agree to the DocketsHQ Pilot Evaluation Terms to proceed.');
       return;
     }
 
@@ -169,7 +169,7 @@ export const OAuthPostAuthPage = () => {
       <div className="find-workspace-page auth-public-page">
         <div className="find-workspace-page__shell">
           <section className="find-workspace-page__context" aria-label="Workspace created successfully">
-            <p className="find-workspace-page__eyebrow">Docketra · Workspace activation</p>
+            <p className="find-workspace-page__eyebrow">DocketsHQ · Workspace activation</p>
             <h1 className="find-workspace-page__heading">Workspace ready</h1>
             <p className="find-workspace-page__intro">
               Your firm workspace <strong>{createdWorkspace.firmName}</strong> has been created successfully.
@@ -259,7 +259,7 @@ export const OAuthPostAuthPage = () => {
       <div className="find-workspace-page auth-public-page">
         <div className="find-workspace-page__shell">
           <section className="find-workspace-page__context" aria-label="Google workspace setup">
-            <p className="find-workspace-page__eyebrow">Docketra · Secure workspace setup</p>
+            <p className="find-workspace-page__eyebrow">DocketsHQ · Secure workspace setup</p>
             <h1 className="find-workspace-page__heading">Name your workspace</h1>
             <p className="find-workspace-page__intro">
               Welcome{pendingName ? `, ${pendingName}` : ''}! You are authenticating with Google ({pendingEmail}). Enter your firm name to activate your command center.

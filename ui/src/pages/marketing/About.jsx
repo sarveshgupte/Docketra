@@ -12,14 +12,14 @@ const SECTIONS = [
 
 export const AboutPage = () => (
   <LegalLayout
-    title="About Docketra"
-    description="Docketra is a connected SaaS operating system for getting clients, managing them, and executing work."
+    title="About DocketsHQ"
+    description="DocketsHQ is a connected SaaS operating system for getting clients, managing them, and executing work."
     sections={SECTIONS}
   >
     <section id="who-we-serve">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Who We Serve</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra is designed for CA firms, CS firms, law firms, compliance and advisory teams,
+        DocketsHQ is designed for CA firms, CS firms, law firms, compliance and advisory teams,
         and other operations-heavy service businesses that need structured workflows and high
         operational clarity.
       </p>
@@ -28,7 +28,7 @@ export const AboutPage = () => (
     <section id="positioning">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Product Positioning</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra combines CMS, CRM, and Tasks into one connected operating system so teams can
+        DocketsHQ combines CMS, CRM, and Tasks into one connected operating system so teams can
         capture leads, manage client relationships, and execute delivery in one place.
       </p>
     </section>
@@ -45,7 +45,7 @@ export const AboutPage = () => (
     <section id="current-status">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Current Status</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra is currently in testing and early access. Access is free while testing.
+        DocketsHQ is currently in testing and early access. Access is free while testing.
         Billing and subscription setup are not live yet.
       </p>
     </section>

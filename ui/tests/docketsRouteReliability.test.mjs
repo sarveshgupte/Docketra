@@ -40,6 +40,7 @@ assert.ok(
 );
 
 assert.ok(
+  platformShellSource.includes('document.title = `${resolvedTitle} • DocketsHQ`;') ||
   platformShellSource.includes('document.title = `${resolvedTitle} • Docketra`;'),
   'PlatformShell must manage document title for unified workspace pages such as Dockets.'
 );

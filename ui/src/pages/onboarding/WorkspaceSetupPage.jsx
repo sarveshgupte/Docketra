@@ -450,7 +450,7 @@ export function WorkspaceSetupPage() {
                 <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
               </svg>
-              <span className="font-bold tracking-tight text-slate-950 text-sm">Docketra</span>
+              <span className="font-bold tracking-tight text-slate-950 text-sm">DocketsHQ</span>
             </Link>
             <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-sm bg-amber-50 border border-amber-200 text-amber-800 font-semibold">
               Setup in progress
@@ -539,7 +539,7 @@ export function WorkspaceSetupPage() {
               <path d="M40 30H50C61.05 30 70 38.95 70 50C70 61.05 61.05 70 50 70H40V30Z" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M50 44C53.31 44 56 46.69 56 50C56 53.31 53.31 56 50 56" stroke="currentColor" strokeWidth="4" strokeLinecap="round"/>
             </svg>
-            <span className="font-bold tracking-tight text-slate-950 text-sm">Docketra</span>
+            <span className="font-bold tracking-tight text-slate-950 text-sm">DocketsHQ</span>
           </Link>
           <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-sm bg-slate-100 border border-slate-200 text-slate-700 font-semibold">
             Workspace Setup
@@ -734,7 +734,7 @@ export function WorkspaceSetupPage() {
                 Your files stay in your hands
               </h1>
               <p className="text-sm text-slate-600">
-                Choose where Docketra saves your client documents, filings, and notices. Docketra never stores copies of your private files on its own servers.
+                Choose where DocketsHQ saves your client documents, filings, and notices. DocketsHQ never stores copies of your private files on its own servers.
               </p>
             </div>
 
@@ -790,12 +790,12 @@ export function WorkspaceSetupPage() {
                         </button>
                       </div>
                       <p className="text-[11px] text-emerald-800 leading-snug">
-                        Privacy check passed: Docketra only accesses its own firm folder. 0 external files accessible.
+                        Privacy check passed: DocketsHQ only accesses its own firm folder. 0 external files accessible.
                       </p>
                     </div>
                   ) : (
                     <p className="text-[11px] text-slate-500">
-                      Safe and restricted: Docketra only accesses files it creates for your firm.
+                      Safe and restricted: DocketsHQ only accesses files it creates for your firm.
                     </p>
                   )}
                 </div>
@@ -888,7 +888,7 @@ export function WorkspaceSetupPage() {
                           type="text"
                           value={customLocalInput}
                           onChange={(e) => setCustomLocalInput(e.target.value)}
-                          placeholder="e.g. D:\Docketra\Clients"
+                          placeholder="e.g. D:\DocketsHQ\Clients"
                           className="w-full bg-white border border-slate-300 rounded-md px-2.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 font-mono focus:outline-none focus:border-slate-950"
                         />
                         <div className="flex items-center gap-2">
@@ -983,7 +983,7 @@ export function WorkspaceSetupPage() {
                         type="text"
                         value={customOfficeServerInput}
                         onChange={(e) => setCustomOfficeServerInput(e.target.value)}
-                        placeholder="e.g. \\OFFICE-PC\Clients or Z:\Docketra"
+                        placeholder="e.g. \\OFFICE-PC\Clients or Z:\DocketsHQ"
                         className="w-full bg-white border border-slate-300 rounded-md px-2.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 font-mono focus:outline-none focus:border-slate-950"
                       />
                       <div className="flex items-center gap-2">
@@ -1031,7 +1031,7 @@ export function WorkspaceSetupPage() {
               <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
                 <span className="font-semibold text-slate-900 block">Privacy Guarantee</span>
-                Docketra connects directly to your chosen storage. We never sell, read, or keep copies of your client files. You can change this anytime from Firm Settings.
+                DocketsHQ connects directly to your chosen storage. We never sell, read, or keep copies of your client files. You can change this anytime from Firm Settings.
               </div>
             </div>
 
@@ -1222,7 +1222,7 @@ export function WorkspaceSetupPage() {
                 <Sparkles className="h-8 w-8" />
               </div>
               <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-950">
-                Welcome to Docketra
+                Welcome to DocketsHQ
               </h1>
               <p className="text-sm text-slate-600">
                 Workspace <span className="text-slate-950 font-bold">{firmName || 'Your Practice'}</span> is configured and ready for daily operations.

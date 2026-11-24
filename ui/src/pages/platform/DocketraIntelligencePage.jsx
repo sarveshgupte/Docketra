@@ -93,7 +93,7 @@ const RankedAssigneeCard = ({ assignee, index, mode = 'best' }) => (
   </article>
 );
 
-export const DocketraIntelligencePage = () => {
+export const DocketsHQIntelligencePage = () => {
   const { firmSlug } = useParams();
   const [rebalanceMessage, setRebalanceMessage] = useState('');
   const [rebalancing, setRebalancing] = useState(false);
@@ -187,7 +187,7 @@ export const DocketraIntelligencePage = () => {
   return (
     <PlatformShell
       moduleLabel="Operations"
-      title="Docketra Intelligence"
+      title="DocketsHQ Intelligence"
       subtitle="Operational capacity, statutory deadline radar, and assignee recommendations."
     >
       <div className="intelligence-shell">
@@ -246,7 +246,7 @@ export const DocketraIntelligencePage = () => {
                   Practice Workspace Initialized · Intelligence Engine Ready
                 </h3>
                 <p className="mt-1 text-xs text-[var(--dt-text-secondary)] leading-relaxed">
-                  Docketra Intelligence tracks statutory SLA timelines and balances task assignments automatically as your team operates.
+                  DocketsHQ Intelligence tracks statutory SLA timelines and balances task assignments automatically as your team operates.
                   To activate real-time analytics for your firm:
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -520,4 +520,5 @@ export const DocketraIntelligencePage = () => {
   );
 };
 
-export default DocketraIntelligencePage;
+export const DocketraIntelligencePage = DocketsHQIntelligencePage;
+export default DocketsHQIntelligencePage;

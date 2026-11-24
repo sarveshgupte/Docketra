@@ -10,11 +10,11 @@ const FAQ_ITEMS = [
     id: 'rbac-permissions',
     question: 'How do role-based permissions work for business teams submitting legal intake requests?',
     answer:
-      'Docketra provides granular Role-Based Access Control (RBAC) separating internal business requesters from legal department counsel. Business users access a simplified intake portal where they can submit requests, upload contract drafts, and track progress without gaining visibility into confidential dispute dockets, executive employment matters, or board governance archives.',
+      'DocketsHQ provides granular Role-Based Access Control (RBAC) separating internal business requesters from legal department counsel. Business users access a simplified intake portal where they can submit requests, upload contract drafts, and track progress without gaining visibility into confidential dispute dockets, executive employment matters, or board governance archives.',
   },
   {
     id: 'sovereignty-dpdp',
-    question: "How does Docketra ensure data sovereignty and compliance with India's DPDP Act?",
+    question: "How does DocketsHQ ensure data sovereignty and compliance with India's DPDP Act?",
     answer:
       'All customer data and documents are stored exclusively on Tier-IV cloud infrastructure located physically within India (Mumbai and Hyderabad). We enforce TLS 1.3 encryption in transit, AES-256 encryption at rest, and zero third-party AI model training. In-house teams can also activate Bring-Your-Own-Storage (BYOS) to vault documents directly into their own enterprise AWS S3 or Google Drive buckets.',
   },
@@ -22,7 +22,7 @@ const FAQ_ITEMS = [
     id: 'excel-migration',
     question: 'How straightforward is migrating ongoing litigation matters and contract repositories from Excel?',
     answer:
-      'Migration takes minutes using Docketra’s built-in Matter & Entity Importers. You can upload existing spreadsheets containing active litigation, regulatory show-cause notices, contract registries, and subsidiary entity profiles. The system runs pre-flight dry runs, checks statutory identifiers (CIN, DIN, PAN), and auto-populates matter dockets with historical dates and responsible counsel.',
+      'Migration takes minutes using DocketsHQ’s built-in Matter & Entity Importers. You can upload existing spreadsheets containing active litigation, regulatory show-cause notices, contract registries, and subsidiary entity profiles. The system runs pre-flight dry runs, checks statutory identifiers (CIN, DIN, PAN), and auto-populates matter dockets with historical dates and responsible counsel.',
   },
 ];
 
@@ -88,7 +88,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
   return (
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25 font-sans">
       <SeoHead
-        title="Legal Operations & Matter Management for In-House Teams | Docketra"
+        title="Legal Operations & Matter Management for In-House Teams | DocketsHQ"
         description="Streamline in-house legal intake, contract dockets, and subsidiary compliance. Purpose-built for Indian corporate legal departments with a 3-month free pilot."
         canonicalPath="/solutions/corporate-legal-teams"
         jsonLd={FAQ_SCHEMA}
@@ -316,10 +316,10 @@ export const CorporateLegalTeamsSolutionPage = () => {
               Why Spreadsheets Fail Legal Operations
             </div>
             <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Spreadsheets &amp; Slack vs. The Docketra Legal Operating System
+              Spreadsheets &amp; Slack vs. The DocketsHQ Legal Operating System
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              When business demand accelerates across subsidiaries, ad-hoc legal intake breaks. Here is how Docketra shields your enterprise from blown contract SLAs and missed statutory windows.
+              When business demand accelerates across subsidiaries, ad-hoc legal intake breaks. Here is how DocketsHQ shields your enterprise from blown contract SLAs and missed statutory windows.
             </p>
           </div>
 
@@ -336,7 +336,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
                       Spreadsheets &amp; Slack (Old Way)
                     </th>
                     <th scope="col" className="p-3.5 font-bold uppercase tracking-wider text-emerald-900 bg-emerald-50/40 w-3/8">
-                      Docketra Legal Platform (Modern Way)
+                      DocketsHQ Legal Platform (Modern Way)
                     </th>
                   </tr>
                 </thead>
@@ -571,7 +571,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
                     <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
                   </div>
                   <span className="ml-2 font-mono text-[11px] text-slate-500 truncate">
-                    docketra.in/app/legal/titan-enterprises
+                    docketshq.com/app/legal/titan-enterprises
                   </span>
                 </div>
                 <span className="rounded bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200 font-mono shrink-0">
@@ -727,7 +727,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
               Why Join the In-House Legal Pilot?
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Partner with Docketra to build an institutional legal operating system customized to your enterprise governance workflows.
+              Partner with DocketsHQ to build an institutional legal operating system customized to your enterprise governance workflows.
             </p>
           </div>
 
@@ -758,7 +758,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
               </span>
               <h3 className="text-sm font-bold text-slate-950">Dedicated Legal Ops Specialist</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Direct Slack/Teams channel with Docketra product engineers to configure custom matter taxonomies and intake approval hierarchies.
+                Direct Slack/Teams channel with DocketsHQ product engineers to configure custom matter taxonomies and intake approval hierarchies.
               </p>
             </div>
           </div>

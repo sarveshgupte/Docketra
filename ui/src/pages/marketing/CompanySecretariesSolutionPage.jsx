@@ -8,15 +8,15 @@ import SeoHead from '../../components/common/SeoHead';
 const FAQ_ITEMS = [
   {
     id: 'event-filings',
-    question: 'How does Docketra handle both annual and event-based MCA V3 filings?',
+    question: 'How does DocketsHQ handle both annual and event-based MCA V3 filings?',
     answer:
-      'Docketra tracks both annual cycles (AOC-4, MGT-7, DIR-3 KYC) and event-based corporate actions (DIR-12, CHG-1/4, PAS-3, INC-22). Every filing gets a 30-day statutory countdown clock, 4-eye partner sign-off, SRN tracking, and auto-vaulting of stamped ROC challans into the client’s permanent record.',
+      'DocketsHQ tracks both annual cycles (AOC-4, MGT-7, DIR-3 KYC) and event-based corporate actions (DIR-12, CHG-1/4, PAS-3, INC-22). Every filing gets a 30-day statutory countdown clock, 4-eye partner sign-off, SRN tracking, and auto-vaulting of stamped ROC challans into the client’s permanent record.',
   },
   {
     id: 'confidentiality-security',
     question: 'Where are our client files and board resolutions stored? Can we use our Google Drive?',
     answer:
-      'Yes. Docketra supports Bring Your Own Storage (BYOS). All client filings, signed resolutions, and ROC receipts can be vaulted directly into your firm’s private Google Drive or AWS S3 bucket. All metadata is hosted in India (Mumbai/Hyderabad) with TLS 1.3 and AES-256 encryption.',
+      'Yes. DocketsHQ supports Bring Your Own Storage (BYOS). All client filings, signed resolutions, and ROC receipts can be vaulted directly into your firm’s private Google Drive or AWS S3 bucket. All metadata is hosted in India (Mumbai/Hyderabad) with TLS 1.3 and AES-256 encryption.',
   },
   {
     id: 'data-export-guarantee',
@@ -89,7 +89,7 @@ export const CompanySecretariesSolutionPage = () => {
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25 font-sans">
       <SeoHead
         canonicalPath="/solutions/company-secretaries"
-        title="Practice Management Software for Company Secretaries | Docketra"
+        title="Practice Management Software for Company Secretaries | DocketsHQ"
         description="Purpose-built secretarial practice management: MCA V3 filings, ₹100/day late fee shield, DSC tracking, SS-1/SS-2 governance, and BYOS Google Drive storage."
         jsonLd={FAQ_SCHEMA}
       />
@@ -316,10 +316,10 @@ export const CompanySecretariesSolutionPage = () => {
               Why Spreadsheets Fail CS Firms
             </div>
             <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Excel & WhatsApp vs. The Docketra CS Operating System
+              Excel & WhatsApp vs. The DocketsHQ CS Operating System
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              When your practice grows past 50 clients, manual tracking breaks. Here is how Docketra shields your firm from missed deadlines and unbilled work.
+              When your practice grows past 50 clients, manual tracking breaks. Here is how DocketsHQ shields your firm from missed deadlines and unbilled work.
             </p>
           </div>
 
@@ -336,7 +336,7 @@ export const CompanySecretariesSolutionPage = () => {
                       Spreadsheets & WhatsApp (Old Way)
                     </th>
                     <th scope="col" className="p-3.5 font-bold uppercase tracking-wider text-emerald-900 bg-emerald-50/40 w-3/8">
-                      Docketra CS Platform (Modern Way)
+                      DocketsHQ CS Platform (Modern Way)
                     </th>
                   </tr>
                 </thead>
@@ -749,7 +749,7 @@ export const CompanySecretariesSolutionPage = () => {
               </span>
               <h3 className="text-sm font-bold text-slate-950">Direct Product Priority</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Direct WhatsApp and phone line with Docketra’s core product team to request custom statutory workflows and resolution templates.
+                Direct WhatsApp and phone line with DocketsHQ’s core product team to request custom statutory workflows and resolution templates.
               </p>
             </div>
           </div>
@@ -818,7 +818,7 @@ export const CompanySecretariesSolutionPage = () => {
               Upgrade your secretarial practice today.
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto leading-relaxed">
-              Join leading Indian CS practices running structured, error-free corporate compliance on Docketra. Onboard your firm in under 15 minutes.
+              Join leading Indian CS practices running structured, error-free corporate compliance on DocketsHQ. Onboard your firm in under 15 minutes.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link

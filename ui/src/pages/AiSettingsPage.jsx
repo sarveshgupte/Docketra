@@ -16,7 +16,7 @@ const PROVIDER_OPTIONS = [
   { value: 'gemini', label: 'Google Gemini' },
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'azure_openai', label: 'Azure OpenAI' },
-  { value: 'docketra_managed', label: 'Docketra Managed AI' },
+  { value: 'docketra_managed', label: 'DocketsHQ Managed AI' },
 ];
 const CREDENTIAL_MODE_OPTIONS = [
   { value: 'none', label: 'none' },
@@ -94,7 +94,7 @@ const PRIVACY_META = {
 
 const modeLabel = (provider, enabled) => {
   if (!enabled || isProviderDisabled(provider)) return 'Disabled';
-  if (String(provider).toLowerCase() === 'docketra_managed') return 'Docketra-managed AI';
+  if (String(provider).toLowerCase() === 'docketra_managed') return 'DocketsHQ-managed AI';
   return 'Firm-connected BYOAI';
 };
 

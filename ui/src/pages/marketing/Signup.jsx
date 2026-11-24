@@ -243,7 +243,7 @@ export default function Signup() {
     if (!form.firmName.trim()) nextErrors.firmName = 'Firm name is required';
     if (!phonePattern.test(form.phone.trim())) nextErrors.phone = 'Phone must be 10 digits';
     if (!agreedToPilotTerms) {
-      nextErrors.agreedToPilotTerms = 'You must agree to the Docketra Pilot Evaluation Terms to proceed.';
+      nextErrors.agreedToPilotTerms = 'You must agree to the DocketsHQ Pilot Evaluation Terms to proceed.';
     }
 
     if (Object.keys(nextErrors).length) {
@@ -390,8 +390,8 @@ export default function Signup() {
     return (
       <SignupShell mode="success">
           <SeoHead
-            title="Create Workspace | Docketra"
-            description="Create your firm's Docketra workspace in 2 minutes. Free 3-month pilot, no credit card required."
+            title="Create Workspace | DocketsHQ"
+            description="Create your firm's DocketsHQ workspace in 2 minutes. Free 3-month pilot, no credit card required."
             canonicalPath="/signup"
           />
           <section className="hidden lg:block" aria-label="Workspace signup success">
@@ -416,7 +416,7 @@ export default function Signup() {
 
           <Card className="auth-card w-full max-w-none rounded-[2rem] border border-white/80 bg-white/90 p-5 shadow-[0_30px_90px_-45px_rgba(15,23,42,0.45)] backdrop-blur md:p-8">
             <div className="auth-header text-center">
-              <p className="auth-kicker">Docketra · Workspace ready</p>
+              <p className="auth-kicker">DocketsHQ · Workspace ready</p>
               <h1 className="text-3xl font-black text-slate-950">Workspace created successfully</h1>
               <p className="mt-2 text-sm text-slate-600">Save these details for your first login.</p>
             </div>
@@ -480,8 +480,8 @@ export default function Signup() {
   return (
     <SignupShell>
         <SeoHead
-          title="Create Workspace | Docketra"
-          description="Create your firm's Docketra workspace in 2 minutes. Free 3-month pilot, no credit card required."
+          title="Create Workspace | DocketsHQ"
+          description="Create your firm's DocketsHQ workspace in 2 minutes. Free 3-month pilot, no credit card required."
           canonicalPath="/signup"
         />
         <section className="hidden lg:block" aria-label="Workspace signup context">
@@ -531,7 +531,7 @@ export default function Signup() {
             <DocketraLogo size="sm" />
           </Link>
           <div className="auth-header text-center">
-            <p className="auth-kicker">Docketra · Secure workspace setup</p>
+            <p className="auth-kicker">DocketsHQ · Secure workspace setup</p>
             <h1 className="text-3xl font-black text-slate-950 md:text-4xl">{step === 1 ? 'Create your workspace' : 'Verify your email OTP'}</h1>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
               {step === 1 ? 'Set up your firm identity, primary admin, and secure workspace handoff in one flow.' : 'Enter the 6-digit code sent to your email so we can activate the workspace.'}
@@ -720,7 +720,7 @@ export default function Signup() {
                     className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
                   >
                     Privacy Policy
-                  </button> (Operator: Sarvesh Gupte, Maharashtra, India). I acknowledge that Docketra is an evaluation workflow tool and does not provide legal, tax, or statutory compliance advice.
+                  </button> (Operator: Sarvesh Gupte, Maharashtra, India). I acknowledge that DocketsHQ is an evaluation workflow tool and does not provide legal, tax, or statutory compliance advice.
                 </span>
               </label>
               {errors.agreedToPilotTerms && (

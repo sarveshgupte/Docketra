@@ -61,10 +61,10 @@ const TOUR_STEPS = [
     title: 'Zero-Custody Document Vault (BYOS)',
     subtitle: 'Bring Your Own Storage: Google Drive / AWS S3',
     description:
-      'Your firm’s confidential client filings, board resolutions, and litigation papers stay entirely in your firm’s cloud storage. Docketra never takes permanent custody of sensitive client documents.',
+      'Your firm’s confidential client filings, board resolutions, and litigation papers stay entirely in your firm’s cloud storage. DocketsHQ never takes permanent custody of sensitive client documents.',
     highlights: [
       'Direct Google Drive & S3 cloud synchronization',
-      'Deterministic folder hierarchy: Google Drive > Docketra > Firm > Cases',
+      'Deterministic folder hierarchy: Google Drive > DocketsHQ > Firm > Cases',
       'SHA-256 checksum verification for tamper-evident file integrity',
       'Zero vendor lock-in — your files always remain yours',
     ],
@@ -166,7 +166,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold tracking-tight text-slate-950">Docketra Product Tour</span>
+                <span className="text-xs font-bold tracking-tight text-slate-950">DocketsHQ Product Tour</span>
                 <span className="rounded-xs border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-mono font-semibold uppercase text-amber-800">
                   Interactive
                 </span>
@@ -446,7 +446,7 @@ export function LandingProductTourModal({ isOpen, onClose, onNavigateToSection }
 
                   <div className="rounded-xs bg-slate-50 p-2 font-mono text-[10px] text-slate-700 border border-slate-200">
                     <div className="text-slate-500"># Deterministic storage hierarchy</div>
-                    <div className="text-amber-800 font-bold">/Firm Drive/Docketra/Zenith_Infra/MCA_Filings/2026/</div>
+                    <div className="text-amber-800 font-bold">/Firm Drive/DocketsHQ/Zenith_Infra/MCA_Filings/2026/</div>
                   </div>
 
                   <p className="text-[10px] text-slate-600 leading-relaxed">

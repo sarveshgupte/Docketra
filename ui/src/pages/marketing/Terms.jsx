@@ -16,7 +16,7 @@ const SECTIONS = [
 export const TermsPage = () => (
   <LegalLayout
     title="Terms of Use"
-    description="Simple terms for using Docketra in early-stage testing, written for firm owners who need clarity before rolling work into the platform."
+    description="Simple terms for using DocketsHQ in early-stage testing, written for firm owners who need clarity before rolling work into the platform."
     sections={SECTIONS}
     kicker="Rules of the workspace"
     highlights={['Firm data remains yours', 'Early-stage product terms', 'Support path included']}
@@ -24,7 +24,7 @@ export const TermsPage = () => (
     <section id="service-description">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Service Description</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra is a SaaS platform that provides CRM, CMS, and task management tools for firms
+        DocketsHQ is a SaaS platform that provides CRM, CMS, and task management tools for firms
         and organizations.
       </p>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
@@ -47,7 +47,7 @@ export const TermsPage = () => (
     <section id="acceptable-use">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Acceptable Use</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        You must not use Docketra for illegal activity, abuse the platform, or attempt to bypass,
+        You must not use DocketsHQ for illegal activity, abuse the platform, or attempt to bypass,
         probe, or break service security controls.
       </p>
     </section>
@@ -55,7 +55,7 @@ export const TermsPage = () => (
     <section id="data-ownership">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">4. Data Ownership</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Your firm owns its business data. Docketra processes your data only to provide, secure,
+        Your firm owns its business data. DocketsHQ processes your data only to provide, secure,
         and improve the service.
       </p>
     </section>
@@ -63,7 +63,7 @@ export const TermsPage = () => (
     <section id="availability">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">5. Availability &amp; Changes</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We may update, improve, or change features at any time. Because Docketra is in early-stage
+        We may update, improve, or change features at any time. Because DocketsHQ is in early-stage
         testing, temporary downtime, maintenance windows, or interruptions may occur.
       </p>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
@@ -74,8 +74,8 @@ export const TermsPage = () => (
     <section id="liability">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">6. Limitation of Liability</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra is provided on an “as available” basis. To the extent permitted by applicable
-        law, Docketra is not liable for indirect or consequential losses resulting from use of the
+        DocketsHQ is provided on an “as available” basis. To the extent permitted by applicable
+        law, DocketsHQ is not liable for indirect or consequential losses resulting from use of the
         platform.
       </p>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
@@ -87,7 +87,7 @@ export const TermsPage = () => (
     <section id="updates-to-terms">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Updates to Terms</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We may update these Terms from time to time. If you continue using Docketra after updates
+        We may update these Terms from time to time. If you continue using DocketsHQ after updates
         are posted, you agree to the revised Terms.
       </p>
     </section>

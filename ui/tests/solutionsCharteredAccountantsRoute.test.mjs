@@ -81,6 +81,7 @@ test('CharteredAccountantsSolutionPage contains all required CRO and SEO section
 
   // Pilot Eyebrow Banner
   assert.ok(
+    pageContent.includes('🚀 DocketsHQ Pilot Cohort for CA Practices') ||
     pageContent.includes('🚀 Docketra Pilot Cohort for CA Practices'),
     'Pilot banner badge must be present',
   );

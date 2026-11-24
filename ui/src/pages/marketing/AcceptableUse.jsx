@@ -11,14 +11,14 @@ const SECTIONS = [
 export const AcceptableUsePage = () => (
   <LegalLayout
     title="Acceptable Use Policy"
-    description="Simple rules that keep Docketra safe, lawful, and reliable for firms using it to run real operations."
+    description="Simple rules that keep DocketsHQ safe, lawful, and reliable for firms using it to run real operations."
     sections={SECTIONS}
     kicker="Keep the workspace healthy"
     highlights={['No illegal activity', 'No harmful files', 'Report suspicious use']}
   >
     <section id="prohibited-activity">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. Prohibited Activity</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">You must not use Docketra to:</p>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">You must not use DocketsHQ to:</p>
       <ul className="mt-3 list-disc pl-5 space-y-1 text-sm text-gray-600">
         <li>Conduct illegal activity.</li>
         <li>Upload malicious code, harmful files, or abusive content.</li>
@@ -29,7 +29,7 @@ export const AcceptableUsePage = () => (
     <section id="enforcement">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">2. Enforcement</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        If misuse is detected, Docketra may limit or suspend access to protect the platform and
+        If misuse is detected, DocketsHQ may limit or suspend access to protect the platform and
         other users.
       </p>
     </section>

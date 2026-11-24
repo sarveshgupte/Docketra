@@ -14,7 +14,7 @@ const env = loadEnv({ exitOnError: false }) || {
 const config = {
   port: env.PORT,
   env: env.NODE_ENV,
-  appName: process.env.APP_NAME || 'Docketra',
+  appName: process.env.APP_NAME || 'DocketsHQ',
   mongodbUri: env.MONGODB_URI,
   strictByos: Boolean(env.STRICT_BYOS),
   aiAnalysisEnabled: Boolean(env.ENABLE_AI_ANALYSIS),

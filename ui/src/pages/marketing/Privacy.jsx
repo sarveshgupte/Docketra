@@ -17,14 +17,14 @@ const SECTIONS = [
 export const PrivacyPage = () => (
   <LegalLayout
     title="Privacy Policy"
-    description="How Docketra handles account, workspace, and operational data while the product is in early-stage testing."
+    description="How DocketsHQ handles account, workspace, and operational data while the product is in early-stage testing."
     sections={SECTIONS}
     kicker="Privacy with practical edges"
     highlights={['No data selling', 'Firm-controlled workspace data', 'Essential cookies only']}
   >
     <section id="data-collected">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">1. What We Collect</h2>
-      <p className="mt-3 text-sm text-gray-600 leading-relaxed">We collect limited categories of data needed to run Docketra, including:</p>
+      <p className="mt-3 text-sm text-gray-600 leading-relaxed">We collect limited categories of data needed to run DocketsHQ, including:</p>
       <ul className="mt-3 list-disc pl-5 space-y-1 text-sm text-gray-600">
         <li>Account information (such as name and email).</li>
         <li>Firm workspace data (such as clients, tasks, dockets, forms, and related records).</li>
@@ -46,7 +46,7 @@ export const PrivacyPage = () => (
     <section id="data-sharing">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">3. Data Sharing</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        We do not sell your data. We share data only when needed to run Docketra (for example,
+        We do not sell your data. We share data only when needed to run DocketsHQ (for example,
         with hosting or database infrastructure providers) or when required by applicable law.
       </p>
     </section>
@@ -78,7 +78,7 @@ export const PrivacyPage = () => (
     <section id="cookies">
       <h2 className="text-xl font-semibold mt-8 mb-2 text-gray-700">7. Cookies &amp; Tracking</h2>
       <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-        Docketra may use essential cookies and similar technologies for session management,
+        DocketsHQ may use essential cookies and similar technologies for session management,
         security, and basic analytics.
       </p>
     </section>

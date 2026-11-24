@@ -157,6 +157,7 @@ const ROUTE_PRELOAD_MAP = {
   '/solutions/company-secretaries': [marketingCsImporter, 'CompanySecretariesSolutionPage'],
   '/solutions/chartered-accountants': [marketingCaImporter, 'CharteredAccountantsSolutionPage'],
   '/solutions/corporate-legal-teams': [marketingLegalImporter, 'CorporateLegalTeamsSolutionPage'],
+  '/compare/docketshq-vs-excel-whatsapp': [marketingCompareImporter, 'DocketraVsExcelWhatsAppPage'],
   '/compare/docketra-vs-excel-whatsapp': [marketingCompareImporter, 'DocketraVsExcelWhatsAppPage'],
   '/about': [marketingAboutImporter, 'AboutPage'],
   '/contact': [marketingContactImporter, 'ContactPage'],

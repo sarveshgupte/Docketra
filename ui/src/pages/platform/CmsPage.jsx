@@ -114,7 +114,7 @@ export const PlatformCmsPage = () => {
   const publicLink = selectedForm ? `${window.location.origin}/forms/${selectedForm._id}` : '';
   const embedLink = selectedForm ? `${publicLink}?embed=true` : '';
   const iframeSnippet = selectedForm
-    ? `<iframe src="${embedLink}" title="${selectedForm.name || 'Docketra Intake'}" width="100%" height="680" style="border:0;max-width:640px;"></iframe>`
+    ? `<iframe src="${embedLink}" title="${selectedForm.name || 'DocketsHQ Intake'}" width="100%" height="680" style="border:0;max-width:640px;"></iframe>`
     : '';
 
   const handleCopy = async (text, label) => {

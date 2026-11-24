@@ -688,7 +688,7 @@ export const CaseDetailPage = () => {
       if (previous) {
         if (nextCommentsCount > previous.commentsCount) {
           showSuccess('New comment update received.');
-          sendBrowserNotification('Docketra update', 'A new comment was added to this docket.');
+          sendBrowserNotification('DocketsHQ update', 'A new comment was added to this docket.');
         }
         if (nextAssignee && previous.assignee && nextAssignee !== previous.assignee) {
           showWarning(`Assignment updated: ${previous.assignee} → ${nextAssignee}`);

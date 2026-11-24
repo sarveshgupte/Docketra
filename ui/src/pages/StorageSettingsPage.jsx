@@ -38,7 +38,7 @@ import { ROUTES } from '../constants/routes';
 import { invalidateStorageStatusSummaryCache } from '../hooks/useStorageStatusSummary';
 import { DriveIsolationCertificateModal } from '../components/storage/DriveIsolationCertificateModal';
 
-const PAGE_SUBTITLE = 'Docketra-managed storage works by default. You can optionally connect your firm’s own cloud storage bucket or drive.';
+const PAGE_SUBTITLE = 'DocketsHQ-managed storage works by default. You can optionally connect your firm’s own cloud storage bucket or drive.';
 
 // Custom vector illustrations for cloud providers
 const GoogleDriveIcon = ({ className = 'h-8 w-8' }) => (
@@ -327,14 +327,14 @@ export function StorageSettingsPage() {
     }
 
     if (error) {
-      setStatusMessage({ type: 'error', text: 'Google Drive connection was not completed. Docketra-managed storage is still active.' });
+      setStatusMessage({ type: 'error', text: 'Google Drive connection was not completed. DocketsHQ-managed storage is still active.' });
     }
   }, [location.search]);
 
   const currentProvider = config?.provider || 'docketra_managed';
   const normalizedProvider = (currentProvider === 'google_drive' || currentProvider === 'google-drive') ? 'google-drive' : currentProvider;
   const isGoogleConnected = normalizedProvider === 'google-drive' && Boolean(config?.isConfigured);
-  const currentModeLabel = normalizedProvider === 'google-drive' ? 'Firm-owned Google Drive' : config?.provider === 'onedrive' ? 'Firm-owned Microsoft OneDrive' : config?.provider === 's3' ? 'Firm-owned Amazon S3' : 'Docketra-managed Google Drive';
+  const currentModeLabel = normalizedProvider === 'google-drive' ? 'Firm-owned Google Drive' : config?.provider === 'onedrive' ? 'Firm-owned Microsoft OneDrive' : config?.provider === 's3' ? 'Firm-owned Amazon S3' : 'DocketsHQ-managed Google Drive';
   const usagePercent = Number(usage?.usagePercent || 0);
   const strictFirmOwnedStorage = Boolean(config?.strictFirmOwnedStorage);
   const rootHealthStatus = String(rootHealth?.status || '').toLowerCase();
@@ -344,7 +344,7 @@ export function StorageSettingsPage() {
   const rootNeedsAttention = normalizedProvider === 'google-drive' && Boolean(config?.isConfigured) && (rootHealthStatus === 'recovery_required' || isAuthExpired);
   const storageNeedsAttention = credentialsNeedAttention || rootNeedsAttention;
   const statusLabel = storageNeedsAttention ? 'Needs attention' : config?.isConfigured ? 'Active' : 'Not connected';
-  const rootHealthMessage = rootHealth?.message || (config?.isConfigured ? 'Docketra could not verify your firm-owned cloud storage root.' : 'Connect firm cloud storage to verify root health.');
+  const rootHealthMessage = rootHealth?.message || (config?.isConfigured ? 'DocketsHQ could not verify your firm-owned cloud storage root.' : 'Connect firm cloud storage to verify root health.');
 
   const onToggleStrictMode = async (nextValue) => {
     if (nextValue && !config?.isConfigured) {
@@ -352,8 +352,8 @@ export function StorageSettingsPage() {
       return;
     }
     const copy = nextValue
-      ? 'Enable Strict firm-owned storage mode? This disables Docketra-managed fallback for business-content writes.'
-      : 'Disable Strict firm-owned storage mode? This re-enables Docketra-managed fallback storage.';
+      ? 'Enable Strict firm-owned storage mode? This disables DocketsHQ-managed fallback for business-content writes.'
+      : 'Disable Strict firm-owned storage mode? This re-enables DocketsHQ-managed fallback storage.';
     if (!window.confirm(copy)) return;
     setStrictModeSaving(true);
     try {
@@ -505,12 +505,12 @@ export function StorageSettingsPage() {
   };
 
   const onDisconnectGoogle = async () => {
-    const confirmed = window.confirm('Disconnect firm Google Drive? Future uploads will use Docketra-managed storage.');
+    const confirmed = window.confirm('Disconnect firm Google Drive? Future uploads will use DocketsHQ-managed storage.');
     if (!confirmed) return;
     setDisconnecting(true);
     try {
       await disconnectStorage();
-      setStatusMessage({ type: 'success', text: 'Firm storage disconnected. Docketra-managed storage is active.' });
+      setStatusMessage({ type: 'success', text: 'Firm storage disconnected. DocketsHQ-managed storage is active.' });
       toast?.showSuccess?.('Firm storage disconnected.');
       loadConfiguration();
     } catch (error) {
@@ -653,8 +653,8 @@ export function StorageSettingsPage() {
             <div className="bg-slate-50 rounded-xl p-4 text-xs leading-relaxed text-slate-500 border border-slate-100 flex items-start gap-2.5">
               <DatabaseIcon className="h-5 w-5 text-indigo-500 flex-shrink-0 mt-0.5" />
               <p>
-                <strong>Security Protocol:</strong> Docketra-managed storage isolates tenant data at the storage level. 
-                By connecting firm-owned cloud storage, all future binary documents bypass Docketra storage servers completely, 
+                <strong>Security Protocol:</strong> DocketsHQ-managed storage isolates tenant data at the storage level. 
+                By connecting firm-owned cloud storage, all future binary documents bypass DocketsHQ storage servers completely, 
                 retaining data sovereignty and strict operational control entirely under your organization's domain.
               </p>
             </div>
@@ -672,8 +672,8 @@ export function StorageSettingsPage() {
                         </span>
                       </div>
                       <p className="text-emerald-800 mt-0.5 leading-relaxed">
-                        Docketra can only access files created inside this app.
-                        <strong> 0 external files readable.</strong> Personal drives, existing client folders, and tax returns outside <code className="bg-emerald-100/70 px-1 py-0.5 rounded text-[11px]">/Docketra/</code> cannot be seen or opened.
+                        DocketsHQ can only access files created inside this app.
+                        <strong> 0 external files readable.</strong> Personal drives, existing client folders, and tax returns outside <code className="bg-emerald-100/70 px-1 py-0.5 rounded text-[11px]">/DocketsHQ/</code> cannot be seen or opened.
                       </p>
                     </div>
                   </div>
@@ -754,7 +754,7 @@ export function StorageSettingsPage() {
                 </>
               ) : (
                 <div className="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100 text-indigo-800 text-sm font-medium w-full flex items-center justify-between">
-                  <span>Docketra-managed encrypted storage is currently active.</span>
+                  <span>DocketsHQ-managed encrypted storage is currently active.</span>
                   <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-bold uppercase">Active Default</span>
                 </div>
               )}
@@ -905,7 +905,7 @@ export function StorageSettingsPage() {
                         &ldquo;See, edit, create, and delete only the specific Google Drive files you use with this app.&rdquo;
                       </blockquote>
                       <p className="text-[11px] text-slate-500 pt-1">
-                        Google blocks Docketra from seeing, searching, or downloading any personal Drive folders, client tax returns, or private files outside <code className="bg-blue-100/60 px-1 py-0.5 rounded text-[11px]">/Docketra/</code>.
+                        Google blocks DocketsHQ from seeing, searching, or downloading any personal Drive folders, client tax returns, or private files outside <code className="bg-blue-100/60 px-1 py-0.5 rounded text-[11px]">/DocketsHQ/</code>.
                       </p>
                     </div>
 
@@ -926,7 +926,7 @@ export function StorageSettingsPage() {
                       <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm space-y-1">
                         <span className="text-[10px] font-mono uppercase text-slate-400 font-semibold block">Root Confinement</span>
                         <div className="font-bold text-sm text-slate-700 font-mono truncate">
-                          {boundaryReport?.boundaryAudit?.rootFolderName || (firmSlug ? `/docketra - ${firmSlug}/` : '/Docketra/')}
+                          {boundaryReport?.boundaryAudit?.rootFolderName || (firmSlug ? `/docketra - ${firmSlug}/` : '/DocketsHQ/')}
                         </div>
                       </div>
                       <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm space-y-1">
@@ -1094,7 +1094,7 @@ export function StorageSettingsPage() {
                   <h3 className="font-bold text-slate-800">Strict Firm-Owned Storage Enforcement</h3>
                   <p className="text-slate-500 text-sm leading-relaxed">
                     By enabling strict mode, you enforce a zero-fallback policy. Writes are blocked if your firm's cloud storage goes offline, 
-                    preventing any document metadata from falling back to Docketra-managed default storage sandboxes.
+                    preventing any document metadata from falling back to DocketsHQ-managed default storage sandboxes.
                   </p>
                 </div>
                 <div>
@@ -1133,7 +1133,7 @@ export function StorageSettingsPage() {
               </div>
             ) : usage?.managedFallback ? (
               <div className="p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 text-indigo-900 text-sm leading-relaxed">
-                Docketra-managed high-performance default cloud sandbox is active. Space capacity and bandwidth quotas are fully optimized and managed by Docketra automatically.
+                DocketsHQ-managed high-performance default cloud sandbox is active. Space capacity and bandwidth quotas are fully optimized and managed by DocketsHQ automatically.
               </div>
             ) : usage?.quotaAvailable ? (
               <div className="space-y-4">
@@ -1432,7 +1432,7 @@ export function StorageSettingsPage() {
                   </div>
 
                   <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-                    Docketra decrypters are streaming raw decrypted streams directly back to active bucket endpoints. Do not navigate away from this page.
+                    DocketsHQ decrypters are streaming raw decrypted streams directly back to active bucket endpoints. Do not navigate away from this page.
                   </p>
                 </div>
               ) : (

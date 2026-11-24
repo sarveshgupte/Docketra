@@ -133,7 +133,7 @@ export function DataStorageMapPage() {
       description: 'Historical case records, task workflows, and user discussion logs.',
       path: dataMap.businessDataLocations?.docketsTasksComments || 'planned cloud storage path: firms/{firmId}/clients/{clientId}/dockets/{docketId}/',
       icon: <DatabaseIcon className="w-5 h-5 text-indigo-500" />,
-      badge: dataMap.strictFirmOwnedStorage ? 'Firm-Owned' : 'Docketra Cloud',
+      badge: dataMap.strictFirmOwnedStorage ? 'Firm-Owned' : 'DocketsHQ Cloud',
     },
   ] : [];
 
@@ -164,7 +164,7 @@ export function DataStorageMapPage() {
           <div className="space-y-1">
             <h4 className="text-sm font-bold text-indigo-950">Zero-Residency Policy (BYOS)</h4>
             <p className="text-xs text-indigo-900/90 leading-relaxed">
-              Your business data lives in your firm cloud storage. Docketra stores only control-plane metadata needed to run the app. All legal client profiles, documents, and CFS registers remain on your own firm's servers.
+              Your business data lives in your firm cloud storage. DocketsHQ stores only control-plane metadata needed to run the app. All legal client profiles, documents, and CFS registers remain on your own firm's servers.
             </p>
           </div>
         </div>
@@ -318,7 +318,7 @@ export function DataStorageMapPage() {
                   <h3 className="text-sm font-bold text-slate-800">Control Plane Data</h3>
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                  Docketra retains only MongoDB control-plane data needed to route connections and execute core platform workflows.
+                  DocketsHQ retains only MongoDB control-plane data needed to route connections and execute core platform workflows.
                 </p>
 
                 <div className="space-y-2.5">

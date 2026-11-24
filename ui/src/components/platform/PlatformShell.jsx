@@ -659,7 +659,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                 <span className="platform__command-trigger-icon" aria-hidden="true">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 </span>
-                <span className="platform__command-trigger-label">Search dockets, clients, or jump to…</span>
+                <span className="platform__command-trigger-label">Search</span>
                 <kbd>Ctrl/⌘ K</kbd>
               </button>
             </div>

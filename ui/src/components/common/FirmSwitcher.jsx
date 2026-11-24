@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useId } from 'react';
+import { X } from 'lucide-react';
 import { superadminService } from '../../services/superadminService';
 import { useToast } from '../../hooks/useToast';
 import { Button } from './Button';
@@ -62,7 +63,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
     <div className="firm-switcher">
       <Button
         variant="primary"
-        size="small"
+        size="sm"
         onClick={() => setShowDropdown(!showDropdown)}
         disabled={loading}
         aria-expanded={showDropdown}
@@ -87,7 +88,7 @@ export const FirmSwitcher = ({ onFirmSwitch }) => {
                 aria-label="Close firm switcher"
                 title="Close firm switcher"
               >
-                <span aria-hidden="true">×</span>
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
             <div className="firm-switcher__mode-selector">

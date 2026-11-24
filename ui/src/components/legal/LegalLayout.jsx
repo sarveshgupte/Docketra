@@ -17,7 +17,7 @@ export const LegalLayout = ({
   description,
   sections,
   children,
-  kicker = 'Docketra policy hub',
+  kicker = 'DocketsHQ policy hub',
   highlights = [],
 }) => {
   const [activeId, setActiveId] = useState('');
@@ -52,7 +52,7 @@ export const LegalLayout = ({
     <article className="min-h-screen bg-slate-50/40 text-slate-900">
       <SeoHead
         canonicalPath={location.pathname}
-        title={`${title} | Docketra`}
+        title={`${title} | DocketsHQ`}
         description={description}
       />
       <PageContainer className="relative py-8 md:py-12" ref={containerRef}>

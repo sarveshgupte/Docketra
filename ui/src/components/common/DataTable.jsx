@@ -1,12 +1,22 @@
+/**
+ * Enterprise DataTable Component
+ * Modernized with shadcn / better-ui architecture:
+ * - High-density tabular layouts with sticky header
+ * - Optical alignment with Lucide icons for sorting and filtering
+ * - Strict keyboard navigation on interactive rows
+ * - Accessible ARIA attributes: aria-sort, aria-label, role="status"
+ */
+
 import React from 'react';
+import { ArrowDown, ArrowUp, ArrowUpDown, X } from 'lucide-react';
 import { Table, TableHead, TableBody, TableRow, TableEmptyState } from './Table';
 import { Button } from './Button';
+import { cn } from '../../lib/utils';
 
-const joinClasses = (...classes) => classes.filter(Boolean).join(' ');
+const filterChipClassName =
+  'inline-flex items-center gap-1.5 rounded-[var(--dt-radius-control,2px)] border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700 transition-[border-color,background-color] hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900';
 
-const filterChipClassName = 'inline-flex items-center gap-1 rounded-sm border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900';
-
-const tableMessageClassName = 'px-6 py-8 text-center text-sm';
+const tableMessageClassName = 'px-6 py-8 text-center text-xs';
 
 export const DataTable = ({
   columns,
@@ -46,13 +56,17 @@ export const DataTable = ({
   const getSortIcon = (key, sortable) => {
     if (!sortable) return null;
     if (sortState?.key !== key) {
-      return <span className="ml-1 text-[var(--dt-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity">↕</span>;
+      return <ArrowUpDown className="ml-1 h-3 w-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden="true" />;
     }
-    return <span className="ml-1 text-[var(--dt-text-secondary)]">{sortState.direction === 'asc' ? '↑' : '↓'}</span>;
+    return sortState.direction === 'asc' ? (
+      <ArrowUp className="ml-1 h-3 w-3 text-slate-900" aria-hidden="true" />
+    ) : (
+      <ArrowDown className="ml-1 h-3 w-3 text-slate-900" aria-hidden="true" />
+    );
   };
 
-  const cellPaddingClass = dense ? 'px-4 py-2.5' : 'px-6 py-4';
-  const headerPaddingClass = dense ? 'px-4 py-3' : 'px-6 py-3';
+  const cellPaddingClass = dense ? 'px-3 py-2' : 'px-4 py-2.5';
+  const headerPaddingClass = dense ? 'px-3 py-2' : 'px-4 py-2.5';
   const normalizedRows = Array.isArray(rows)
     ? rows
     : (Array.isArray(data) ? data : []);
@@ -62,10 +76,10 @@ export const DataTable = ({
   return (
     <div className="flex flex-col space-y-3">
       {(toolbarLeft || toolbarRight || hasActiveFilters) && (
-        <div className="flex min-h-10 items-center justify-between gap-4">
+        <div className="flex min-h-9 items-center justify-between gap-4">
           <div className="flex items-center gap-3">{toolbarLeft}</div>
 
-          <div className="flex items-center gap-3 flex-wrap justify-end">
+          <div className="flex items-center gap-2.5 flex-wrap justify-end">
             {hasActiveFilters && (
               <div className="flex items-center gap-2 flex-wrap" role="list" aria-label="Active filters">
                 {activeFilters.map((f) => (
@@ -77,8 +91,9 @@ export const DataTable = ({
                     aria-label={`Remove filter: ${f.label} ${f.value}`}
                     title={`Remove filter: ${f.label} ${f.value}`}
                   >
-                    <span className="font-medium">{f.label}:</span> {f.value}
-                    <span aria-hidden className="ml-0.5 text-[var(--dt-text-muted)]">&times;</span>
+                    <span className="font-medium text-slate-500">{f.label}:</span>
+                    <span className="font-semibold text-slate-800">{f.value}</span>
+                    <X className="h-3 w-3 text-slate-400 hover:text-slate-700" aria-hidden="true" />
                   </button>
                 ))}
                 <Button variant="ghost" size="xs" onClick={onResetFilters}>
@@ -92,7 +107,7 @@ export const DataTable = ({
       )}
 
       {refreshing ? (
-        <p className="text-xs text-[var(--dt-text-muted)]" role="status" aria-live="polite">{refreshingMessage}</p>
+        <p className="text-xs text-slate-500" role="status" aria-live="polite">{refreshingMessage}</p>
       ) : null}
 
       <Table loading={loading} loadingMessage={loadingMessage} className="max-h-[70vh] overflow-auto overscroll-contain">
@@ -106,11 +121,11 @@ export const DataTable = ({
               return (
                 <th
                   key={String(col.key)}
-                  className={joinClasses(
+                  className={cn(
                     headerPaddingClass,
                     col.align === 'right' ? 'text-right' : 'text-left',
-                    'text-xs font-semibold text-[var(--dt-text-muted)] uppercase tracking-wider whitespace-nowrap bg-[var(--dt-surface-subtle)]',
-                    col.headerClassName,
+                    'text-[11px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap bg-slate-50/90 select-none',
+                    col.headerClassName
                   )}
                   style={{ width: col.width }}
                   aria-sort={ariaSort}
@@ -120,17 +135,17 @@ export const DataTable = ({
                     <button
                       type="button"
                       onClick={() => handleSortClick(col.key, col.sortable)}
-                      className={joinClasses(
-                        'flex items-center w-full group hover:text-[var(--dt-text-secondary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dt-focus)]/45 rounded-[var(--dt-radius-control)]',
-                        col.align === 'right' ? 'justify-end' : 'justify-start',
+                      className={cn(
+                        'flex items-center w-full group hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 rounded-[var(--dt-radius-control,2px)]',
+                        col.align === 'right' ? 'justify-end' : 'justify-start'
                       )}
                     >
-                      {col.label || col.header || col.key}
+                      <span>{col.label || col.header || col.key}</span>
                       {getSortIcon(col.key, col.sortable)}
                       <span className="sr-only">{`Sort ${nextDirection}`}</span>
                     </button>
                   ) : (
-                    <div className={joinClasses('flex items-center', col.align === 'right' ? 'justify-end' : 'justify-start')}>
+                    <div className={cn('flex items-center', col.align === 'right' ? 'justify-end' : 'justify-start')}>
                       {col.label || col.header || col.key}
                     </div>
                   )}
@@ -142,7 +157,7 @@ export const DataTable = ({
         <TableBody>
           {!loading && errorMessage ? (
             <tr>
-              <td colSpan={columns.length} className={joinClasses(tableMessageClassName, 'text-[var(--dt-error)]')} role="status" aria-live="polite">
+              <td colSpan={columns.length} className={cn(tableMessageClassName, 'text-rose-600')} role="status" aria-live="polite">
                 <p>{errorMessage}</p>
                 {onRetry ? <Button variant="outline" size="sm" onClick={onRetry} className="mt-3" aria-label="Retry loading table data">Retry</Button> : null}
               </td>
@@ -165,16 +180,16 @@ export const DataTable = ({
                   onRowClick(row);
                 }
               } : undefined}
-              className={onRowClick ? 'cursor-pointer hover:bg-[var(--dt-surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--dt-focus)]/45 focus-visible:ring-inset transition-colors' : ''}
+              className={onRowClick ? 'cursor-pointer hover:bg-slate-50/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-inset transition-colors' : ''}
             >
               {columns.map((col) => (
                 <td
                   key={String(col.key)}
-                  className={joinClasses(
+                  className={cn(
                     cellPaddingClass,
-                    'whitespace-nowrap text-sm text-[var(--dt-text)]',
+                    'whitespace-nowrap text-xs text-slate-800',
                     col.align === 'right' ? 'text-right' : 'text-left',
-                    col.className || col.cellClassName,
+                    col.className || col.cellClassName
                   )}
                 >
                   {col.render ? col.render(row) : row[col.key]}
@@ -186,8 +201,8 @@ export const DataTable = ({
       </Table>
 
       {pagination?.pages > 1 ? (
-        <div className="flex items-center justify-between rounded-[var(--dt-radius-control)] border border-[var(--dt-border-whisper)] bg-[var(--dt-surface-subtle)] px-3 py-2 text-sm text-[var(--dt-text-secondary)]" role="navigation" aria-label="Queue pagination">
-          <span>Page {pagination.page} of {pagination.pages} · {pagination.total || 0} dockets</span>
+        <div className="flex items-center justify-between rounded-[var(--dt-radius-control,2px)] border border-slate-200 bg-slate-50/60 px-3 py-2 text-xs text-slate-600" role="navigation" aria-label="Queue pagination">
+          <span className="tabular-nums">Page {pagination.page} of {pagination.pages} · {pagination.total || 0} dockets</span>
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" disabled={pagination.page <= 1} onClick={() => pagination.onPageChange?.(pagination.page - 1)}>Previous</Button>
             <Button type="button" variant="outline" size="sm" disabled={pagination.page >= pagination.pages} onClick={() => pagination.onPageChange?.(pagination.page + 1)}>Next</Button>

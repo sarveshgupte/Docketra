@@ -54,7 +54,7 @@ export const ContactPage = () => {
       title="Contact"
       description="Request early access, ask a security question, or tell us what your firm needs from a Company Brain + Work Execution OS."
       sections={SECTIONS}
-      kicker="Talk to Docketra"
+      kicker="Talk to DocketsHQ"
       highlights={['Early access requests', 'Security questions', 'Firm workflow discovery']}
     >
       <section id="contact-form" className="max-w-3xl">
