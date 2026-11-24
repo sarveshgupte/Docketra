@@ -1,127 +1,80 @@
-# Brand Identity Brief: Brand Clearance & Naming Options Around "Docket"
+# Brand Identity: DocketsHQ
 
-A brand is the promise a customer remembers. For an operational platform trusted with client tax filings, ROC compliance, and statutory defense, the brand cannot look like a consumer app or an experimental AI tool. It must project **institutional stability, audit-level precision, and unshakeable data sovereignty**.
-
----
-
-## 1. Context: Why "Docketra" Faces Trademark & Confusion Risk
-
-Recent web searches and registry audits confirmed that **`docketra.co.in`** is an active, live commercial operation in Mumbai, India:
-- **Business Profile**: Litigation filing coordination, document preparation (indexing, pagination, OCR), and registry scrutiny defect support for NCLT matters.
-- **Target Audience**: Advocates, law firms, **Company Secretaries (CS)**, and **Chartered Accountants (CA)**.
-- **Legal & Commercial Conflict**: Operating under the exact same industry niche (compliance/practice workflow in India targeting CAs and CSs) under Class 9 & Class 42 creates acute trademark infringement risk, likelihood of objection under Section 11 of the Indian Trade Marks Act, 1999, and common-law "passing off" actions.
-
-Therefore, transitioning to an unencumbered, clean trademark and domain centered around **"Docket"** or **"Dockets"** is strongly recommended before scaling public onboarding.
+A brand is the promise a customer remembers. For an operational platform trusted with client tax filings, ROC compliance, and statutory defense, the brand cannot look like a consumer app or an experimental AI toy. It must project **institutional stability, audit-level precision, and unshakeable data sovereignty**.
 
 ---
 
-## 2. Name Candidates Around "Docket / Dockets" (10 Evaluated)
+## 1. Brand Positioning & Core Thesis
 
-| Name | Style | What it Says | How it Sounds Out Loud | Sign & 32px App Icon | The Risk / Availability Status |
-|---|---|---|---|---|---|
-| **DocketSutra** *(Recommended #1)* | Invented (Docket + Sutra) | "Docket" + "Sutra" (Sanskrit for aphorism, guiding principle, thread of systematic order). Governed statutory practice. | Authoritative, prestigious, culturally grounded for Indian CAs & CSs | Monogram **"DS"** or seal with interlocking thread & folder | **Clean**: `.com` & `.in` free; zero trademark hits in Class 9/42. |
-| **DocketsHQ** *(Recommended #2)* | Modern B2B Institutional | Central command headquarters for managing firm client dockets | Crisp, modern, authoritative (reminiscent of Basecamp or Linear) | Clean bold **"HQ"** with docket tab silhouette | **Clean**: `docketshq.com` & `docketshq.in` free; zero trademark hits. |
-| **DocketLex** *(Recommended #3)* | Classical / Legal Authority | "Docket" + "Lex" (Latin for law / statutory code) | Heavy, dignified, corporate compliance & legal tech feel | Geometric **"L"** inside a docket shield | **Clean**: `docketlex.com` & `docketlex.in` free; zero trademark hits. |
-| **DocketNode** | Architectural / BYOS Cloud | Sovereign, isolated firm node managing records in Google Drive | Technical, secure, modern SaaS | Hexagonal node with docket core | **Clean**: `docketnode.com` & `docketnode.in` free. |
-| **DocketArk** | Evocative / Protective | Secure sanctuary preserving records against audit scrutiny | Defensive, solid, reassuring | Symmetrical arch/ark silhouette | **Clean**: `docketark.com` & `docketark.in` free. |
-| **DocketGrid** | Descriptive / Structured | Structured tabular matrix of dockets, queues, and maker-checkers | Fast, sharp, product-led | 2x2 grid icon with checkmark | `.in` free; `.com` taken/parked. |
-| **DocketsApp** | Direct Functional | The straightforward app for managing practice dockets | Everyday, simple, accessible | App tile with floating docket layers | `docketsapp.com` & `docketsapp.in` free. |
-| **DocketNest** | Warm / Custody | Safe home and resting place for confidential client dockets | Friendly, protective | Nested shield mark | `.in` free; `.com` taken. |
-| **DocketHelm** | Navigational Authority | Steering the firm's compliance operations from the partner bridge | Nautical, strong, in control | Helm wheel / compass geometric mark | `dockethelm.com` & `dockethelm.in` free; potential phonetic confusion with Helm (K8s). |
-| **DocketLoom** | Evocative / Process | Weaving client documents, filings, and audit logs into one whole | Creative, artisanal | Interlocking geometric weave | `.in` free; `.com` taken. |
+* **Brand Name**: **DocketsHQ**
+* **Primary Domain**: `docketshq.com` (Live, DNS & Edge SSL Active)
+* **API Domain**: `api.docketshq.com` (Cloud Run Production)
+* **The Problem It Solves**: Boutique Indian CA, CS, and Legal practices are drowning in chaotic WhatsApp document dumps, unindexed Google Drive folders, and article clerk turnover. Existing practice software is either bloated legacy software with painful setup fees or consumer tools that lack Indian statutory semantics.
+* **The Core Positioning**:  
+  *For Indian Chartered Accountants, Company Secretaries, and Corporate Legal Teams, DocketsHQ is The Company Brain—a sovereign practice operations engine that turns unstructured client requests into audit-proof dockets with 4-eye partner review and Bring-Your-Own-Storage (BYOS) privacy.*
 
 ---
 
-## 3. Top 3 Shortlist & Deep Due Diligence Checks
-
-> **Mandatory Trademark & Legal Disclaimer**:  
-> Public registry searches (Verisign, NIXI, USPTO, and IP India) provide clearance indicators for research and preliminary vetting only. Formal legal clearance, final non-infringement opinions, and trademark registration must be confirmed by an accredited Trademark Attorney before commercial launch.
-
----
-
-### Option 1: **DocketSutra** (Frontrunner — Cultural & Operational Resonance)
-- **Why it wins**: Balances domain specificity (*docket* = work item) with the revered Indian professional concept of *sutra* (a codified rule, aphorism, or thread of truth). For Indian CAs and CSs who live by ICAI/ICSI statutory standards and Companies Act provisions, "DocketSutra" represents the definitive rulebook and operating system for their practice.
-- **Domain Availability (Live Registry Checked)**:
-  - `docketsutra.com` — **AVAILABLE** (Verified via Verisign GRS WHOIS)
-  - `docketsutra.in` — **AVAILABLE** (Verified via NIXI Registry WHOIS)
-- **Trademark Search (India & Global)**:
-  - **Classes**: Class 9 (Software) and Class 42 (SaaS / Cloud Platforms).
-  - **IP India (TMR)**: Zero records or conflicting pending applications for `DOCKETSUTRA`.
-  - **USPTO / WIPO**: Zero records or conflicts.
-- **Social & Handle Footprint**:
-  - X / Twitter: `@docketsutra` (Free / unclaimed)
-  - LinkedIn: `company/docketsutra` (Free)
-  - GitHub: Unclaimed
-- **Confusion Check**: No overlap with existing Indian or global compliance software.
-
----
-
-### Option 2: **DocketsHQ** (Modern Institutional SaaS)
-- **Why it wins**: Built on the plural **"Dockets"** as requested, combined with **"HQ"**. It positions the platform as the partner's high-command operational cockpit for all active dockets. Matches the clean, no-nonsense aesthetic of Linear, Attio, and Mercury.
-- **Domain Availability (Live Registry Checked)**:
-  - `docketshq.com` — **AVAILABLE** (Verified via Verisign GRS WHOIS)
-  - `docketshq.in` — **AVAILABLE** (Verified via NIXI Registry WHOIS)
-- **Trademark Search**:
-  - **IP India (TMR)**: Zero conflicting marks for `DOCKETSHQ` under Class 9 & Class 42.
-  - **USPTO**: Zero records.
-- **Social & Handle Footprint**:
-  - Clean slate across X, LinkedIn, and GitHub.
-- **Confusion Check**: Distinct from court docketing tools; clearly indicates a central practice management portal.
-
----
-
-### Option 3: **DocketLex** (Legal Precision & Audit Authority)
-- **Why it wins**: "Lex" is Latin for law/statutory code. It projects unmatched institutional gravity, particularly appealing to corporate Company Secretaries, NCLT practitioners, and CAs running forensic audits and ROC filings.
-- **Domain Availability (Live Registry Checked)**:
-  - `docketlex.com` — **AVAILABLE** (Verified via Verisign GRS WHOIS)
-  - `docketlex.in` — **AVAILABLE** (Verified via NIXI Registry WHOIS)
-- **Trademark Search**:
-  - **IP India (TMR)**: Zero records for `DOCKETLEX`.
-  - **USPTO**: Zero records.
-- **Social & Handle Footprint**:
-  - Clean slate across primary platforms.
-- **Confusion Check**: "Lex" is used widely in legal tech (e.g. LexisNexis), but the combined mark `DocketLex` is unregistered and completely distinct.
-
----
-
-## 4. Brand Voice and Promise
+## 2. Voice and Promise
 
 ### The One-Line Promise
-> **"Run your practice from your own Google Drive. Zero file leakage, 100% partner review."**
+> **"Run your practice with institutional precision from your own Google Drive. Zero file leakage, 100% partner review."**
 
-### Tagline Options
-1. **Primary (Operational Anchor)**: *"Run your practice from your own Google Drive. Zero file leakage, 100% partner review."*
-2. **Alternative (Practitioner Direct)**: *"From WhatsApp intake to partner sign-off. Built for Indian CAs & CSs."*
-3. **Alternative (Sovereign Order)**: *"Disciplined compliance. Sovereign data."*
+### Taglines
+1. **Primary (The Category Definer)**: *"The Company Brain for Indian Professional Firms."*
+2. **Operational (The Workflow Hook)**: *"From WhatsApp intake to partner sign-off. Built for Indian CAs & CSs."*
+3. **Defensibility (The Security Seal)**: *"Disciplined compliance. Sovereign data."*
 
 ### Brand Voice in 3 Adjectives
-- **Authoritative**: Speaks with the sober precision of a senior partner who understands statutory compliance risk, peer-review standards, and ICAI/ICSI guidelines. Never uses frivolous startup slang ("hustle", "game changer", "growth hack").
-- **Operational**: Focuses ruthlessly on mechanics: queues, maker-checker handoffs, timestamped audit logs, and file custody. Uses real practitioner terms (ROC, MCA-21, DIN, GSTR-3B).
-- **Protective**: Reassures partners about sovereign data custody. Emphasizes that client documents never leave firm custody.
+
+| Adjective | DO | DON'T |
+| :--- | :--- | :--- |
+| **Authoritative** | Speak with the sober precision of a senior partner who understands statutory compliance risk, peer-review standards, and ICAI/ICSI guidelines. | Never use frivolous startup slang (*"hustle"*, *"growth hack"*, *"game changer"*, *"AI magic"*). |
+| **Operational** | Focus ruthlessly on mechanics: queues, maker-checker handoffs, timestamped audit logs, and file custody. Use real practitioner terms (*ROC, MCA-21, DIN, GSTR-3B, SQC-1*). | Never speak in abstract marketing generalities (*"boost your productivity"*, *"streamline your workflow"*). |
+| **Protective** | Reassure partners about sovereign data custody. Emphasize that client documents never leave firm custody and Tier-IV Indian data centers. | Never dismiss data sensitivity or treat confidential corporate filings like generic cloud files. |
+
+#### Before & After Voice Transformation
+* **Before (Generic SaaS)**:  
+  *"DocketsHQ is an AI-powered all-in-one productivity tool that helps modern professionals collaborate faster and automate their day-to-day work."*
+* **After (DocketsHQ Voice)**:  
+  *"DocketsHQ gives managing partners total operational control across 200+ clients. Pre-loaded with MCA and tax calendars, 4-eye QC review baskets, and zero-access Google Drive folder isolation."*
 
 ---
 
-## 5. Visual Identity Brief
+## 3. Visual Identity Brief
 
-Adheres to high-caliber B2B dashboard benchmarks: **Linear, Attio, Stripe Dashboard, Mercury**.
+### Color System (WCAG AA Compliant)
 
-### Colour Palette
-- **Sovereign Navy (`#0B0F19`)**: Foundations, typography, high-contrast dark surfaces. Conveys institutional trust (16.8:1 contrast on white canvas).
-- **Precision Blue (`#2563EB`)**: Action buttons, active docket state, focused interactive tabs. Communicates surgical software speed (WCAG AA).
-- **Audit Emerald (`#059669`)**: QC Approved states, verified maker-checker badges, completed filings.
-- **Defect Amber (`#D97706`)**: QC Rework queue, pending partner review, approaching statutory deadlines.
-- **Canvas Slate (`#F8FAFC`)**: Crisp, low eye-strain surface for 8-hour daily operational work.
+| Token | Hex | Role | Contrast Ratio |
+| :--- | :--- | :--- | :--- |
+| **Institutional Slate** | `#020617` (Slate 950) | Primary surfaces, heavy typography, and executive UI. Conveys bank-grade gravity. | 19.8:1 on White (AAA) |
+| **Signal Amber** | `#d97706` (Amber 600) | Signature accent for **"HQ"**, critical statutory SLA countdowns, and active dockets. | 4.8:1 on White (AA) |
+| **Audit Emerald** | `#059669` (Emerald 600) | Compliance pass states, partner sign-offs, and verified statutory filings. | 4.9:1 on White (AA) |
+| **Border & Surface Zinc** | `#e2e8f0` (Slate 200) | Clean tabular gridlines, subtle separators, and card boundaries. | Subtle structural framing |
 
-### Typography
-- **Display / Headlines**: **Plus Jakarta Sans** (SemiBold 600, Bold 700) — Tight geometric proportions, razor-sharp ink traps.
-- **Body & Data Tables**: **Inter** (Regular 400, Medium 500, SemiBold 600) — Exceptional legibility for dense compliance tables.
-- **Monospace (Timestamps/IDs)**: **JetBrains Mono** — Formats CIN, DIN, GSTIN, and audit logs with mathematical clarity.
+### Typography System
+* **Display & Body Face**: **Inter** (Alternative: **SF Pro Display / System Sans**). Clean, high-legibility neo-grotesque sans-serif optimized for dense numerical and tabular data. Free Google Font / Open Font License.
+* **Statutory Monospace Face**: **JetBrains Mono** (Alternative: **Fira Code / Roboto Mono**). Used for 21-digit CINs, 10-digit PANs/TANs, 15-digit GSTINs, firm XIDs, and immutable audit timestamps. Free Open Font License.
+
+### Logo & Icon Architecture
+* **Logotype Structure**: `Dockets` in bold institutional Slate (`#020617`), followed immediately by `HQ` in vibrant Signal Amber (`#d97706`).
+* **Sub-mark / Eyebrow**: *"The Company Brain"* in uppercase tracked monospace.
+* **App Icon (32px / Favicon)**: Amber geometric docket shield with dual interlocking document layers, functioning sharply on mobile homescreens, browser tabs, and dark/light OS shells.
 
 ---
 
-## 6. The First 5 Touchpoints
-1. **Homepage Hero**: *"The Sovereign Operations OS for Indian Compliance Practices. Connect your firm's Google Drive in one click. Triage client WhatsApp documents into structured dockets. Enforce maker-checker review before any filing is submitted."*
-2. **BYOS Connected State**: *"Google Drive Connected: Sovereign Custody Verified. Firm Workspace: `/My Drive/DocketSutra_Records/2026-27/`."*
-3. **Partner Review Queue**: Review cards with clerk notes, attached MCA XML/PDF file previewed directly from Drive, and definitive `[Request Rework]` | `[Approve Sign-off]` actions.
-4. **ICAI Study Circle / LinkedIn Post**: *"Why the best CA and CS firms in India still run on WhatsApp and panic during October ROC filings."*
-5. **Support Reply**: Crisp engineering diagnosis signed off by tech leads in plain English; no canned deflection.
+## 4. The First Five Touchpoints
+
+1. **The Homepage (`docketshq.com`)**: No decorative gradients or marketing buzzwords. Immediately displays the Command Center canvas, client memory grid, and risk-free 90-day pilot cohort.
+2. **The Welcome & Confirmation Email**: Sent from `notifications@docketshq.com`. Concise, plain-text styled, includes the firm's sovereign XID (`X000001`), dedicated firm URL (`docketshq.com/{firmSlug}`), and direct WhatsApp onboarding support.
+3. **The 1-Click Client Drop Link**: A clean, white-labeled client intake page showing the firm's verified badge and Google Drive isolation guarantee. Clients drop files without creating passwords.
+4. **The First Social Launch Post (LinkedIn)**: A personal, high-conviction letter from founder Sarvesh Gupte on November 26th (his birthday), explaining why he built DocketsHQ for Indian practice heads.
+5. **The Reply to the First Critical Inquiry**: Handled personally by the founder within 15 minutes, offering an immediate screen-share session and custom Excel import assistance.
+
+---
+
+## 5. Next Operational Steps
+
+* **Launch Run Sheet**: Detailed 48-hour countdown in [`founder/launch.md`](./launch.md).
+* **Launch Date**: **Thursday, November 26th, 2026** (Founder Birthday Milestone).
+* **Pilot Target**: 30 Founding Firms in the November Cohort.

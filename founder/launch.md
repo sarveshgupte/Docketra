@@ -1,110 +1,152 @@
-# Launch Plan & Opening Countdown: Docketra
+# Launch Plan & Birthday Opening Run Sheet: DocketsHQ
 
-This launch plan outlines the exact sequence to take Docketra from pre-launch validation to commercial launch day and the first 30 operating days.
-
-Every deadline, budget, and operational handoff traces to [`founder/ops.md`](./ops.md), [`founder/marketing.md`](./marketing.md), [`founder/numbers.json`](./numbers.json), and [`founder/offer.md`](./offer.md).
-
----
-
-## 1. Test Before You Spend (The Pre-Launch Reality Check)
-
-Before spending the ₹50,000 startup capital in [`founder/numbers.json`](./numbers.json) (incorporation, brand production, seminar sponsorships), run a low-cost, real-money commitment test with practicing partners.
-
-### The Test Design: The "Founding 10" Pre-Order Deposit
-* **What**: Offer a limited **Founding Firm Pre-Order** to 25 warm CA/CS contacts in the founders' professional network.
-* **The Deal**: Lock in the Pioneer Annual rate of **₹12,990 / year for life** by placing a fully refundable **₹2,500 commitment deposit**. In exchange, they receive:
-  1. Priority onboarding in Cohort #01.
-  2. Free 24-hour concierge client list migration from their current Excel roster.
-  3. 60-day extended money-back trial (double the standard 30 days).
-* **The Success Line (Pre-Launch Gate)**:
-  * **Target**: **5 paid deposits (20% conversion) within 14 days**.
-  * **Comparison to Panel**: In [`founder/panel/results.md`](./panel/results.md), the panel scored 15% overall buy rate and 50% in tech-forward and frugal segments. Achieving 5 paid deposits confirms real-world willingness to pay matches the simulated panel.
-  * **Failsafe**: If fewer than 3 firms put down money, do not proceed with the launch budget. Return to [`founder/offer.md`](./offer.md) and [`founder/pricing.md`](./pricing.md) to diagnose whether data custody fears or price resistance are still blocking commitment.
+* **Official Launch Date**: **Thursday, November 26th, 2026**
+* **Occasion**: Founder's Birthday (Sarvesh Gupte) + Public Release of **DocketsHQ** (`docketshq.com`)
+* **Core Launch Campaign**: **The Birthday Pioneer Cohort (30 Founding Practices)**
+* **Target Audience**: Indian Chartered Accountants, Company Secretaries, and Corporate Legal Teams managing 50–200+ clients.
 
 ---
 
-## 2. The 30-Day Countdown to Launch Day
+## 1. The Founder Story & Birthday Angle
 
-**Assumed Launch Date**: T-Zero = 30 days from project kickoff.
+In B2B SaaS, generic corporate announcements get ignored. Personal founder stories built around real craftsmanship, vulnerability, and a landmark date generate outsized engagement and emotional buy-in.
 
+### The Angle
+> *"Today is my birthday. Instead of throwing a party or taking a day off, I'm launching DocketsHQ—the company brain I spent the last few months building for Indian CA, CS, and Legal practices."*
+
+### Why This Works for Indian Professionals
+1. **Human & Authentic**: Senior CAs and CSs respect individuals who build with their own hands rather than faceless venture-backed startups.
+2. **High Social Proof**: Birthday posts on LinkedIn naturally trigger maximum organic algorithmic distribution (comments, wishes, shares).
+3. **The Birthday Gift Offer**: Framing the 90-day free pilot as a founder gift to the community removes sales resistance and creates genuine goodwill.
+
+---
+
+## 2. Pre-Launch Countdown (T-Minus 36 Hours: Nov 25)
+
+| Time (IST) | Channel / Scope | Action | Success Check |
+|---|---|---|---|
+| **10:00** | Infrastructure | Verify `https://docketshq.com` and `https://api.docketshq.com` health. | Status 200 OK |
+| **12:00** | Google Cloud | Confirm OAuth consent screen and redirect URIs in GCP Console. | No `redirect_uri_mismatch` |
+| **14:00** | Demo Workspace | Prepare a flawless demo firm (`docketshq.com/gupte-associates`) populated with realistic sample data (MCA AOC-4 docket, Section 73 GST notice, 4-eye review basket). | Ready for screenshots / Loom |
+| **16:00** | Visual Assets | Capture 3 crisp product screenshots (Command Center, Client Drop Link, 4-Eye Review Gate). | 1200x675 PNG |
+| **18:00** | Outreach List | Assemble WhatsApp and email lists of 50 warm CA/CS contacts, batchmates, and seniors. | List ready in spreadsheet |
+| **21:00** | Final Rehearsal | Complete end-to-end self-signup test on `https://docketshq.com/signup`. | Seamless XID assignment |
+
+---
+
+## 3. Launch Day Run Sheet (Thursday, November 26th, 2026)
+
+| Time (IST) | Channel | Action | Target Outcome |
+|:---:|---|---|---|
+| **08:30** | System Check | Sanity check Cloud Run, MongoDB Atlas, Cloudflare, and Brevo delivery. | All green |
+| **09:30** | **LinkedIn** | **Publish Founder Birthday Launch Post** (Text + 3-image carousel below). | Peak morning professional feed |
+| **10:30** | **WhatsApp** | Send personal direct messages to 30 warm CA & CS managing partners. | Immediate 1-on-1 replies |
+| **11:30** | **Email** | Broadcast launch invitation to early waitlist / pilot contacts. | > 40% open rate |
+| **14:00** | Engagement | Actively respond to every comment on LinkedIn within 5 minutes. | Algorithmic boost |
+| **16:00** | Concierge Onboarding | Onboard the first 5 sign-ups; assist with their Excel client master imports. | Zero drop-off |
+| **19:00** | Evening Social Check | Post a "Day 1 Milestone" update in LinkedIn comments (e.g. *"First 7 firms onboarded"*). | Sustained evening engagement |
+| **21:30** | Day-One Close | Review database registrations, send personal thank-you notes to new practice heads. | Cohort tracking updated |
+
+---
+
+## 4. Ready-to-Use Launch Copy
+
+### Channel 1: The LinkedIn Launch Post (Copy & Paste)
+
+```text
+Today is my birthday. 🎉
+
+Instead of throwing a party or taking a day off, I am doing something much closer to my heart:
+
+I am officially launching DocketsHQ (https://docketshq.com) — the company brain purpose-built for Indian Chartered Accountants, Company Secretaries, and Corporate Legal Teams.
+
+Over the past year, I spoke with dozens of managing partners across Mumbai, Delhi, and Bangalore. The story was always the same:
+
+1. Important client files getting buried in chaotic WhatsApp groups.
+2. Crucial MCA, ROC, and GST deadlines tracked on fragile Excel sheets.
+3. Senior partners terrified that client financial data stored on generic cloud tools will get leaked or trained on AI models.
+4. Article trainees rotating every year, leaving behind broken handoffs.
+
+We built DocketsHQ to fix this with absolute architectural discipline:
+
+✅ Bring-Your-Own-Storage (BYOS): Your client files stay locked inside YOUR OWN Google Drive or AWS S3. We never own your data.
+✅ 1-Click Secure Client Drop: Clients upload statutory documents without needing passwords or portals.
+✅ 4-Eye Review Baskets: Mandatory senior partner QC review gates before MCA forms, GST returns, or court filings are dispatched.
+✅ Pre-Built Statutory Semantics: Native validation for 21-digit CINs, DINs, PANs, GSTINs, and MCA V3 calendars.
+
+To celebrate my birthday, I am opening the "Birthday Pioneer Cohort":
+
+The first 30 Indian compliance firms to join get:
+🎁 3 Months Unrestricted Free Access
+🎁 White-glove concierge data migration from your existing Excel rosters
+🎁 Direct WhatsApp hotline with me for custom workflow setup
+
+If you run a practice or know a partner fighting spreadsheet chaos, check it out here:
+👉 https://docketshq.com
+
+Thank you to everyone who supported this journey. This is just Day 1! 🚀
+
+#CharteredAccountant #CompanySecretary #LegalTech #MakeInIndia #DocketsHQ #SaaSLaunch
 ```
-Critical Path: [Legal & Merchant KYC] ──> [Google OAuth App Verification] ──> [Pilot Soft Open] ──> [Public Launch Day]
+
+---
+
+### Channel 2: Personal WhatsApp Message for Warm Partners & Mentors
+
+```text
+Hi [Name] sir/ma'am! 
+
+Today is my birthday, and as a milestone I’ve officially launched DocketsHQ (https://docketshq.com) — an operating system built specifically for Indian CA & CS practices.
+
+It solves the headache of clients dumping files on WhatsApp and tracks all MCA/Tax dockets with 4-eye partner sign-offs. Most importantly, it keeps 100% of client files inside your firm's own Google Drive with zero vendor lock-in.
+
+As part of our founding launch cohort, I've reserved a 3-Month Free Enterprise Seat for your firm. I would love to personally assist you in setting it up or migrating an ongoing client roster from Excel.
+
+Would love your blessings and feedback when you have 5 minutes: https://docketshq.com
+
+Warm regards,
+Sarvesh
 ```
 
-### Week 1 (Days -30 to -24): Legal, Banking & Production Foundations
-* [ ] **Legal Incorporation**: Submit SPICe+ (INC-32) on MCA portal for *Docketra Technologies Pvt Ltd*. *(Owner: Founder 2 | Deadline: Day -26)* **[CRITICAL PATH]**
-* [ ] **Google Cloud App Review**: Submit Docketra's OAuth verification request for restricted `drive.file` scope in Google Cloud Console. *(Owner: Founder 1 | Deadline: Day -28)* **[CRITICAL PATH]**
-* [ ] **Domain & DNS Hardening**: Configure Cloudflare DNS, SSL/TLS, and strict SPF/DKIM/DMARC records for `docketra.in`. *(Owner: Founder 1 | Deadline: Day -25)*
-* [ ] **Pre-Launch Commitment Test**: Pitch the "Founding 10" pre-order to 25 warm CA/CS contacts. *(Owner: Founder 2 | Deadline: Day -24)*
+---
 
-### Week 2 (Days -23 to -17): Banking, Infrastructure & Security Whitepaper
-* [ ] **Bank Current Account & Razorpay KYC**: Open current account (ICICI/HDFC); submit business documents to Razorpay for merchant activation. *(Owner: Founder 2 | Deadline: Day -18)* **[CRITICAL PATH]**
-* [ ] **Production Infrastructure**: Deploy Render Web Service, provision MongoDB Atlas M10 dedicated cluster, configure Upstash Redis. *(Owner: Founder 1 | Deadline: Day -19)*
-* [ ] **Security Whitepaper Production**: Format and print the *"Zero-Access Sovereign Drive Custody Whitepaper"* for distribution to senior partners. *(Owner: Founder 2 | Deadline: Day -17)*
-* [ ] **Review Pre-Launch Gate**: Confirm at least 5 deposits secured. *(Owners: Founders 1 & 2 | Deadline: Day -17)*
+### Channel 3: Email Announcement to Waitlist / Existing Contacts
 
-### Week 3 (Days -16 to -10): Concierge Tooling & Study Circle Booking
-* [ ] **Concierge Migration Engine**: Finalize and test the automated Excel-to-MongoDB client roster import scripts. *(Owner: Founder 1 | Deadline: Day -12)*
-* [ ] **Statutory Blueprints Verification**: Verify pre-loaded templates for MCA Annual Filings, DIR-3 KYC, GST, and Tax Audit 3CD. *(Owner: Founder 1 | Deadline: Day -13)*
-* [ ] **ICAI Study Circle Bookings**: Finalize speaking slots/sponsorships with convenors of 2 Mumbai study circles (Nariman Point & Andheri) and 2 Delhi study circles. *(Owner: Founder 2 | Deadline: Day -10)* **[CRITICAL PATH]**
-* [ ] **Launch Teaser Content**: Begin Day -14 marketing sequence on LinkedIn per [`founder/marketing.md`](./marketing.md). *(Owner: Founder 2 | Deadline: Day -14)*
+**Subject**: `Today is my birthday — and DocketsHQ is officially live 🚀`  
+**From**: `Sarvesh Gupte <notifications@docketshq.com>`
 
-### Week 4 (Days -09 to -01): The Soft Open (Friends & Family Beta)
-* [ ] **Soft Open Onboarding**: Onboard the 5 deposit-paying founding firms onto the production platform. Run live concierge imports for their client rosters. *(Owners: Founders 1 & 2 | Deadline: Day -07)*
-* [ ] **End-to-End Filing Dry Run**: Test complete maker-checker workflow: clerk generates 1-click client drop link -> client uploads document -> partner reviews on mobile -> approves. *(Owner: Founder 1 | Deadline: Day -05)*
-* [ ] **Payment Webhook Verification**: Execute real ₹1 test transactions through Razorpay live environment; verify automated GST invoice generation. *(Owner: Founder 1 | Deadline: Day -04)*
-* [ ] **Launch Rehearsal**: Dry run of launch-day webinar and seminar presentation deck. *(Owner: Founder 2 | Deadline: Day -02)*
+```text
+Dear Partner,
+
+Today marks a special milestone for me: it is my birthday, and after months of engineering and testing with practicing firms, DocketsHQ is officially open to the public.
+
+If your firm manages 50+ corporate clients, you already know the friction:
+- Clients dumping unindexed PDFs and bank statements on WhatsApp.
+- Juggling ROC and GST statutory dates on spreadsheets.
+- The fear of confidential client records sitting on unverified third-party cloud servers.
+
+DocketsHQ is built to give your firm complete operational peace of mind:
+1. Sovereign Data Privacy: Files stay in your firm's private Google Drive (BYOS).
+2. 1-Click Client Drop: No client passwords; instant statutory indexing.
+3. 4-Eye Review Gates: Strict QC sign-offs before any filing leaves the firm.
+
+To celebrate our launch day, the first 30 practices can activate the 3-Month Free Founding Pilot directly here:
+
+👉 Start Your Free Practice Pilot: https://docketshq.com/signup
+
+I am personally overseeing onboarding for this cohort. If you need any assistance migrating client records from Excel, simply reply directly to this email.
+
+With gratitude,
+Sarvesh Gupte
+Founder, DocketsHQ
+https://docketshq.com
+```
 
 ---
 
-## 3. Launch Day Run Sheet (Day 00)
+## 5. Post-Launch Review Cadence (First 7 Days)
 
-**Target Launch Date**: Thursday (Optimal weekday for Indian professional practices; avoids Monday crunch and weekend drop-off).
-
-| Time (IST) | Channel / Area | Action | Owner | Contigency Plan (If Error Occurs) |
-|---|---|---|---|---|
-| **08:00** | Infrastructure | Final sanity check: verify Render API, Atlas replica health, Redis queues, and Resend delivery status. | Founder 1 | If API fails, check Render deployment rollback log. |
-| **09:00** | Website & Portal | Switch `docketra.in` from pre-launch teaser to live application. Enable public sign-up and Pioneer 30 pricing. | Founder 1 | Verify DNS propagation via Cloudflare edge. |
-| **10:00** | LinkedIn & Community | Publish official Launch Announcement post; tag founding pilot partners and industry contributors. | Founder 2 | Monitor post comments; reply to inquiries within 5 mins. |
-| **11:00** | Email Outreach | Send personal Pioneer Cohort activation links to 50 waitlisted managing partners. | Founder 2 | Resend via alternate transactional provider if bounces occur. |
-| **14:00** | Live Demo Webinar | Host 30-minute interactive Zoom demo: *"How Boutique CAs Run Audit-Proof Practices on Google Drive"*. | Both | Record session; automatically email replay to non-attendees. |
-| **16:30** | Study Circle Seminar | Present 20-minute physical session at ICAI Mumbai Study Circle: *"SQC-1 Defensibility & Digital Audit Trails"*. | Founder 2 | Distribute printed Zero-Access Security Whitepapers. |
-| **18:30** | Onboarding Triage | Review day-one registrations; initiate 24-hr concierge imports for new firms who uploaded client lists. | Both | Process imports in order of receipt. |
-| **21:00** | Day-One Close | Verify Razorpay settlements, log day-one metrics, and review customer feedback logs. | Both | Send founder thank-you email to all registered firms. |
-
----
-
-## 4. The First 30 Days (Operating Review Cadence)
-
-### Weekly Metrics to Track (Against CFO Targets)
-
-| Metric | Target (Week 1) | Target (Week 2) | Target (Week 3) | Target (Week 4) | Source |
-|---|:---:|:---:|:---:|:---:|---|
-| **Total Sign-ups (Free Sandbox)** | 25 firms | 55 firms | 90 firms | 130 firms | Database |
-| **Pioneer Paid Conversions (₹12,990)** | 6 firms | 14 firms | 22 firms | **30 firms (Cap reached)** | Razorpay |
-| **Active Dockets Created / Firm** | > 5 | > 10 | > 15 | > 20 | Telemetry |
-| **Concierge Migrations Completed** | 6 | 14 | 22 | 30 | Operations log |
-| **Support Tickets Response Time** | < 15 mins | < 15 mins | < 20 mins | < 20 mins | Support inbox |
-
----
-
-### Milestone Reviews
-
-#### Day 07 Review: The Onboarding Health Check
-* **Questions to Answer**:
-  1. Did new firm admins connect Google Drive on their first session without abandoning the OAuth consent screen?
-  2. Did clients successfully drop files via the 1-click upload link into dockets?
-* **Trigger for Change**: If > 30% of sign-ups abandon at the Google Drive permission step, publish an in-app 15-second visual tooltip explaining that Docketra strictly only reads the folder it created.
-
-#### Day 14 Review: The Free-to-Paid Conversion Check
-* **Questions to Answer**:
-  1. Are firms hitting the 5-client Free Sandbox threshold and initiating upgrades to Starter?
-  2. Is the Pioneer 30 scarcity creating urgency in sales conversations?
-* **Trigger for Change**: If firms are active but not upgrading, review whether the 5-client limit is being enforced correctly across all workspace routes.
-
-#### Day 30 Review: The Unit Economics & Breakeven Trajectory
-* **Questions to Answer**:
-  1. Did we achieve the 30 Pioneer Cohort target (generating ₹3,89,700 in upfront annual cash collections)?
-  2. Is the fixed monthly burn rate holding within the planned ₹85,000 threshold?
-  3. Are any firms requesting refunds under the 30-Day Zero-Risk Guarantee?
-* **Next Action**: Transition the Starter tier from the promotional ₹12,990 Pioneer rate to the standard commercial rate of **₹1,499 / month billed annually (₹17,990/year)** and **₹1,999 / month billed monthly**.
+1. **Day 1 (Nov 26)**: Track registration velocity; aim for 8–10 firm sign-ups on launch day.
+2. **Day 2 (Nov 27)**: Follow up with all firms who signed up but haven't uploaded an Excel roster; offer 15-minute screen-share onboarding.
+3. **Day 3 (Nov 28)**: Post a public "Thank You & Cohort Update" on LinkedIn highlighting early feedback.
+4. **Day 7 (Dec 03)**: Review cohort engagement: verify that active dockets are being created and maker-checker approvals are being tested.

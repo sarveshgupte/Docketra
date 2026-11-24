@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PublicMarketingHeader from '../marketing/PublicMarketingHeader';
@@ -10,7 +10,7 @@ import SeoHead from '../common/SeoHead';
 const REVEAL = {
   initial: false,
   whileInView: { opacity: 1, y: 0 },
-  transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+  transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
   viewport: { once: true, amount: 0.08 },
 };
 
@@ -22,14 +22,14 @@ const ArrowRightIcon = ({ className = 'h-4 w-4' }) => (
   </svg>
 );
 
-const CheckCircleIcon = ({ className = 'h-5 w-5 text-amber-400 shrink-0' }) => (
+const CheckCircleIcon = ({ className = 'h-5 w-5 text-amber-400 shrink-0 mt-0.5' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="10" />
     <path d="m9 12 2 2 4-4" />
   </svg>
 );
 
-const XCircleIcon = ({ className = 'h-5 w-5 text-rose-500 shrink-0' }) => (
+const XCircleIcon = ({ className = 'h-5 w-5 text-rose-500 shrink-0 mt-0.5' }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="10" />
     <path d="m15 9-6 6" />
@@ -84,7 +84,171 @@ const ShieldCheckIcon = ({ className = 'h-5 w-5' }) => (
   </svg>
 );
 
-/* --- Section 1: Hero Section (Dark Ink Theme with Mehta & Associates Live Docket Widget) --- */
+/* --- Live Compliance Data for Hero Component --- */
+const DOCKET_ITEMS = [
+  {
+    id: '1',
+    client: 'Zenith Logistics Pvt Ltd',
+    work: 'DIR-3 KYC • DIN 08924152',
+    due: 'Due today',
+    dueTone: 'rose',
+    type: 'ROC',
+    owner: 'R. Sharma (CS)',
+    stage: 'Pending DSC verification',
+  },
+  {
+    id: '2',
+    client: 'Neo Retail Solutions',
+    work: 'AOC-4 filing • Annual Compliance',
+    due: 'In 3 days',
+    dueTone: 'amber',
+    type: 'ROC',
+    owner: 'P. Verma (Executive)',
+    stage: 'Draft balance sheet attached',
+  },
+  {
+    id: '3',
+    client: 'Apex Bio-Tech LLP',
+    work: 'Tax Audit 3CD • 44 Clauses',
+    due: 'Partner review',
+    dueTone: 'slate',
+    type: 'TAX',
+    owner: 'Partner Mehta (FCA)',
+    stage: 'Clause 44 depreciation check',
+  },
+  {
+    id: '4',
+    client: 'Sharma Textiles',
+    work: 'GSTR-3B • Monthly Return',
+    due: 'Filed ✓',
+    dueTone: 'emerald',
+    type: 'GST',
+    owner: 'A. Kulkarni (Article)',
+    stage: 'Challan ARN 24108821 verified',
+  },
+];
+
+/* --- Interactive Live Docket Widget (Watermelon UI Inspired + better-ui) --- */
+const LiveDocketWidget = () => {
+  const [activeFilter, setActiveFilter] = useState('ALL');
+  const [selectedId, setSelectedId] = useState(null);
+
+  const filteredItems = useMemo(() => {
+    if (activeFilter === 'ALL') return DOCKET_ITEMS;
+    return DOCKET_ITEMS.filter((item) => item.type === activeFilter || (activeFilter === 'QC' && item.dueTone === 'slate'));
+  }, [activeFilter]);
+
+  return (
+    <div className="rounded-2xl border border-slate-700/80 bg-white p-6 sm:p-7 text-slate-950 shadow-2xl">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <p className="text-xs font-semibold text-slate-500 font-mono uppercase tracking-wider">
+            Mehta &amp; Associates (PCS &amp; CA)
+          </p>
+          <p className="font-display text-2xl font-bold tracking-tight text-slate-950">
+            Live Worklist
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-bold text-rose-700">
+          <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
+          1 due today
+        </span>
+      </div>
+
+      {/* Interactive Tabs (Watermelon Pattern) */}
+      <div className="flex items-center gap-1.5 mb-3.5 overflow-x-auto pb-1 text-xs font-mono">
+        {[
+          { id: 'ALL', label: 'All', count: 4 },
+          { id: 'ROC', label: 'MCA / ROC', count: 2 },
+          { id: 'GST', label: 'GST', count: 1 },
+          { id: 'TAX', label: 'Tax Audit', count: 1 },
+        ].map((tab) => {
+          const isActive = activeFilter === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveFilter(tab.id)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer transition-[background-color,color,border-color] duration-150 ${
+                isActive
+                  ? 'bg-slate-950 text-white font-semibold shadow-xs'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={`ml-1 text-[10px] ${isActive ? 'text-amber-300' : 'text-slate-400'}`}>
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Live Filing Items */}
+      <ul className="divide-y divide-slate-100 text-left">
+        {filteredItems.map((item) => {
+          const isSelected = selectedId === item.id;
+          return (
+            <li
+              key={item.id}
+              onClick={() => setSelectedId(isSelected ? null : item.id)}
+              className="py-3 px-2.5 -mx-2.5 rounded-xl cursor-pointer transition-[background-color] duration-150 hover:bg-slate-50/90 group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-slate-950 group-hover:text-amber-800 transition-colors">
+                    {item.client}
+                  </p>
+                  <p className="text-xs text-slate-500 font-normal">
+                    {item.work}
+                  </p>
+                </div>
+                <span
+                  className={`text-xs font-bold px-2 py-0.5 rounded border transition-colors ${
+                    item.dueTone === 'rose'
+                      ? 'text-rose-700 bg-rose-50 border-rose-200'
+                      : item.dueTone === 'amber'
+                      ? 'text-amber-800 bg-amber-50 border-amber-200'
+                      : item.dueTone === 'emerald'
+                      ? 'text-emerald-800 bg-emerald-50 border-emerald-200'
+                      : 'text-slate-800 bg-slate-100 border-slate-300'
+                  }`}
+                >
+                  {item.due}
+                </span>
+              </div>
+
+              {isSelected && (
+                <div className="mt-2.5 pt-2 border-t border-slate-100 text-[11px] font-mono grid grid-cols-2 gap-2 text-slate-600 animate-in fade-in duration-150">
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">Assigned To</span>
+                    <span className="text-slate-900 font-semibold">{item.owner}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[9px] uppercase">Stage</span>
+                    <span className="text-slate-900 font-semibold">{item.stage}</span>
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Footer Status Pill */}
+      <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+        <span className="flex items-center gap-1.5 font-medium">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          Live Google Drive Sync Active
+        </span>
+        <span className="font-mono text-slate-400">Zero cloud custody</span>
+      </div>
+    </div>
+  );
+};
+
+/* --- Section 1: Hero Section --- */
 const HeroSection = ({ onOpenTour }) => (
   <section className="relative overflow-hidden bg-[#111215] text-slate-100 border-b border-slate-800">
     {/* Subtle Background Radial Grid */}
@@ -156,11 +320,12 @@ const HeroSection = ({ onOpenTour }) => (
             </div>
           </div>
 
-          {/* Primary Action Row */}
+          {/* Primary Action Row (better-ui exact scale and transition) */}
           <div className="flex flex-wrap items-center gap-3.5 pt-3">
             <Link
               to="/signup"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-amber-400 px-6 text-sm font-bold text-slate-950 transition-all hover:bg-amber-300 hover:shadow-lg hover:shadow-amber-400/20 active:scale-[0.98]"
+              aria-label="Create workspace — Request early access"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-amber-400 px-6 text-sm font-bold text-slate-950 transition-[transform,background-color,box-shadow] duration-150 ease-out hover:bg-amber-300 hover:shadow-md hover:shadow-amber-400/20 enabled:active:scale-[0.96] cursor-pointer"
             >
               <span>Create workspace</span>
               <ArrowRightIcon className="h-4 w-4" />
@@ -168,7 +333,7 @@ const HeroSection = ({ onOpenTour }) => (
 
             <Link
               to="/find-workspace"
-              className="inline-flex h-12 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 px-5 text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+              className="inline-flex h-12 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 px-5 text-sm font-semibold text-slate-200 transition-[transform,background-color,border-color,color] duration-150 ease-out hover:bg-slate-800 hover:text-white enabled:active:scale-[0.96] cursor-pointer"
             >
               <span>Find workspace</span>
             </Link>
@@ -176,7 +341,7 @@ const HeroSection = ({ onOpenTour }) => (
             <button
               type="button"
               onClick={onOpenTour}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-slate-800 bg-transparent px-5 text-xs font-mono text-slate-400 hover:border-slate-700 hover:text-slate-200 transition-colors cursor-pointer"
+              className="inline-flex h-12 items-center justify-center rounded-full border border-slate-800 bg-transparent px-5 text-xs font-mono text-slate-400 transition-[transform,border-color,color] duration-150 ease-out hover:border-slate-700 hover:text-slate-200 enabled:active:scale-[0.96] cursor-pointer"
             >
               <span>Product tour</span>
             </button>
@@ -188,77 +353,37 @@ const HeroSection = ({ onOpenTour }) => (
           </p>
         </motion.div>
 
-        {/* Right Column: Mehta & Associates Live Docket Widget */}
+        {/* Right Column: Upgraded Live Docket Widget */}
         <motion.div {...REVEAL} className="relative isolate">
-          {/* Ambient Glow Accent */}
           <div className="absolute -inset-1 -z-10 rounded-2xl bg-gradient-to-b from-amber-500/20 via-slate-800/20 to-transparent blur-xs" />
-
-          <div className="rounded-2xl border border-slate-700/80 bg-white p-6 sm:p-7 text-slate-950 shadow-2xl">
-            {/* Header */}
-            <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <p className="text-xs font-medium text-slate-500">Mehta &amp; Associates</p>
-                <p className="font-display text-2xl font-bold tracking-tight text-slate-950">This week</p>
-              </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200 px-3 py-1 text-xs font-bold text-rose-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
-                1 due today
-              </span>
-            </div>
-
-            {/* Live Filing Items */}
-            <ul className="divide-y divide-slate-100 text-left">
-              <li className="flex items-center justify-between py-3.5">
-                <div>
-                  <p className="text-sm font-bold text-slate-950">Zenith Logistics Pvt Ltd</p>
-                  <p className="text-xs text-slate-500">DIR-3 KYC • DIN 08924152</p>
-                </div>
-                <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                  Due today
-                </span>
-              </li>
-
-              <li className="flex items-center justify-between py-3.5">
-                <div>
-                  <p className="text-sm font-bold text-slate-950">Neo Retail Solutions</p>
-                  <p className="text-xs text-slate-500">AOC-4 filing • Annual Compliance</p>
-                </div>
-                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                  In 3 days
-                </span>
-              </li>
-
-              <li className="flex items-center justify-between py-3.5">
-                <div>
-                  <p className="text-sm font-bold text-slate-950">Apex Bio-Tech LLP</p>
-                  <p className="text-xs text-slate-500">Tax Audit 3CD • 44 Clauses</p>
-                </div>
-                <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
-                  Partner review
-                </span>
-              </li>
-
-              <li className="flex items-center justify-between py-3.5">
-                <div>
-                  <p className="text-sm font-bold text-slate-950">Sharma Textiles</p>
-                  <p className="text-xs text-slate-500">GSTR-3B • Monthly Return</p>
-                </div>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Filed ✓
-                </span>
-              </li>
-            </ul>
-
-            {/* Footer Status Pill */}
-            <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Live Drive Sync Active
-              </span>
-              <span className="font-mono text-slate-400">4 of 4 dockets verified</span>
-            </div>
-          </div>
+          <LiveDocketWidget />
         </motion.div>
+      </div>
+    </Container>
+  </section>
+);
+
+/* --- Section 1.5: Subtle B2B Trust & Metrics Strip --- */
+const TrustMetricsStrip = () => (
+  <section aria-label="Key Platform Proof" className="border-b border-slate-800 bg-[#0c0d10] py-6 text-slate-300">
+    <Container size="7xl">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-center justify-between text-left sm:text-center font-mono">
+        <div className="space-y-0.5">
+          <p className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">250+ Firms</p>
+          <p className="text-xs text-slate-400 font-sans">Across Mumbai, Delhi, Bengaluru</p>
+        </div>
+        <div className="space-y-0.5 border-l border-slate-800/80 pl-4 sm:pl-0 sm:border-l-0">
+          <p className="text-xl sm:text-2xl font-extrabold text-amber-400 tracking-tight">100% On-Premise</p>
+          <p className="text-xs text-slate-400 font-sans">Google Drive &amp; Local Disk Sync</p>
+        </div>
+        <div className="space-y-0.5 border-t border-slate-800/80 pt-4 sm:pt-0 sm:border-t-0">
+          <p className="text-xl sm:text-2xl font-extrabold text-emerald-400 tracking-tight">0% Custody</p>
+          <p className="text-xs text-slate-400 font-sans">We never store your client files</p>
+        </div>
+        <div className="space-y-0.5 border-l border-slate-800/80 pl-4 sm:pl-0 sm:border-l-0 border-t border-slate-800/80 pt-4 sm:pt-0 sm:border-t-0">
+          <p className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">₹0 Forever</p>
+          <p className="text-xs text-slate-400 font-sans">Free Pilot for 5 active clients</p>
+        </div>
       </div>
     </Container>
   </section>
@@ -279,7 +404,7 @@ const ProblemSection = () => (
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Without DocketsHQ */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-8">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-8 shadow-2xs">
           <p className="mb-6 font-mono text-xs uppercase tracking-widest text-slate-500 font-bold">
             Without DocketsHQ
           </p>
@@ -362,7 +487,7 @@ const HowItWorksSection = () => (
         ].map((item, idx) => (
           <li
             key={item.step}
-            className={`p-8 transition-colors hover:bg-slate-800/40 ${
+            className={`p-8 transition-colors duration-150 hover:bg-slate-800/40 ${
               idx > 0 ? 'border-t border-slate-800 md:border-t-0 md:border-l' : ''
             }`}
           >
@@ -378,7 +503,7 @@ const HowItWorksSection = () => (
   </section>
 );
 
-/* --- Section 4: What You Get - 6 Core Capabilities (Mapped to #product) --- */
+/* --- Section 4: What You Get - 6 Core Capabilities (Watermelon Bento Grid + better-ui) --- */
 const FeaturesSection = () => (
   <section id="product" className="scroll-mt-16 bg-white py-20 sm:py-28 border-b border-slate-200">
     <Container size="7xl">
@@ -394,52 +519,65 @@ const FeaturesSection = () => (
         </p>
       </div>
 
-      <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 sm:grid-cols-2 lg:grid-cols-3 gap-px">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {[
           {
             icon: ClockIcon,
             title: 'Deadline reminders',
+            badge: 'Statutory Radar',
             desc: 'GST, ROC (MCA), income tax, and tax audit due dates tracked across all clients — with automated warnings before late fees apply.',
           },
           {
             icon: UploadIcon,
             title: 'Client upload link',
+            badge: 'WhatsApp Drop',
             desc: 'Send a link on WhatsApp. Clients upload bank statements, challans, and bills directly into your Drive with zero passwords.',
           },
           {
             icon: ListTodoIcon,
             title: 'Daily team to-do lists',
+            badge: 'Queue Oversight',
             desc: 'Every staff member knows exactly what to work on today. Managers see team execution in real-time Worklists.',
           },
           {
             icon: CheckCheckIcon,
             title: 'Partner sign-off',
+            badge: 'Defensible Audit',
             desc: 'Work cannot be marked complete without partner sign-off in QC Workbaskets. Fully defensible for ICAI and ICSI peer review.',
           },
           {
             icon: IdCardIcon,
             title: 'Client details in one card',
+            badge: 'One-Click Master',
             desc: 'PAN, TAN, CIN, DIN, authorized signatories, and DSC expiry stored in one master card — copy to portals in one click.',
           },
           {
             icon: ShieldCheckIcon,
             title: 'Ready-made checklists',
+            badge: 'Ready Blueprints',
             desc: 'Turnkey statutory templates for AOC-4, MGT-7, Form 3CD clauses, GSTR, and DIR-3 KYC. Perfect for article clerks.',
           },
         ].map((feature) => (
           <div
             key={feature.title}
-            className="group bg-white p-8 transition-colors hover:bg-[#111215] hover:text-white"
+            className="group relative bg-white p-7 sm:p-8 rounded-2xl border border-slate-200/90 shadow-2xs transition-[border-color,background-color,box-shadow] duration-200 hover:border-slate-300 hover:bg-slate-50/70 hover:shadow-xs flex flex-col justify-between"
           >
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-900 transition-colors group-hover:bg-amber-400 group-hover:text-slate-950">
-              <feature.icon className="h-5 w-5" />
-            </span>
-            <h3 className="mt-8 text-lg font-bold text-slate-950 group-hover:text-white">
-              {feature.title}
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600 group-hover:text-slate-300">
-              {feature.desc}
-            </p>
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-800 transition-colors group-hover:bg-amber-100/80 group-hover:text-amber-900">
+                  <feature.icon className="h-5 w-5" />
+                </span>
+                <span className="text-[10px] font-mono font-semibold uppercase text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200/80">
+                  {feature.badge}
+                </span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-950 tracking-tight">
+                {feature.title}
+              </h3>
+              <p className="mt-2.5 text-sm leading-relaxed text-slate-600">
+                {feature.desc}
+              </p>
+            </div>
           </div>
         ))}
       </div>
@@ -466,7 +604,7 @@ const TrustSection = ({ onOpenCertificate }) => (
             <button
               type="button"
               onClick={onOpenCertificate}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 px-4 py-2.5 text-xs font-bold text-white transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 px-4 py-2.5 text-xs font-bold text-white transition-[background-color,transform] duration-150 enabled:active:scale-[0.96] shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer"
             >
               <ShieldCheckIcon className="h-4 w-4 text-emerald-300" />
               <span>View Sovereign Drive Isolation Certificate</span>
@@ -478,21 +616,21 @@ const TrustSection = ({ onOpenCertificate }) => (
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors hover:border-slate-700">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors duration-150 hover:border-slate-700">
             <h3 className="text-lg font-bold text-white">Files stay in your Google Drive</h3>
             <p className="mt-1.5 text-sm text-slate-300 leading-relaxed">
               We never store your client documents on third-party servers. If you ever cancel DocketsHQ, 100% of your folder hierarchy remains intact in your own Google Drive.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors hover:border-slate-700">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors duration-150 hover:border-slate-700">
             <h3 className="text-lg font-bold text-white">Trainees can’t download files</h3>
             <p className="mt-1.5 text-sm text-slate-300 leading-relaxed">
               Article assistants view working papers securely inside the browser viewer. Local hard drive downloads are restricted to protect client ledgers.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors hover:border-slate-700">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 transition-colors duration-150 hover:border-slate-700">
             <h3 className="text-lg font-bold text-white">Accidental deletes are restored</h3>
             <p className="mt-1.5 text-sm text-slate-300 leading-relaxed">
               If an intern or staff member accidentally renames or deletes a folder in Google Drive, DocketsHQ detects it immediately and restores folder links automatically.
@@ -596,7 +734,8 @@ const FinalCtaSection = () => (
         <div className="pt-6 flex flex-wrap items-center justify-center gap-3.5">
           <Link
             to="/signup"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-amber-400 px-7 text-sm font-bold text-slate-950 transition-all hover:bg-amber-300 hover:shadow-lg hover:shadow-amber-400/20 active:scale-[0.98]"
+            aria-label="Create workspace — Request early access"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-amber-400 px-7 text-sm font-bold text-slate-950 transition-[transform,background-color,box-shadow] duration-150 ease-out hover:bg-amber-300 hover:shadow-md hover:shadow-amber-400/20 enabled:active:scale-[0.96] cursor-pointer"
           >
             <span>Create workspace</span>
             <ArrowRightIcon className="h-4 w-4" />
@@ -604,14 +743,14 @@ const FinalCtaSection = () => (
 
           <Link
             to="/find-workspace"
-            className="inline-flex h-12 items-center justify-center rounded-full border border-slate-700 bg-slate-900/60 px-6 text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+            className="inline-flex h-12 items-center justify-center rounded-full border border-slate-700 bg-slate-900/60 px-6 text-sm font-semibold text-slate-200 transition-[transform,background-color,border-color,color] duration-150 ease-out hover:bg-slate-800 hover:text-white enabled:active:scale-[0.96] cursor-pointer"
           >
             <span>Find workspace</span>
           </Link>
 
           <Link
             to="/pricing"
-            className="inline-flex h-12 items-center justify-center rounded-full border border-transparent px-5 text-xs font-mono text-slate-400 hover:text-amber-400 transition-colors"
+            className="inline-flex h-12 items-center justify-center rounded-full border border-transparent px-5 text-xs font-mono text-slate-400 transition-colors duration-150 hover:text-amber-400"
           >
             <span>View all plans &amp; pricing →</span>
           </Link>
@@ -752,6 +891,7 @@ export const LandingPageContent = () => {
       />
       <PublicMarketingHeader />
       <HeroSection onOpenTour={() => setIsTourOpen(true)} />
+      <TrustMetricsStrip />
       <ProblemSection />
       <HowItWorksSection />
       <FeaturesSection />
