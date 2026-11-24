@@ -3,6 +3,7 @@ const AuthAudit = require('../models/AuthAudit.model');
 const TenantStorageHealth = require('../models/TenantStorageHealth.model');
 const onboardingAnalyticsService = require('./onboardingAnalytics.service');
 const metricsService = require('./metrics.service');
+const { getDailyEmailBudgetStatus } = require('./emailBudget.service');
 const { getDashboardSnapshot } = require('../utils/operationalMetrics');
 
 const OTP_FAILURE_ACTIONS = new Set(['OTP_FAILED', 'LOGIN_FAILED', 'LoginFailed', 'LOGIN_FAILURE', 'AccountLocked']);
@@ -126,6 +127,7 @@ const getSupportDiagnosticsSnapshot = async ({ limit = 15 } = {}) => {
 
   return {
     generatedAt: new Date().toISOString(),
+    emailBudget: await getDailyEmailBudgetStatus(),
     totals: {
       firmsInScope: firms.length,
       firmsNeedingOnboardingFollowUp: firmsWithOnboarding.filter(

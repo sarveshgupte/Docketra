@@ -12,6 +12,11 @@ const https = require('https');
 const log = require('../utils/log');
 const { getSession } = require('../utils/getSession');
 const { enqueueOutbox } = require('./outbox.service');
+const {
+  checkAndIncrementEmailBudget,
+  rollbackEmailBudget,
+  getDailyEmailBudgetStatus,
+} = require('./emailBudget.service');
 
 // Constants
 const BREVO_MESSAGE_ID_FALLBACK = 'brevo-email-sent';
@@ -101,6 +106,13 @@ const sendTransactionalEmail = async ({ to, subject, html, text, attachments, re
   if (!mailFrom) {
     throw new Error('MAIL_FROM, SMTP_FROM, or EMAIL_FROM is not configured');
   }
+
+  // Circuit breaker: protect Brevo free tier limit (300/day) with a hard daily safety cap
+  const budget = await checkAndIncrementEmailBudget();
+  if (!budget.allowed) {
+    log.error(`[EMAIL] Daily email budget cap reached (${budget.count}/${budget.cap} on ${budget.date}). Brevo send blocked to prevent quota exhaustion.`);
+    throw new Error(`EMAIL_DAILY_BUDGET_EXCEEDED: Daily limit of ${budget.cap} emails reached to protect Brevo quota.`);
+  }
   
   // Parse sender from MAIL_FROM format
   const sender = parseSender(mailFrom);
@@ -158,12 +170,14 @@ const sendTransactionalEmail = async ({ to, subject, html, text, attachments, re
             resolve({ success: true, messageId: BREVO_MESSAGE_ID_FALLBACK });
           }
         } else {
+          void rollbackEmailBudget();
           reject(new Error(`Brevo API error: ${res.statusCode} - ${data}`));
         }
       });
     });
     
     req.on('error', (error) => {
+      void rollbackEmailBudget();
       reject(new Error(`Failed to send email via Brevo: ${error.message}`));
     });
     
@@ -1167,4 +1181,8 @@ module.exports = {
   sendFirmCreatedEmail,
   sendFirmCreationFailedEmail,
   sendSystemIntegrityEmail,
+  // Daily Email Budget Circuit Breaker
+  getDailyEmailBudgetStatus,
+  checkAndIncrementEmailBudget,
+  rollbackEmailBudget,
 };
