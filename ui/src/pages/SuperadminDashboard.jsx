@@ -11,6 +11,7 @@ import { productUpdatesService } from '../services/productUpdatesService';
 import { APP_VERSION } from '../utils/constants';
 import { CreateFirmModal } from './admin/components/CreateFirmModal';
 import { LegalConsentCertificateModal } from '../components/superadmin/LegalConsentCertificateModal';
+import { SuperadminFeedbackView } from '../components/superadmin/SuperadminFeedbackView';
 import { PILOT_TERMS_VERSION } from '../components/marketing/PilotAgreementModal';
 
 const safeCount = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
@@ -408,6 +409,7 @@ export const SuperadminDashboard = () => {
             { id: 'launch', label: 'Launch Checklist' },
             { id: 'flags', label: 'Feature Flags' },
             { id: 'legal', label: 'Legal & Consent' },
+            { id: 'feedback', label: 'User Feedback & Bugs' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1373,6 +1375,13 @@ export const SuperadminDashboard = () => {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* ==================== TAB G: USER FEEDBACK & BUGS ==================== */}
+          {activeTab === 'feedback' && (
+            <div className="space-y-6">
+              <SuperadminFeedbackView />
             </div>
           )}
 

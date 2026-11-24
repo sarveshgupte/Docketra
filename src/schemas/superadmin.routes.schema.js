@@ -173,5 +173,26 @@ module.exports = {
       state: z.enum(['open', 'closed', 'all']).optional(),
     }).strict(),
   },
+  'GET /feedback': {
+    query: z.object({
+      status: z.enum(['OPEN', 'IN_REVIEW', 'RESOLVED', 'CLOSED']).optional(),
+      type: z.enum(['BUG', 'FEEDBACK', 'ERROR', 'OTHER']).optional(),
+      search: z.string().trim().max(100).optional(),
+      page: z.coerce.number().int().min(1).optional(),
+      limit: z.coerce.number().int().min(1).max(100).optional(),
+    }).strict(),
+  },
+  'GET /feedback/stats': {
+    query: z.object({}).strict(),
+  },
+  'POST /feedback/:id/reply': {
+    params: z.object({
+      id: z.string().trim().min(1).max(100),
+    }),
+    body: z.object({
+      response: nonEmptyString.min(1).max(5000),
+    }).strict(),
+  },
 };
+
 

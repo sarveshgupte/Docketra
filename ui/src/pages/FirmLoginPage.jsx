@@ -16,6 +16,7 @@ import { resolvePostAuthNavigation } from '../utils/postAuthNavigation';
 import { sanitizeFirmSlug } from '../utils/tenantRouting';
 import { isWorkspaceActive } from '../utils/workspaceStatus';
 import SeoHead from '../components/common/SeoHead';
+import { DocketraLogo } from '../components/common/DocketraLogo';
 
 const mapSafeLoginError = (error) => {
   const status = error?.status || error?.response?.status;
@@ -461,11 +462,8 @@ export const FirmLoginPage = () => {
   if (firmLoading) return (
     <div className="min-h-screen flex flex-col bg-slate-50/70">
       <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5 text-slate-900 group">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white font-bold text-sm tracking-tight group-hover:bg-indigo-600 transition-colors">
-            D
-          </span>
-          <span className="font-bold text-base tracking-tight text-slate-900">Docketra</span>
+        <Link to="/" className="hover:opacity-90 transition-opacity">
+          <DocketraLogo />
         </Link>
       </header>
       <main className="flex-1 flex items-center justify-center p-4">
@@ -480,11 +478,8 @@ export const FirmLoginPage = () => {
     return (
       <div className="min-h-screen flex flex-col bg-slate-50/70">
         <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5 text-slate-900 group">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white font-bold text-sm tracking-tight group-hover:bg-indigo-600 transition-colors">
-              D
-            </span>
-            <span className="font-bold text-base tracking-tight text-slate-900">Docketra</span>
+          <Link to="/" className="hover:opacity-90 transition-opacity">
+            <DocketraLogo />
           </Link>
         </header>
         <main className="flex-1 flex items-center justify-center p-4">
@@ -529,21 +524,9 @@ export const FirmLoginPage = () => {
 
       {/* Top Navbar Header */}
       <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between border-b border-slate-100/80 sm:border-none">
-        <Link to="/" className="flex items-center gap-2.5 text-slate-900 group">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white font-bold text-sm tracking-tight group-hover:bg-indigo-600 transition-colors shadow-xs">
-            D
-          </span>
-          <span className="font-bold text-base tracking-tight text-slate-900">Docketra</span>
+        <Link to="/" className="hover:opacity-90 transition-opacity">
+          <DocketraLogo />
         </Link>
-        <div className="flex items-center gap-3 text-xs">
-          <span className="hidden sm:inline text-slate-500">Need a workspace?</span>
-          <Link
-            to="/signup"
-            className="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-          >
-            Start free pilot →
-          </Link>
-        </div>
       </header>
 
       {/* Main Centered Sign-In Content */}

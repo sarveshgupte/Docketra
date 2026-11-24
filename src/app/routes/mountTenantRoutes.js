@@ -41,6 +41,7 @@ const mountTenantRoutes = (app, deps) => {
     teamRoutes,
     bulkUploadRoutes,
     productUpdateRoutes,
+    feedbackRoutes,
     settingsRoutes,
     knowledgeItemRoutes,
     emailCaptureRoutes,
@@ -80,6 +81,7 @@ const mountTenantRoutes = (app, deps) => {
   app.use('/api/teams', ...tenantScopedApiAccess, writeGuardChain, teamRoutes);
   app.use('/api/bulk-upload', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), bulkUploadRoutes);
   app.use('/api/product-updates', authenticate, writeGuardChain, productUpdateRoutes);
+  app.use('/api/feedback', authenticate, writeGuardChain, feedbackRoutes);
   app.use('/api/settings', ...tenantScopedApiAccess, writeGuardChain, settingsRoutes);
   app.use('/api/knowledge-items', ...tenantScopedApiAccess, writeGuardChain, knowledgeItemRoutes);
   app.use('/api/email-captures', ...tenantScopedApiAccess, writeGuardChain, emailCaptureRoutes);

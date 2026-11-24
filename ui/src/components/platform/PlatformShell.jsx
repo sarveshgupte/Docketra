@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { ROUTES } from '../../constants/routes';
 import { getPlatformDestinationCommands, getPlatformNavigation, PLATFORM_SHORTCUT_ROUTES } from '../../constants/platformNavigation';
 import { CommandPalette } from '../common/CommandPalette';
+import { FeedbackModal } from '../common/FeedbackModal';
 import StorageStatusBadge from './StorageStatusBadge';
 import { NotificationBell } from './NotificationBell';
 import api from '../../services/api';
@@ -137,6 +138,7 @@ const NAV_ICONS = {
 export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -370,6 +372,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
 
     const actionsItems = [
       { id: 'new-docket', label: 'New Docket', shortcut: 'Alt+Shift+N', action: () => openRoute(ROUTES.CREATE_CASE(firmSlug)), description: 'Create a docket quickly.' },
+      { id: 'report-feedback', label: 'Report Bug / Feedback', shortcut: 'Alt+Shift+F', action: () => setFeedbackModalOpen(true), description: 'Submit bug report, system error, or feedback directly to engineering.' },
       { id: 'open-profile', label: 'Open Profile', action: () => openRoute(ROUTES.PROFILE(firmSlug)), description: 'Open personal profile and preferences.' },
       { id: 'sign-out', label: 'Sign out', action: () => { void handleLogout(); }, description: 'Sign out from current firm workspace.' },
     ];
@@ -455,6 +458,12 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
       if (key === '/' && !event.metaKey && !event.ctrlKey) {
         event.preventDefault();
         setCommandPaletteOpen(true);
+        return;
+      }
+
+      if (event.altKey && event.shiftKey && key === 'f') {
+        event.preventDefault();
+        setFeedbackModalOpen(true);
         return;
       }
 
@@ -655,6 +664,18 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
               </button>
             </div>
             {actions ? <div className="platform__action-primary">{actions}</div> : null}
+            <button
+              type="button"
+              className="platform__feedback-btn inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+              onClick={() => setFeedbackModalOpen(true)}
+              title="Report bug or give feedback"
+              aria-label="Report bug or give feedback"
+            >
+              <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span>Feedback</span>
+            </button>
             <NotificationBell />
             {canViewStorageStatus ? <div className="platform__action-status"><StorageStatusBadge /></div> : null}
             <div className="platform__account-menu" ref={menuRef}>
@@ -687,6 +708,17 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
                   >
                     Profile
                   </Link>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="platform__account-dropdown-item text-left w-full"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setFeedbackModalOpen(true);
+                    }}
+                  >
+                    Feedback & Bug Report
+                  </button>
                   <button type="button" role="menuitem" className="platform__account-dropdown-item" onClick={handleLogout}>Sign out</button>
                 </div>
               ) : null}
@@ -704,6 +736,11 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
         onQueryChange={setCommandQuery}
         queryPlaceholder="Search docket IDs, clients, queues, modules, and commands"
         helperText={searching ? 'Searching records and docket IDs…' : (searchError || `Shortcuts: ${shortcutHint}`)}
+      />
+
+      <FeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
       />
     </div>
   );

@@ -126,6 +126,7 @@ export const ForgotPasswordPage = () => {
         'error-callback': () => {
           setTurnstileToken('');
           turnstileTokenRef.current = '';
+          setError('Security verification could not connect. Please check your network or ad blocker, or refresh.');
         },
       });
     };

@@ -10,6 +10,11 @@ const {
   dispatchRepoAgentTask,
   getRepoAgentPRs,
 } = require('../controllers/superadminRepoAgent.controller');
+const {
+  getSuperadminFeedbackList,
+  getSuperadminFeedbackStats,
+  replySuperadminFeedback,
+} = require('../controllers/feedback.controller');
 const { authorize } = require('../middleware/authorize');
 const SuperAdminPolicy = require('../policies/superadmin.policy');
 const FirmPolicy = require('../policies/firm.policy');
@@ -118,5 +123,10 @@ router.get('/repo-agent/status', getRepoAgentStatus);
 router.post('/repo-agent/audit', runRepoAgentAudit);
 router.post('/repo-agent/dispatch', dispatchRepoAgentTask);
 router.get('/repo-agent/prs', getRepoAgentPRs);
+
+// User Feedback & Bug Reporting
+router.get('/feedback', authorize(SuperAdminPolicy.canAccessPlatform), getSuperadminFeedbackList);
+router.get('/feedback/stats', authorize(SuperAdminPolicy.canAccessPlatform), getSuperadminFeedbackStats);
+router.post('/feedback/:id/reply', authorize(SuperAdminPolicy.canAccessPlatform), superadminAdminManagementLimiter, replySuperadminFeedback);
 
 module.exports = router;

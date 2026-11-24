@@ -100,6 +100,7 @@ const notificationsRoutes = require('../routes/notifications.routes');
 const teamRoutes = require('../routes/team.routes');
 const bulkUploadRoutes = require('../routes/bulkUpload.routes');
 const productUpdateRoutes = require('../routes/productUpdate.routes');
+const feedbackRoutes = require('../routes/feedback.routes');
 const knowledgeItemRoutes = require('../routes/knowledgeItem.routes');
 const docketRoutes = require('../routes/docket.routes');
 const attachmentRoutes = require('../routes/attachment.routes');
@@ -428,6 +429,7 @@ const createApp = () => {
     teamRoutes,
     bulkUploadRoutes,
     productUpdateRoutes,
+    feedbackRoutes,
     settingsRoutes,
     knowledgeItemRoutes,
     emailCaptureRoutes,
