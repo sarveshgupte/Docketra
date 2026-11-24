@@ -2,14 +2,13 @@ const fsp = require('fs/promises');
 const { storageRestoreService } = require('../services/storageRestore.service');
 const { ensureStorageOtpVerification } = require('./storage.controller');
 const { requireAdmin } = require('../middleware/permission.middleware');
+const { cleanupTempFile } = require('../utils/tempFile');
 const log = require('../utils/log');
 
 const initiateStorageRestore = async (req, res) => {
   const cleanupUploadedFile = async () => {
     if (req.file?.path) {
-      try {
-        await fsp.unlink(req.file.path);
-      } catch (_e) {}
+      await cleanupTempFile(req.file.path);
     }
   };
 

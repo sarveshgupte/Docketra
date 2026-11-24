@@ -16,6 +16,7 @@ const { Worker, UnrecoverableError } = require('bullmq');
 const fs = require('fs').promises;
 const fsSync = require('fs');
 const { createHash } = require('crypto');
+const { cleanupTempFile } = require('../utils/tempFile');
 const FirmStorage = require('../models/FirmStorage.model');
 const CaseFile = require('../models/CaseFile.model');
 const Attachment = require('../models/Attachment.model');
@@ -399,16 +400,9 @@ const storageWorker = new Worker(
             }
           }
 
-          // Remove the local temp file
-          try {
-            await fs.unlink(caseFile.localPath);
-          } catch (unlinkErr) {
-            // Non-fatal: log and continue
-            log.warn('[StorageWorker]', {
-              event: 'local_file_delete_failed',
-              jobType: job.name,
-              message: unlinkErr.message,
-            });
+          // Remove the local temp file safely
+          if (caseFile.localPath) {
+            await cleanupTempFile(caseFile.localPath);
           }
 
           log.info('[StorageWorker]', { event: 'file_uploaded', jobType: job.name, firmId, folderId: targetFolderId });

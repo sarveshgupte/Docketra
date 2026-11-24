@@ -12,6 +12,7 @@
 
 const fs = require('fs').promises;
 const path = require('path');
+const { cleanupTempFile } = require('./tempFile');
 const log = require('../utils/log');
 
 const TMP_DIR = path.join(__dirname, '../../uploads/tmp');
@@ -74,8 +75,8 @@ async function _deleteIfStale(filePath, cutoff) {
   try {
     const stat = await fs.stat(filePath);
     if (stat.mtimeMs < cutoff) {
-      await fs.unlink(filePath);
-      return 1;
+      const removed = await cleanupTempFile(filePath);
+      return removed ? 1 : 0;
     }
   } catch {
     // File may have been deleted between readdir and stat — ignore

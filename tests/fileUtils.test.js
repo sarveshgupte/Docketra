@@ -2,7 +2,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { getMimeType, sanitizeFilename, getExtension, ensureDirectoryExists } = require('../src/utils/fileUtils');
+const { cleanupTempFile, isUnderAllowedRoot } = require('../src/utils/tempFile');
+const { cleanupStaleTmpUploads } = require('../src/utils/cleanupTmpUploads');
 
 function testGetMimeType() {
   console.log('Running testGetMimeType...');
@@ -89,12 +92,66 @@ async function testEnsureDirectoryExists() {
   }
 }
 
+async function testCleanupTempFile() {
+  console.log('Running testCleanupTempFile (hardening checks)...');
+
+  // 1. Rejects invalid inputs
+  assert.strictEqual(await cleanupTempFile(null), false);
+  assert.strictEqual(await cleanupTempFile(''), false);
+  assert.strictEqual(await cleanupTempFile(123), false);
+
+  // 2. Refuses to delete files outside allowed roots (e.g. project files)
+  const projectFile = path.resolve(__dirname, '../package.json');
+  assert.strictEqual(isUnderAllowedRoot(projectFile), false);
+  assert.strictEqual(await cleanupTempFile(projectFile), false);
+  // Verify package.json still exists
+  assert.strictEqual(fs.existsSync(projectFile), true);
+
+  // 3. Allows valid temp root paths
+  const tempFilePath = path.join(os.tmpdir(), `docketra-test-${Date.now()}.tmp`);
+  assert.strictEqual(isUnderAllowedRoot(tempFilePath), true);
+
+  // Create real temp file and verify cleanup
+  fs.writeFileSync(tempFilePath, 'temporary content');
+  assert.strictEqual(fs.existsSync(tempFilePath), true);
+  const deleted = await cleanupTempFile(tempFilePath);
+  assert.strictEqual(deleted, true);
+  assert.strictEqual(fs.existsSync(tempFilePath), false);
+
+  // 4. Handles already deleted or non-existent file cleanly
+  const nonExistent = path.join(os.tmpdir(), `docketra-missing-${Date.now()}.tmp`);
+  assert.strictEqual(await cleanupTempFile(nonExistent), false);
+
+  console.log('testCleanupTempFile passed.');
+}
+
+async function testCleanupStaleTmpUploads() {
+  console.log('Running testCleanupStaleTmpUploads...');
+  const tmpUploadsDir = path.resolve(__dirname, '../uploads/tmp');
+  fs.mkdirSync(tmpUploadsDir, { recursive: true });
+
+  const staleFile = path.join(tmpUploadsDir, `stale-${Date.now()}.tmp`);
+  fs.writeFileSync(staleFile, 'stale content');
+
+  // Set file mtime to 2 days ago
+  const twoDaysAgo = (Date.now() - (48 * 60 * 60 * 1000)) / 1000;
+  fs.utimesSync(staleFile, twoDaysAgo, twoDaysAgo);
+
+  const deletedCount = await cleanupStaleTmpUploads(24 * 60 * 60 * 1000);
+  assert.strictEqual(deletedCount >= 1, true, 'Should delete stale file');
+  assert.strictEqual(fs.existsSync(staleFile), false, 'Stale file should no longer exist');
+
+  console.log('testCleanupStaleTmpUploads passed.');
+}
+
 async function run() {
   try {
     testGetMimeType();
     testSanitizeFilename();
     testGetExtension();
     await testEnsureDirectoryExists();
+    await testCleanupTempFile();
+    await testCleanupStaleTmpUploads();
     console.log('All fileUtils tests passed.');
   } catch (err) {
     console.error('Test failed:', err);

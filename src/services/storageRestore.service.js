@@ -10,6 +10,7 @@ const BackupJob = require('../models/BackupJob.model');
 const AuditLog = require('../models/AuditLog.model');
 const mongoose = require('mongoose');
 const { StorageProviderFactory } = require('./storage/StorageProviderFactory');
+const { cleanupTempFile } = require('../utils/tempFile');
 const log = require('../utils/log');
 
 const BACKUP_PATH_PREFIX = 'backups/nightly';
@@ -250,12 +251,8 @@ class StorageRestoreService {
       }
 
       // Clean up uploaded archive from multer if provided
-      try {
-        if (uploadedZipPath && fs.existsSync(uploadedZipPath)) {
-          await fsp.unlink(uploadedZipPath);
-        }
-      } catch (uploadCleanupErr) {
-        log.warn('[RESTORE] Uploaded file cleanup failed', { uploadCleanupErr: uploadCleanupErr.message });
+      if (uploadedZipPath) {
+        await cleanupTempFile(uploadedZipPath);
       }
     }
   }
