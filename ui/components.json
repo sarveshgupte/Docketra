@@ -3,6 +3,10 @@
   "style": "default",
   "rsc": false,
   "tsx": false,
+  "registries": {
+    "@kokonutui": "https://kokonutui.com/r/{name}.json",
+    "@watermelon": "https://registry.watermelon.sh/r/{name}.json"
+  },
   "tailwind": {
     "config": "tailwind.config.js",
     "css": "src/styles/index.css",

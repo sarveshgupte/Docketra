@@ -7,6 +7,7 @@ import { CommandPalette } from '../common/CommandPalette';
 import { FeedbackModal } from '../common/FeedbackModal';
 import StorageStatusBadge from './StorageStatusBadge';
 import { NotificationBell } from './NotificationBell';
+import { StatusIsland } from '../kokonutui';
 import api from '../../services/api';
 import { clientApi } from '../../api/client.api';
 import { caseApi } from '../../api/case.api';
@@ -677,6 +678,7 @@ export const PlatformShell = ({ moduleLabel, title, subtitle, actions, children 
               <span>Feedback</span>
             </button>
             <NotificationBell />
+            <StatusIsland className="hidden lg:inline-flex" />
             {canViewStorageStatus ? <div className="platform__action-status"><StorageStatusBadge /></div> : null}
             <div className="platform__account-menu" ref={menuRef}>
               <button

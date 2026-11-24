@@ -1,13 +1,15 @@
 /**
  * Confirmation Dialog Component
  * Reusable modal for destructive and confirmation actions requiring explicit user consent.
- * Compatible with shadcn AlertDialog patterns.
+ * Supports standard click confirmations as well as Kokonut UI slide-to-confirm
+ * and hold-button for high-stakes compliance actions.
  */
 
 import React from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
 import { Button } from './Button';
 import { Modal } from './Modal';
+import { HoldButton, SlideToConfirm } from '../kokonutui';
 import { cn } from '../../lib/utils';
 
 export const ConfirmDialog = ({
@@ -20,21 +22,54 @@ export const ConfirmDialog = ({
   cancelText = 'Cancel',
   danger = false,
   loading = false,
+  slide = false,
+  hold = false,
   className = '',
-}) => (
-  <Modal
-    isOpen={isOpen}
-    onClose={loading ? () => {} : onCancel}
-    title={title}
-    maxWidth="sm"
-    className={className}
-    actions={(
-      <>
-        <Button variant="outline" onClick={onCancel} disabled={loading}>
+}) => {
+  const renderActions = () => {
+    if (slide) {
+      return (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+          <Button variant="outline" size="sm" onClick={onCancel} disabled={loading}>
+            {cancelText}
+          </Button>
+          <SlideToConfirm
+            label={confirmText}
+            doneLabel="Confirmed"
+            onConfirm={onConfirm}
+            disabled={loading}
+            className="w-full sm:max-w-[260px]"
+          />
+        </div>
+      );
+    }
+
+    if (hold) {
+      return (
+        <div className="flex items-center justify-end gap-2.5">
+          <Button variant="outline" size="sm" onClick={onCancel} disabled={loading}>
+            {cancelText}
+          </Button>
+          <HoldButton
+            variant={danger ? 'red' : 'compliance'}
+            size="sm"
+            onHoldComplete={onConfirm}
+            disabled={loading}
+          >
+            {confirmText}
+          </HoldButton>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center justify-end gap-2.5">
+        <Button variant="outline" size="sm" onClick={onCancel} disabled={loading}>
           {cancelText}
         </Button>
         <Button
           variant={danger ? 'danger' : 'primary'}
+          size="sm"
           onClick={onConfirm}
           loading={loading}
           disabled={loading}
@@ -42,22 +77,33 @@ export const ConfirmDialog = ({
         >
           {confirmText}
         </Button>
-      </>
-    )}
-  >
-    <div className="flex items-start gap-3">
-      {danger ? (
-        <div className="mt-0.5 rounded-full p-1 bg-rose-50 text-rose-600 shrink-0 border border-rose-200/60">
-          <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-        </div>
-      ) : (
-        <div className="mt-0.5 rounded-full p-1 bg-blue-50 text-blue-600 shrink-0 border border-blue-200/60">
-          <Info className="h-4 w-4" aria-hidden="true" />
-        </div>
-      )}
-      <p className="text-xs leading-5 text-slate-600 dark:text-slate-300">{message}</p>
-    </div>
-  </Modal>
-);
+      </div>
+    );
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={loading ? () => {} : onCancel}
+      title={title}
+      maxWidth="sm"
+      className={className}
+      actions={renderActions()}
+    >
+      <div className="flex items-start gap-3">
+        {danger ? (
+          <div className="mt-0.5 rounded-full p-1 bg-rose-50 text-rose-600 shrink-0 border border-rose-200/60">
+            <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+          </div>
+        ) : (
+          <div className="mt-0.5 rounded-full p-1 bg-blue-50 text-blue-600 shrink-0 border border-blue-200/60">
+            <Info className="h-4 w-4" aria-hidden="true" />
+          </div>
+        )}
+        <p className="text-xs leading-5 text-slate-600 dark:text-slate-300">{message}</p>
+      </div>
+    </Modal>
+  );
+};
 
 export const AlertDialog = ConfirmDialog;

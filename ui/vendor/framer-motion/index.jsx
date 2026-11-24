@@ -168,3 +168,25 @@ export const AnimatePresence = ({ children, mode = 'sync' }) => {
     </>
   );
 };
+
+export const MotionConfig = ({ children }) => <>{children}</>;
+
+export const useMotionValue = (initialValue) => {
+  const ref = useRef(initialValue);
+  return useMemo(() => ({
+    get: () => ref.current,
+    set: (v) => { ref.current = v; },
+  }), []);
+};
+
+export const useTransform = (value, transformer) => {
+  return useMemo(() => {
+    const val = typeof value?.get === 'function' ? value.get() : value;
+    return typeof transformer === 'function' ? transformer(val) : val;
+  }, [value, transformer]);
+};
+
+export const animate = () => ({
+  stop: () => {},
+});
+
