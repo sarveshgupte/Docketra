@@ -1414,23 +1414,27 @@ export const FirmSettingsPage = () => {
                       <div className="flex items-center gap-2">
                         <span className="inline-flex items-center gap-1.5 rounded-xs bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200">
                           <span className="h-2 w-2 rounded-xs bg-emerald-500 animate-pulse" />
-                          {planData?.tierName || (planData?.isPilot ? 'Free Pilot' : 'Active Plan')}
+                          {planData?.tierName || (planData?.isPilot ? 'Founding Pilot' : 'Active Plan')}
                         </span>
-                        {planData?.isPilot && (
-                          <span className="rounded-xs bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 border border-slate-200/60">
-                            ₹0 forever
+                        {(planData?.isPioneerCohort || planData?.isPilot) && (
+                          <span className="rounded-xs bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 border border-slate-200/60">
+                            {planData?.isPioneerCohort ? '1 Year Free • Unlimited' : 'Pilot Evaluation'}
                           </span>
                         )}
                       </div>
                       <h2 className="mt-2 text-xl font-bold text-slate-900">
-                        {planData?.isPilot
-                          ? 'Free Pilot (Proof of Sovereign Isolation)'
-                          : `${planData?.tierName || 'Current Plan'}`}
+                        {planData?.isPioneerCohort
+                          ? 'Founding Pilot Cohort (1 Year Full Access)'
+                          : (planData?.isPilot
+                            ? 'Free Pilot (Proof of Sovereign Isolation)'
+                            : `${planData?.tierName || 'Current Plan'}`)}
                       </h2>
                       <p className="mt-1 text-sm text-slate-500">
-                        {planData?.isPilot
-                          ? 'Test with up to 5 clients and 2 seats. Verify Google Drive safety and trainee laptop download blocks before upgrading.'
-                          : 'Active plan with Google Drive storage and unlimited dockets.'}
+                        {planData?.isPioneerCohort
+                          ? `Unlimited team seats, active clients, and dockets across active pilot workflows.${planData?.subscriptionExpiresAt ? ` Pilot term active through ${new Date(planData.subscriptionExpiresAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}.` : ''}`
+                          : (planData?.isPilot
+                            ? 'Test with up to 5 clients and 2 seats. Verify Google Drive safety and trainee laptop download blocks before upgrading.'
+                            : 'Active plan with Google Drive storage and unlimited dockets.')}
                       </p>
                     </div>
                     <Button
@@ -1450,13 +1454,15 @@ export const FirmSettingsPage = () => {
                     <div className="rounded-md border border-slate-200 bg-slate-50 p-4 shadow-xs">
                       <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Staff Seats</p>
                       <p className="mt-1 text-2xl font-bold text-slate-900 tabular-nums font-mono">
-                        {planData?.currentUsage?.usersCount ?? 1} / {planData?.limits?.maxSeats ?? 2}
+                        {planData?.currentUsage?.usersCount ?? 1} / {planData?.limits?.maxSeats ?? 'Unlimited'}
                       </p>
                       <div className="mt-2 h-1.5 w-full rounded-xs bg-slate-200 overflow-hidden">
                         <div
                           className="h-full bg-indigo-600 rounded-xs transition-all duration-300"
                           style={{
-                            width: `${Math.min(100, (((planData?.currentUsage?.usersCount ?? 1) / (planData?.limits?.maxSeats ?? 2)) * 100))}%`,
+                            width: planData?.limits?.maxSeats
+                              ? `${Math.min(100, (((planData?.currentUsage?.usersCount ?? 1) / planData.limits.maxSeats) * 100))}%`
+                              : '100%',
                           }}
                         />
                       </div>
@@ -1466,13 +1472,15 @@ export const FirmSettingsPage = () => {
                     <div className="rounded-md border border-slate-200 bg-slate-50 p-4 shadow-xs">
                       <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Active Clients</p>
                       <p className="mt-1 text-2xl font-bold text-slate-900 tabular-nums font-mono">
-                        {planData?.currentUsage?.clientsCount ?? 0} / {planData?.limits?.maxClients ?? 5}
+                        {planData?.currentUsage?.clientsCount ?? 0} / {planData?.limits?.maxClients ?? 'Unlimited'}
                       </p>
                       <div className="mt-2 h-1.5 w-full rounded-xs bg-slate-200 overflow-hidden">
                         <div
                           className="h-full bg-emerald-600 rounded-xs transition-all duration-300"
                           style={{
-                            width: `${Math.min(100, (((planData?.currentUsage?.clientsCount ?? 0) / (planData?.limits?.maxClients ?? 5)) * 100))}%`,
+                            width: planData?.limits?.maxClients
+                              ? `${Math.min(100, (((planData?.currentUsage?.clientsCount ?? 0) / planData.limits.maxClients) * 100))}%`
+                              : '100%',
                           }}
                         />
                       </div>
@@ -1527,19 +1535,19 @@ export const FirmSettingsPage = () => {
                   </div>
                 </Card>
 
-                {/* 1-Click Friction-Free Upgrade Cards */}
+                {/* Planned Tier Capacities (Pricing Coming Soon) */}
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div>
-                      <h3 className="text-base font-semibold text-slate-900">Upgrade your plan</h3>
+                      <h3 className="text-base font-semibold text-slate-900">Planned Tiers &amp; Limits</h3>
                       <p className="text-sm text-slate-500">
-                        Zero file transfer needed. All your client folders and dockets stay in your Drive.
+                        Commercial pricing is coming soon. During the 26-firm pilot cohort, your workspace operates with unrestricted seats, clients, and dockets for 1 year.
                       </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Pioneer 30 Card */}
+                    {/* Starter Tier Card */}
                     <div className={`relative flex flex-col justify-between rounded-2xl border p-6 transition ${
                       planData?.plan === 'starter'
                         ? 'border-indigo-600 bg-indigo-50/20 ring-2 ring-indigo-600'
@@ -1548,18 +1556,16 @@ export const FirmSettingsPage = () => {
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                            Pioneer 30 Cohort
+                            Coming Soon
                           </span>
-                          <span className="text-xs font-medium text-slate-500">Locked Rate for Life</span>
+                          <span className="text-xs font-medium text-slate-500">2 to 5 staff</span>
                         </div>
                         <div>
-                          <h4 className="text-xl font-bold text-slate-900">Pioneer 30 Annual Pass</h4>
+                          <h4 className="text-xl font-bold text-slate-900">Starter Tier</h4>
                           <p className="mt-1 text-sm text-slate-500">For boutique CA and CS firms with up to 5 team members.</p>
                         </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-extrabold text-slate-900">₹12,990</span>
-                          <span className="text-sm text-slate-500">/ year</span>
-                          <span className="ml-2 text-xs text-slate-400 line-through">₹17,990</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-bold text-slate-900">Pricing Coming Soon</span>
                         </div>
                         <ul className="space-y-2.5 text-sm text-slate-600 border-t border-slate-100 pt-4">
                           <li className="flex items-center gap-2">
@@ -1591,15 +1597,11 @@ export const FirmSettingsPage = () => {
                       <div className="mt-6 pt-4 border-t border-slate-100">
                         <Button
                           type="button"
-                          variant={planData?.plan === 'starter' ? 'outline' : 'primary'}
+                          variant="outline"
                           className="w-full"
-                          disabled={planData?.plan === 'starter' || planData?.plan === 'growth' || planData?.plan === 'professional' || upgradingPlan}
-                          loading={upgradingPlan}
-                          onClick={() => void handleUpgradePlan('starter')}
+                          disabled
                         >
-                          {planData?.plan === 'starter'
-                            ? 'Current Active Plan'
-                            : (planData?.plan === 'growth' || planData?.plan === 'professional' ? 'Included in Higher Plan' : 'Upgrade to Pioneer 30')}
+                          {planData?.plan === 'starter' ? 'Current Active Plan' : 'Pricing Coming Soon'}
                         </Button>
                       </div>
                     </div>
@@ -1612,8 +1614,8 @@ export const FirmSettingsPage = () => {
                     }`}>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">
-                            Top Choice for 6 to 12 Staff • 25% Practice Selection
+                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                            Coming Soon
                           </span>
                           <span className="text-xs font-medium text-slate-500">6 to 12 staff</span>
                         </div>
@@ -1621,15 +1623,13 @@ export const FirmSettingsPage = () => {
                           <h4 className="text-xl font-bold text-slate-900">Growth Tier</h4>
                           <p className="mt-1 text-sm text-slate-500">For mid-sized firms requiring department queues, trainee shields & multi-partner review.</p>
                         </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-extrabold text-slate-900">₹21,990</span>
-                          <span className="text-sm text-slate-500">/ year</span>
-                          <span className="ml-2 text-xs text-slate-500">(₹1,832 / month)</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-bold text-slate-900">Pricing Coming Soon</span>
                         </div>
                         <ul className="space-y-2.5 text-sm text-slate-600 border-t border-slate-100 pt-4">
                           <li className="flex items-center gap-2">
                             <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Up to 12 staff seats</strong> (+₹1,200/seat/yr add-on)</span>
+                            <span><strong>Up to 12 staff seats</strong> (add-on seats supported)</span>
                           </li>
                           <li className="flex items-center gap-2">
                             <span className="text-emerald-600 font-bold">✓</span>
@@ -1637,11 +1637,11 @@ export const FirmSettingsPage = () => {
                           </li>
                           <li className="flex items-center gap-2">
                             <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Pre-loaded blueprints:</strong> Form 3CD, MCA, and GST checklists</span>
+                            <span><strong>Unlimited dockets</strong></span>
                           </li>
                           <li className="flex items-center gap-2">
                             <span className="text-emerald-600 font-bold">✓</span>
-                            <span><strong>Trainee Laptop Shield:</strong> Blocks raw downloads to personal laptops</span>
+                            <span><strong>Pre-loaded blueprints:</strong> Form 3CD, MCA, and GST checklists</span>
                           </li>
                           <li className="flex items-center gap-2">
                             <span className="text-emerald-600 font-bold">✓</span>
@@ -1664,15 +1664,11 @@ export const FirmSettingsPage = () => {
                       <div className="mt-6 pt-4 border-t border-slate-100">
                         <Button
                           type="button"
-                          variant={planData?.plan === 'growth' ? 'outline' : 'primary'}
+                          variant="outline"
                           className="w-full"
-                          disabled={planData?.plan === 'growth' || planData?.plan === 'pro' || planData?.plan === 'professional' || upgradingPlan}
-                          loading={upgradingPlan}
-                          onClick={() => void handleUpgradePlan('growth')}
+                          disabled
                         >
-                          {planData?.plan === 'growth'
-                            ? 'Current Active Plan'
-                            : (planData?.plan === 'pro' || planData?.plan === 'professional' ? 'Included in Higher Plan' : 'Upgrade to Growth Tier')}
+                          {planData?.plan === 'growth' ? 'Current Active Plan' : 'Pricing Coming Soon'}
                         </Button>
                       </div>
                     </div>
@@ -1685,8 +1681,8 @@ export const FirmSettingsPage = () => {
                     }`}>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800">
-                            Corporate & Multi-Branch
+                          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                            Coming Soon
                           </span>
                           <span className="text-xs font-medium text-slate-500">15+ staff</span>
                         </div>
@@ -1694,10 +1690,8 @@ export const FirmSettingsPage = () => {
                           <h4 className="text-xl font-bold text-slate-900">Pro Tier</h4>
                           <p className="mt-1 text-sm text-slate-500">For multi-partner firms requiring DSC routing, custom roles, and priority support.</p>
                         </div>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-extrabold text-slate-900">₹59,990</span>
-                          <span className="text-sm text-slate-500">/ year</span>
-                          <span className="ml-2 text-xs text-slate-500">(₹4,999 / month)</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-bold text-slate-900">Pricing Coming Soon</span>
                         </div>
                         <ul className="space-y-2.5 text-sm text-slate-600 border-t border-slate-100 pt-4">
                           <li className="flex items-center gap-2">
@@ -1729,25 +1723,23 @@ export const FirmSettingsPage = () => {
                       <div className="mt-6 pt-4 border-t border-slate-100">
                         <Button
                           type="button"
-                          variant={planData?.plan === 'pro' || planData?.plan === 'professional' ? 'outline' : 'primary'}
+                          variant="outline"
                           className="w-full"
-                          disabled={planData?.plan === 'pro' || planData?.plan === 'professional' || upgradingPlan}
-                          loading={upgradingPlan}
-                          onClick={() => void handleUpgradePlan('pro')}
+                          disabled
                         >
                           {planData?.plan === 'pro' || planData?.plan === 'professional'
                             ? 'Current Active Plan'
-                            : 'Upgrade to Pro Tier'}
+                            : 'Pricing Coming Soon'}
                         </Button>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Anti-Jamku Stance Callout */}
+                {/* Operational Custody Callout */}
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-3">
                   <h4 className="text-base font-semibold text-slate-900">
-                    Why DocketsHQ does not offer ₹6,500 generic task tracker rates
+                    Why DocketsHQ is engineered beyond generic task trackers
                   </h4>
                   <p className="text-sm leading-6 text-slate-600">
                     Generic office tools store client data on shared servers without download controls or maker-checker audit logs. DocketsHQ gives you full custody and compliance:
@@ -1796,9 +1788,9 @@ export const FirmSettingsPage = () => {
 
                   {subscriptionOrders.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-slate-200 p-6 text-center">
-                      <p className="text-xs font-medium text-slate-600">No payment history yet</p>
+                      <p className="text-xs font-medium text-slate-600">Paid plans coming soon</p>
                       <p className="mt-1 text-[11px] text-slate-400">
-                        When you upgrade your plan, payment records and downloadable invoices will appear here.
+                        Your firm is enrolled under the 1-year Pilot Program. When paid billing opens post-pilot, invoices and receipts will appear here.
                       </p>
                     </div>
                   ) : (

@@ -1327,9 +1327,9 @@ export function WorkspaceSetupPage() {
 
             {/* Active Plan Banner */}
             <div className="max-w-md mx-auto rounded-md bg-slate-50 border border-slate-200 p-3 text-xs text-slate-700 font-mono text-center">
-              Active Plan: <span className="text-amber-800 font-bold">Free Pilot</span> (2 Seats • 5 Clients • ₹0 Forever)
+              Active Plan: <span className="text-amber-800 font-bold">1-Year Founding Pilot</span> (Unlimited Seats • Unlimited Clients • Full Access)
               <span className="block text-[11px] text-slate-500 mt-1">
-                Upgrade to Pioneer 30 or Growth Tier anytime with 1 click from Firm Settings.
+                Paid plans coming soon. Manage capacity anytime in Firm Settings.
               </span>
             </div>
 

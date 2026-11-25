@@ -4,12 +4,29 @@
  */
 
 const PIONEER_COHORT_CONFIG = {
-  maxFirms: 30,
+  maxFirms: 26,
+  pricingReviewThreshold: 20,
   freeDurationDays: 365,
   billingStatus: 'free_pioneer_1yr',
-  plan: 'enterprise',
-  maxUsers: 100,
-  tierName: 'Pioneer Cohort (1 Year Free - Unlimited)',
+  plan: 'pilot',
+  maxUsers: null, // Unlimited seats during 1-year pilot
+  tierName: 'Pilot Cohort (1 Year Free - Unlimited)',
+};
+
+/**
+ * Determine whether a firm is within an active 1-year Pioneer Pilot Cohort grant.
+ * Supports both 'pilot' and legacy 'enterprise' cohort records with free_pioneer_1yr billingStatus.
+ */
+const isFirmPioneerCohort = (firm) => {
+  if (!firm) return false;
+  const billingStatus = String(firm.billingStatus || '').trim();
+  const expiresAt = firm.subscriptionExpiresAt ? new Date(firm.subscriptionExpiresAt) : null;
+  const hasUnexpiredGrant = !expiresAt || (!Number.isNaN(expiresAt.getTime()) && expiresAt > new Date());
+  if (billingStatus === PIONEER_COHORT_CONFIG.billingStatus && hasUnexpiredGrant) {
+    return true;
+  }
+  const rawPlan = String(firm.plan || '').toLowerCase();
+  return Boolean(expiresAt && hasUnexpiredGrant && rawPlan === 'enterprise');
 };
 
 const SUBSCRIPTION_PLANS = {
@@ -21,7 +38,7 @@ const SUBSCRIPTION_PLANS = {
     maxClients: 50,
     pricing: {
       monthly: 1999,
-      annual: 12990, // Pioneer 30 locked rate
+      annual: 12990, // Founding locked rate
     },
     features: [
       'Up to 5 team seats',
@@ -86,4 +103,5 @@ module.exports = {
   PIONEER_COHORT_CONFIG,
   SUBSCRIPTION_PLANS,
   PAYMENT_GATEWAY_CONFIG,
+  isFirmPioneerCohort,
 };

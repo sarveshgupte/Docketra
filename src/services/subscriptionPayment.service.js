@@ -3,7 +3,7 @@ const Firm = require('../models/Firm.model');
 const User = require('../models/User.model');
 const Client = require('../models/Client.model');
 const SubscriptionOrder = require('../models/SubscriptionOrder.model');
-const { SUBSCRIPTION_PLANS, PAYMENT_GATEWAY_CONFIG } = require('../constants/subscriptionPlans');
+const { SUBSCRIPTION_PLANS, PAYMENT_GATEWAY_CONFIG, PIONEER_COHORT_CONFIG, isFirmPioneerCohort } = require('../constants/subscriptionPlans');
 const log = require('../utils/log');
 
 /**
@@ -47,13 +47,16 @@ const getCurrentSubscription = async ({ firmId }) => {
     SubscriptionOrder.find({ firmId }).sort({ createdAt: -1 }).limit(5).lean(),
   ]);
 
+  const isPioneer = isFirmPioneerCohort(firm);
   const currentPlanKey = String(firm.plan || 'pilot').toLowerCase();
   const currentPlanConfig = SUBSCRIPTION_PLANS[currentPlanKey] || {
     id: currentPlanKey,
-    name: currentPlanKey === 'pilot' ? 'Free Pilot' : currentPlanKey.toUpperCase(),
-    maxUsers: firm.maxUsers || 2,
-    maxClients: 5,
+    name: isPioneer ? PIONEER_COHORT_CONFIG.tierName : (currentPlanKey === 'pilot' ? 'Free Pilot' : currentPlanKey.toUpperCase()),
+    maxUsers: isPioneer ? null : (firm.maxUsers || 2),
+    maxClients: isPioneer ? null : 5,
   };
+
+  const resolvedMaxUsers = isPioneer ? null : (firm.maxUsers || currentPlanConfig.maxUsers || 2);
 
   return {
     firm: {
@@ -61,16 +64,17 @@ const getCurrentSubscription = async ({ firmId }) => {
       firmSlug: firm.firmSlug,
       name: firm.name,
       plan: currentPlanKey,
-      planName: currentPlanConfig.name,
-      maxUsers: firm.maxUsers || currentPlanConfig.maxUsers || 2,
-      maxClients: currentPlanConfig.maxClients || null,
+      planName: isPioneer ? PIONEER_COHORT_CONFIG.tierName : currentPlanConfig.name,
+      isPioneerCohort: isPioneer,
+      maxUsers: resolvedMaxUsers,
+      maxClients: isPioneer ? null : (currentPlanConfig.maxClients || null),
       subscriptionStatus: firm.subscriptionStatus || 'active',
       billingStatus: firm.billingStatus || 'active',
     },
     usage: {
       activeUsers: activeUsersCount,
       activeClients: activeClientsCount,
-      userCapacityPercent: firm.maxUsers ? Math.min(100, Math.round((activeUsersCount / firm.maxUsers) * 100)) : 0,
+      userCapacityPercent: resolvedMaxUsers ? Math.min(100, Math.round((activeUsersCount / resolvedMaxUsers) * 100)) : 0,
     },
     availablePlans: SUBSCRIPTION_PLANS,
     gateway: {

@@ -4,6 +4,7 @@ const ClientRepository = require('../repositories/ClientRepository');
 const AttachmentRepository = require('../repositories/AttachmentRepository');
 const { mapClientResponse } = require('../mappers/client.mapper');
 const { generateNextClientId } = require('../services/clientIdGenerator');
+const { isFirmPioneerCohort } = require('../constants/subscriptionPlans');
 const log = require('../utils/log');
 const { 
   logFactSheetCreated, 
@@ -950,10 +951,10 @@ const createClient = async (req, res) => {
       });
     }
 
-    // Check Sovereign Isolation Pilot client volume limit (5 active clients)
+    // Enforce 5-client sandbox limit only on post-cohort standard pilot firms (active 26-firm pilot cohort has no client cap)
     try {
-      const firmDoc = await Firm.findById(userFirmId).select('plan').lean();
-      if (firmDoc && String(firmDoc.plan || 'pilot').toLowerCase() === 'pilot') {
+      const firmDoc = await Firm.findById(userFirmId).select('plan billingStatus subscriptionExpiresAt maxUsers').lean();
+      if (firmDoc && String(firmDoc.plan || 'pilot').toLowerCase() === 'pilot' && !isFirmPioneerCohort(firmDoc)) {
         const activeCount = await ClientRepository.count(userFirmId, {
           isActive: true,
           isSystemClient: { $ne: true },
@@ -963,7 +964,7 @@ const createClient = async (req, res) => {
           return res.status(403).json({
             success: false,
             code: 'PILOT_CLIENT_LIMIT_REACHED',
-            message: 'You have reached the 5-client limit on the Proof of Sovereign Isolation Pilot. Upgrade to Pioneer 30 or Growth Tier for expanded client retainers and unlimited dockets with zero data migration.',
+            message: 'You have reached the 5-client limit on the Free Sandbox Pilot. Paid plans are coming soon — contact support to request a pilot capacity upgrade.',
           });
         }
       }

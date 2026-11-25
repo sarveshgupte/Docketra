@@ -597,8 +597,9 @@ const createFirmAndAdmin = async ({
     agreementType: 'PILOT_CLICKWRAP',
   } : null);
 
-  // First 30 founding firms in the Pioneer Cohort receive 1 year free with enterprise limits.
-  // Firms after the cohort receive the standard Free Pilot plan and existing limits.
+  // First 26 founding firms in the Pilot Cohort receive 1 year free with unlimited usage quotas under pilot.
+  // Log a pricing-decision milestone alert once we reach 20 onboarded firms.
+  // Firms after the 26-firm cohort receive the standard sandbox Pilot fallback until final pricing is launched.
   const firmNumeric = Number(String(firmId || '').replace('FIRM', '')) || 1;
   const isEarlyPioneer = firmNumeric <= PIONEER_COHORT_CONFIG.maxFirms;
   const oneYearFromNow = new Date(Date.now() + PIONEER_COHORT_CONFIG.freeDurationDays * 24 * 60 * 60 * 1000);
@@ -608,6 +609,15 @@ const createFirmAndAdmin = async ({
   const subscriptionStatus = isEarlyPioneer ? 'active' : null;
   const billingStatus = isEarlyPioneer ? PIONEER_COHORT_CONFIG.billingStatus : null;
   const subscriptionExpiresAt = isEarlyPioneer ? oneYearFromNow : null;
+
+  if (firmNumeric >= PIONEER_COHORT_CONFIG.pricingReviewThreshold && firmNumeric <= PIONEER_COHORT_CONFIG.maxFirms) {
+    log.warn('[PILOT_MILESTONE_20_FIRMS] Pilot cohort reached pricing review threshold', {
+      firmId,
+      firmNumeric,
+      reviewThreshold: PIONEER_COHORT_CONFIG.pricingReviewThreshold,
+      maxFirms: PIONEER_COHORT_CONFIG.maxFirms,
+    });
+  }
 
   for (let attempt = 0; attempt < MAX_SLUG_COLLISION_RETRIES; attempt += 1) {
     firmSlug = await generateUniqueSlug(normalizedFirmName, session, attempt);

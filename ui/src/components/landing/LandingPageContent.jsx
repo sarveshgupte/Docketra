@@ -381,8 +381,8 @@ const TrustMetricsStrip = () => (
           <p className="text-xs text-slate-400 font-sans">We never store your client files</p>
         </div>
         <div className="space-y-0.5 border-l border-slate-800/80 pl-4 sm:pl-0 sm:border-l-0 border-t border-slate-800/80 pt-4 sm:pt-0 sm:border-t-0">
-          <p className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">₹0 Forever</p>
-          <p className="text-xs text-slate-400 font-sans">Free Pilot for 5 active clients</p>
+          <p className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">1 Year Free</p>
+          <p className="text-xs text-slate-400 font-sans">Unlimited Pilot (First 26 Firms)</p>
         </div>
       </div>
     </Container>
@@ -725,10 +725,10 @@ const FinalCtaSection = () => (
 
       <div className="relative mx-auto max-w-3xl space-y-5">
         <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-          Try DocketsHQ free with 5 clients.
+          Try DocketsHQ free for 1 full year.
         </h2>
         <p className="mx-auto max-w-xl text-base sm:text-lg text-slate-300 leading-relaxed">
-          See every deadline for your firm on one screen — set up in minutes with zero credit card required.
+          See every deadline for your firm on one screen — unrestricted pilot access for our first 26 founding firms, zero card required.
         </p>
 
         <div className="pt-6 flex flex-wrap items-center justify-center gap-3.5">
@@ -752,7 +752,7 @@ const FinalCtaSection = () => (
             to="/pricing"
             className="inline-flex h-12 items-center justify-center rounded-full border border-transparent px-5 text-xs font-mono text-slate-400 transition-colors duration-150 hover:text-amber-400"
           >
-            <span>View all plans &amp; pricing →</span>
+            <span>View tier limits &amp; features →</span>
           </Link>
         </div>
 

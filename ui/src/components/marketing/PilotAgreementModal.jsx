@@ -124,7 +124,7 @@ export const PilotAgreementModal = ({
               <div>
                 <h3 className="text-base font-bold text-slate-950">1. Pilot Cohort &amp; 1-Year Free Evaluation License</h3>
                 <p className="mt-2 text-slate-600">
-                  Subject to your adherence to these terms, the Operator grants your firm a limited, non-exclusive, revocable, non-transferable, and royalty-free evaluation license to access and use the DocketsHQ platform for a duration of <strong>one (1) full year (12 consecutive months)</strong> for the first 30 founding firms starting on the date of workspace verification (&quot;Pilot Period&quot;).
+                  Subject to your adherence to these terms, the Operator grants your firm a limited, non-exclusive, revocable, non-transferable, and royalty-free evaluation license to access and use the DocketsHQ platform for a duration of <strong>one (1) full year (12 consecutive months)</strong> for the first 26 founding firms starting on the date of workspace verification (&quot;Pilot Period&quot;).
                 </p>
                 <ul className="mt-2 list-disc pl-5 space-y-1 text-slate-600">
                   <li><strong>Zero Cost:</strong> No subscription fees, platform licensing fees, or credit card commitments are required during the Pilot Period.</li>

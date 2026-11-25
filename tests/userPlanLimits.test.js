@@ -76,6 +76,39 @@ async function run() {
     }
     assert(shortCircuitError instanceof PlanLimitExceededError, 'Expected short-circuit error when incrementBy > threshold');
 
+    // Active 26-firm 1-year Pilot Cohort firms allow unlimited users and admins
+    const futureExpiry = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000);
+    Firm.findById = async () => ({
+      _id: 'firm-cohort',
+      plan: 'pilot',
+      maxUsers: null,
+      billingStatus: 'free_pioneer_1yr',
+      subscriptionExpiresAt: futureExpiry,
+    });
+    User.countDocuments = async () => 250;
+    User.find = mockFind(User.countDocuments);
+    await assertFirmPlanCapacity({ firmId: 'firm-cohort', incrementBy: 50, role: 'Employee' });
+    await assertFirmPlanCapacity({ firmId: 'firm-cohort', incrementBy: 5, role: 'Admin' });
+
+    // Expired cohort grant falls back to bounded capacity when maxUsers is present
+    const pastExpiry = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    Firm.findById = async () => ({
+      _id: 'firm-expired',
+      plan: 'pilot',
+      maxUsers: 2,
+      billingStatus: 'free_pioneer_1yr',
+      subscriptionExpiresAt: pastExpiry,
+    });
+    User.countDocuments = async () => 2;
+    User.find = mockFind(User.countDocuments);
+    let expiredErr = null;
+    try {
+      await assertFirmPlanCapacity({ firmId: 'firm-expired', role: 'Employee' });
+    } catch (error) {
+      expiredErr = error;
+    }
+    assert(expiredErr instanceof PlanLimitExceededError, 'Expected expired pioneer grant with bounded maxUsers to enforce limit');
+
     console.log('User plan limits test passed.');
   } catch (error) {
     console.error('User plan limits test failed:', error);

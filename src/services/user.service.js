@@ -1,6 +1,7 @@
 const Firm = require('../models/Firm.model');
 const Plan = require('../models/Plan.model');
 const User = require('../models/User.model');
+const { isFirmPioneerCohort } = require('../constants/subscriptionPlans');
 const log = require('../utils/log');
 
 class PlanLimitExceededError extends Error {
@@ -67,7 +68,15 @@ const assertFirmPlanCapacity = async ({ firmId, session, incrementBy = 1, role =
   }
 
   const normalizedPlan = String(firm.plan || 'starter').toLowerCase();
-  const firmMaxUsers = Number.isFinite(Number(firm.maxUsers)) ? Number(firm.maxUsers) : null;
+
+  // Active 26-firm 1-year Pilot Cohort firms have unlimited seats & usage quotas.
+  if (isFirmPioneerCohort(firm)) {
+    return;
+  }
+
+  const firmMaxUsers = firm.maxUsers !== null && firm.maxUsers !== undefined && Number.isFinite(Number(firm.maxUsers))
+    ? Number(firm.maxUsers)
+    : null;
 
   // 1. Resolve overall capacity threshold (firmMaxUsers or plan.maxUsers)
   let threshold = null;

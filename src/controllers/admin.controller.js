@@ -37,7 +37,7 @@ const { resolveFirmStorageState } = require('../services/storage/resolveFirmStor
 const { EVENTS: STRICT_STORAGE_EVENTS, logStrictStorageEvent } = require('../services/strictStorageAudit.service');
 const { sendOtp, verifyOtp } = require('../services/otp.service');
 const { collectFirmWeeklyAuditLogs, generateAuditCsv, sendWeeklyAuditDigestEmail } = require('../services/weeklyAuditDigest.service');
-const { PIONEER_COHORT_CONFIG } = require('../constants/subscriptionPlans');
+const { PIONEER_COHORT_CONFIG, isFirmPioneerCohort } = require('../constants/subscriptionPlans');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -2187,29 +2187,53 @@ const getFirmPlan = async (req, res) => {
     const traineeShieldActive = Boolean(firm.settings?.firm?.restrictTraineeDownloads);
 
     const rawPlan = String(firm.plan || 'pilot').toLowerCase();
-    const isEarlyPioneer = firm.billingStatus === PIONEER_COHORT_CONFIG.billingStatus
-      || (firm.subscriptionExpiresAt && new Date(firm.subscriptionExpiresAt) > new Date() && rawPlan === PIONEER_COHORT_CONFIG.plan);
+    const isEarlyPioneer = isFirmPioneerCohort(firm);
     const isPilot = rawPlan === 'pilot' && !isEarlyPioneer;
-    const currentPlan = isEarlyPioneer ? PIONEER_COHORT_CONFIG.plan : (isPilot ? 'pilot' : (rawPlan === 'growth' ? 'growth' : (rawPlan === 'starter' ? 'starter' : rawPlan)));
+    const currentPlan = isEarlyPioneer ? PIONEER_COHORT_CONFIG.plan : (isPilot ? 'pilot' : rawPlan);
+
+    let maxSeats = null;
+    let maxClients = null;
+    if (isEarlyPioneer) {
+      maxSeats = PIONEER_COHORT_CONFIG.maxUsers; // null = Unlimited
+      maxClients = null;
+    } else if (currentPlan === 'growth') {
+      maxSeats = firm.maxUsers ?? 12;
+      maxClients = 150;
+    } else if (currentPlan === 'starter') {
+      maxSeats = firm.maxUsers ?? 5;
+      maxClients = 50;
+    } else if (currentPlan === 'pro' || currentPlan === 'professional' || currentPlan === 'enterprise') {
+      maxSeats = firm.maxUsers ?? 25;
+      maxClients = null;
+    } else {
+      maxSeats = firm.maxUsers ?? 2;
+      maxClients = 5;
+    }
 
     const limits = {
-      maxSeats: isEarlyPioneer || currentPlan === PIONEER_COHORT_CONFIG.plan
-        ? (firm.maxUsers || PIONEER_COHORT_CONFIG.maxUsers)
-        : (firm.maxUsers || (currentPlan === 'growth' ? 12 : (currentPlan === 'starter' ? 5 : 2))),
-      maxClients: isEarlyPioneer || currentPlan === PIONEER_COHORT_CONFIG.plan ? null : (currentPlan === 'growth' ? 150 : (currentPlan === 'starter' ? 50 : 5)),
+      maxSeats,
+      maxClients,
       maxDocketsMonthly: isPilot ? 15 : null,
     };
+
+    const resolvedTierName = isEarlyPioneer
+      ? PIONEER_COHORT_CONFIG.tierName
+      : (isPilot
+        ? 'Free Sandbox Pilot'
+        : (currentPlan === 'growth'
+          ? 'Growth Tier'
+          : (currentPlan === 'starter'
+            ? 'Starter Tier'
+            : (currentPlan === 'pro' || currentPlan === 'professional' ? 'Pro Tier' : currentPlan.toUpperCase()))));
 
     return res.json({
       success: true,
       data: {
         plan: currentPlan,
-        tierName: isEarlyPioneer
-          ? PIONEER_COHORT_CONFIG.tierName
-          : (isPilot
-            ? 'Proof of Sovereign Isolation Pilot'
-            : (currentPlan === 'growth' ? 'Growth Tier' : (currentPlan === 'starter' ? 'Pioneer 30 / Starter' : currentPlan.toUpperCase()))),
-        isPilot,
+        tierName: resolvedTierName,
+        isPilot: isPilot || isEarlyPioneer,
+        isPioneerCohort: isEarlyPioneer,
+        subscriptionExpiresAt: firm.subscriptionExpiresAt || null,
         limits,
         currentUsage: {
           usersCount,
@@ -2225,25 +2249,39 @@ const getFirmPlan = async (req, res) => {
         upgradeOptions: [
           {
             tier: 'starter',
-            name: 'Pioneer 30 Annual Pass',
-            badge: 'Pioneer 30 Cohort',
-            annualPrice: 12990,
-            monthlyPrice: 1999,
+            name: 'Starter Tier',
+            badge: 'Coming Soon',
+            comingSoon: true,
+            annualPrice: null,
+            monthlyPrice: null,
             maxSeats: 5,
             maxClients: 50,
             dockets: 'Unlimited',
-            description: 'Up to 5 team seats, 50 clients, and unlimited dockets with 100% Google Drive BYOS custody.',
+            description: 'Up to 5 team seats, 50 active clients, and unlimited dockets with 100% Google Drive BYOS custody.',
           },
           {
             tier: 'growth',
             name: 'Growth Tier',
-            badge: 'Expanding Practices (6 to 12 staff)',
-            annualPrice: 21990,
-            monthlyPrice: 2499,
+            badge: 'Coming Soon',
+            comingSoon: true,
+            annualPrice: null,
+            monthlyPrice: null,
             maxSeats: 12,
             maxClients: 150,
             dockets: 'Unlimited',
-            description: 'Up to 12 team seats, 150 clients, unlimited dockets, shared department queues, and +₹1,200/seat/yr add-on.',
+            description: 'Up to 12 team seats, 150 active clients, unlimited dockets, shared department queues, and SQC-1 workflows.',
+          },
+          {
+            tier: 'pro',
+            name: 'Pro Tier',
+            badge: 'Coming Soon',
+            comingSoon: true,
+            annualPrice: null,
+            monthlyPrice: null,
+            maxSeats: 25,
+            maxClients: null,
+            dockets: 'Unlimited',
+            description: 'Up to 25 team seats, unlimited active clients and dockets, custom roles, and multi-partner DSC routing.',
           },
         ],
       },
@@ -2300,7 +2338,7 @@ const upgradeFirmPlan = async (req, res) => {
 
     return res.json({
       success: true,
-      message: `Successfully upgraded workspace to ${requestedPlan === 'growth' ? 'Growth Tier' : 'Pioneer 30 / Starter'}. All Google Drive files, client dockets, and configurations remain 100% in your custody.`,
+      message: `Successfully upgraded workspace to ${requestedPlan === 'growth' ? 'Growth Tier' : (requestedPlan === 'starter' ? 'Starter Tier' : 'Pro Tier')}. All Google Drive files, client dockets, and configurations remain 100% in your custody.`,
       data: {
         plan: firm.plan,
         maxUsers: firm.maxUsers,

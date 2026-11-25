@@ -27,6 +27,7 @@ const onboardingAnalyticsService = require('../services/onboardingAnalytics.serv
 const { getSupportDiagnosticsSnapshot } = require('../services/superadminDiagnostics.service');
 const { getFirmHealthSnapshot } = require('../services/superadminFirmHealth.service');
 const { buildPilotReadinessSnapshot } = require('../services/superadminPilotReadiness.service');
+const { PIONEER_COHORT_CONFIG, isFirmPioneerCohort } = require('../constants/subscriptionPlans');
 const {
   getFeatureFlagConfigByKey,
   getFeatureFlagsSnapshot,
@@ -176,6 +177,9 @@ const getPlatformStats = async (req, res) => {
       User.countDocuments({ ...firmScope, role: { $ne: 'SuperAdmin' } })
     ]);
     
+    const reviewThreshold = PIONEER_COHORT_CONFIG.pricingReviewThreshold;
+    const maxCohortFirms = PIONEER_COHORT_CONFIG.maxFirms;
+
     res.json({
       success: true,
       data: {
@@ -184,6 +188,14 @@ const getPlatformStats = async (req, res) => {
         inactiveFirms: totalFirms - activeFirms,
         totalClients,
         totalUsers,
+        pilotCohort: {
+          onboardedFirms: totalFirms,
+          reviewThreshold,
+          maxFirms: maxCohortFirms,
+          remainingSlots: Math.max(0, maxCohortFirms - totalFirms),
+          pricingReviewTriggered: totalFirms >= reviewThreshold,
+          cohortFull: totalFirms >= maxCohortFirms,
+        },
       },
     });
   } catch (error) {
@@ -2009,13 +2021,17 @@ const activateFirm = async (req, res, next) => {
 const PLAN_VALUES = ['pilot', 'starter', 'growth', 'professional', 'enterprise'];
 
 const buildPlanCapacityMetadata = (firm, userCount = 0) => {
-  const maxUsers = Number.isFinite(Number(firm?.maxUsers)) ? Number(firm.maxUsers) : 0;
+  const isUnlimited = isFirmPioneerCohort(firm) || firm?.maxUsers === null;
+  const hasFiniteMax = !isUnlimited && firm?.maxUsers !== undefined && Number.isFinite(Number(firm.maxUsers)) && Number(firm.maxUsers) > 0;
+  const maxUsers = hasFiniteMax ? Number(firm.maxUsers) : (isUnlimited ? null : 0);
   const safeUserCount = Number.isFinite(Number(userCount)) ? Number(userCount) : 0;
-  const capacityUsedPercent = maxUsers > 0 ? Math.min(999, Math.round((safeUserCount / maxUsers) * 100)) : 0;
-  const capacityStatus = safeUserCount > maxUsers ? 'over_capacity' : (capacityUsedPercent >= 85 ? 'near_capacity' : 'within_capacity');
+  const capacityUsedPercent = maxUsers ? Math.min(999, Math.round((safeUserCount / maxUsers) * 100)) : 0;
+  const capacityStatus = maxUsers
+    ? (safeUserCount > maxUsers ? 'over_capacity' : (capacityUsedPercent >= 85 ? 'near_capacity' : 'within_capacity'))
+    : 'unlimited';
   return {
     firmObjectId: firm?._id, firmId: firm?.firmId, firmSlug: firm?.firmSlug, name: firm?.name, status: firm?.status,
-    plan: String(firm?.plan || 'pilot').toLowerCase(), maxUsers, userCount: safeUserCount, capacityUsedPercent, capacityStatus,
+    plan: String(firm?.plan || 'pilot').toLowerCase(), maxUsers, isUnlimited, userCount: safeUserCount, capacityUsedPercent, capacityStatus,
     subscriptionStatus: firm?.subscriptionStatus || null, billingStatus: firm?.billingStatus || null,
     href: `/app/superadmin/firms/${firm?._id}`,
   };
@@ -2033,18 +2049,18 @@ const getPilotReadiness = async (req, res) => {
 
 const getPlansCapacity = async (req, res) => {
   try {
-    const firms = await Firm.find().select('firmId firmSlug name status plan maxUsers subscriptionStatus billingStatus').sort({ createdAt: -1 }).lean();
+    const firms = await Firm.find().select('firmId firmSlug name status plan maxUsers subscriptionStatus billingStatus subscriptionExpiresAt').sort({ createdAt: -1 }).lean();
     const firmIds = firms.map((f) => f._id);
     const userCounts = await User.aggregate([{ $match: { firmId: { $in: firmIds }, status: { $ne: 'deleted' } } }, { $group: { _id: '$firmId', count: { $sum: 1 } } }]);
     const userCountMap = new Map(userCounts.map((entry) => [String(entry._id), Number(entry.count) || 0]));
     const rows = firms.map((firm) => buildPlanCapacityMetadata(firm, userCountMap.get(String(firm._id)) || 0));
     const totals = rows.reduce((acc, row) => {
       acc.firms += 1;
-      if (PLAN_VALUES.includes(row.plan)) acc[row.plan] += 1;
+      if (PLAN_VALUES.includes(row.plan)) acc[row.plan] = (acc[row.plan] || 0) + 1;
       if (row.capacityStatus === 'over_capacity') acc.overCapacity += 1;
       if (row.capacityStatus === 'near_capacity') acc.nearCapacity += 1;
       return acc;
-    }, { firms: 0, pilot: 0, starter: 0, professional: 0, enterprise: 0, overCapacity: 0, nearCapacity: 0 });
+    }, { firms: 0, pilot: 0, starter: 0, growth: 0, professional: 0, enterprise: 0, overCapacity: 0, nearCapacity: 0 });
 
     return res.json({ success: true, data: { totals, firms: rows } });
   } catch (error) {

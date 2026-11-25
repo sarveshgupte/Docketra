@@ -206,6 +206,15 @@ export const SuperadminDashboard = () => {
   const activeFirms = safeCount(stats?.activeFirms);
   const inactiveFirms = safeCount(stats?.inactiveFirms);
   const totalUsers = safeCount(stats?.totalUsers);
+
+  const pilotCohort = stats?.pilotCohort || {
+    onboardedFirms: totalFirms,
+    reviewThreshold: 20,
+    maxFirms: 26,
+    remainingSlots: Math.max(0, 26 - totalFirms),
+    pricingReviewTriggered: totalFirms >= 20,
+    cohortFull: totalFirms >= 26,
+  };
   
   const averageUsersPerFirm = useMemo(() => {
     return totalFirms > 0 ? (totalUsers / totalFirms).toFixed(1) : '0';
@@ -431,6 +440,65 @@ export const SuperadminDashboard = () => {
           {/* ==================== TAB A: ECOSYSTEM VITALS ==================== */}
           {activeTab === 'vitals' && (
             <div className="space-y-6">
+
+              {/* 26-FIRM PILOT COHORT TRACKER & 20-FIRM MILESTONE TRIGGER */}
+              <div
+                role="status"
+                className={`rounded-xl border p-4 shadow-xs transition-colors ${
+                  pilotCohort.pricingReviewTriggered
+                    ? 'border-amber-300 bg-amber-50/70'
+                    : 'border-slate-200 bg-white'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
+                          pilotCohort.cohortFull
+                            ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                            : pilotCohort.pricingReviewTriggered
+                              ? 'bg-amber-200 text-amber-950 border border-amber-300'
+                              : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        }`}
+                      >
+                        {pilotCohort.cohortFull
+                          ? 'Cohort Full (26 / 26)'
+                          : pilotCohort.pricingReviewTriggered
+                            ? `Pricing Trigger Reached (${pilotCohort.onboardedFirms} / ${pilotCohort.maxFirms})`
+                            : `1-Year Pilot Cohort (${pilotCohort.onboardedFirms} / ${pilotCohort.maxFirms})`}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-800">
+                        {pilotCohort.pricingReviewTriggered
+                          ? '20-firm milestone reached — time to decide final pricing & post-cohort plan.'
+                          : `${pilotCohort.remainingSlots} unlimited pilot slots remaining (20-firm review trigger armed).`}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      First {pilotCohort.maxFirms} founding firms get 1 full year free with unlimited seats, clients, and dockets under Pilot. Milestone review triggers at {pilotCohort.reviewThreshold} firms.
+                    </p>
+                  </div>
+
+                  <div className="sm:w-56 shrink-0">
+                    <div className="flex items-center justify-between text-[11px] font-mono font-semibold text-slate-700 mb-1">
+                      <span>{pilotCohort.onboardedFirms} onboarded</span>
+                      <span>Target: {pilotCohort.maxFirms}</span>
+                    </div>
+                    <div className="relative h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          pilotCohort.cohortFull
+                            ? 'bg-rose-600'
+                            : pilotCohort.pricingReviewTriggered
+                              ? 'bg-amber-500'
+                              : 'bg-slate-900'
+                        }`}
+                        style={{ width: `${Math.min(100, (pilotCohort.onboardedFirms / pilotCohort.maxFirms) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               {/* PLATFORM VITALS GRID */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -1243,7 +1311,7 @@ export const SuperadminDashboard = () => {
                   <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
                     <span className="font-bold text-slate-900 block mb-1">2. Pilot Evaluation License</span>
                     <p className="text-slate-600 text-xs leading-relaxed">
-                      1-year revocable evaluation license for the first 30 founding firms for internal operations, client tracking, and statutory compliance.
+                      1-year revocable evaluation license for the first 26 founding firms for internal operations, client tracking, and statutory compliance.
                     </p>
                   </div>
                   <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">

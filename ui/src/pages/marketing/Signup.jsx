@@ -391,7 +391,7 @@ export default function Signup() {
       <SignupShell mode="success">
           <SeoHead
             title="Create Workspace | DocketsHQ"
-            description="Create your firm's DocketsHQ workspace in 2 minutes. Free 1-year pilot for 30 founding firms, no credit card required."
+            description="Create your firm's DocketsHQ workspace in 2 minutes. Free 1-year pilot for 26 founding firms, no credit card required."
             canonicalPath="/signup"
           />
           <section className="hidden lg:block" aria-label="Workspace signup success">
@@ -481,7 +481,7 @@ export default function Signup() {
     <SignupShell>
         <SeoHead
           title="Create Workspace | DocketsHQ"
-          description="Create your firm's DocketsHQ workspace in 2 minutes. Free 1-year pilot for 30 founding firms, no credit card required."
+          description="Create your firm's DocketsHQ workspace in 2 minutes. Free 1-year pilot for 26 founding firms, no credit card required."
           canonicalPath="/signup"
         />
         <section className="hidden lg:block" aria-label="Workspace signup context">

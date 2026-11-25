@@ -33,9 +33,9 @@ const COMPARISON_ROWS = [
   },
   {
     feature: 'Mandatory Setup & Migration Fees',
-    docketra: '₹0 (Free assisted migration)',
-    jamku: '₹3,000 to ₹15,000 Setup Surcharge',
-    excel: '₹0 (Manual typing)',
+    docketra: 'Zero setup fees (Free assisted migration)',
+    jamku: 'Paid setup & migration surcharge',
+    excel: 'Manual spreadsheet setup',
   },
   {
     feature: 'Client Document Intake',
@@ -75,8 +75,8 @@ const FAQS = [
     answer: 'No. When you connect Google Drive, DocketsHQ uses Google’s restricted drive.file permission. It only accesses the specific /DocketsHQ/ folder it created. We have zero access to read, search, or index any of your pre-existing client files, PAN copies, or private archives.',
   },
   {
-    question: 'What happens to our client records if we cancel our subscription?',
-    answer: '100% of your client files and organized folders stay inside your firm’s own Google Drive. If you ever cancel, you keep everything. No lock-in, no export delays, and no charges.',
+    question: 'What happens to our client records if we choose not to continue after the pilot?',
+    answer: '100% of your client files and organized folders stay inside your firm’s own Google Drive. If you ever discontinue, you keep everything. No lock-in, no export delays, and no charges.',
   },
   {
     question: 'Our clients refuse to open web links and only dump files in WhatsApp. How does DocketsHQ handle this?',
@@ -87,20 +87,16 @@ const FAQS = [
     answer: 'Zero days. DocketsHQ comes with ready-made statutory checklists for MCA filings (MGT-7/AOC-4), DIR-3 KYC, GST returns, and Tax Audit Form 3CD. Fresh article assistants can follow the steps from Day 1, and partners review and sign off before final submission.',
   },
   {
-    question: 'How does the Pioneer 30 Launch Cohort rate work?',
-    answer: 'The Pioneer 30 Cohort is strictly limited to the first 30 verified Indian CA, CS, and legal practices: you get 1 full year of unrestricted free access during the launch pilot, followed by a ₹12,990 / year flat Starter Pass rate locked for life.',
+    question: 'How does the 26-Firm Founding Pilot work?',
+    answer: 'DocketsHQ is currently onboarding the first 26 founding Indian CA, CS, and legal practices into a 1-year free pilot. Participating firms receive full access with unlimited team seats, unlimited active clients, and unlimited dockets across active workflows for 12 consecutive months at zero cost.',
   },
   {
-    question: 'Our firm has 6 to 12 staff. Which plan is right for us, and can we add extra seats?',
-    answer: 'Our Growth Tier (₹21,990 / year flat or ₹2,499 / month) is the top choice for expanding practices with 6 to 12 team members. It includes 12 seats, 150 active clients, department queues (ROC, GST, Direct Tax), and Trainee Laptop Shield. Need more seats? You can add individual seats at just ₹1,200 / seat / year without an enterprise contract.',
+    question: 'When will paid pricing for Starter, Growth, and Pro tiers be announced?',
+    answer: 'Paid tier pricing is coming soon and will be finalized once our founding pilot reaches the 20-firm operational milestone. All tier limits (team seats, client allowances, and features) are published here transparently, and founding pilot firms keep their full 1-year free evaluation period.',
   },
   {
-    question: 'Why is DocketsHQ priced at ₹12,990/yr when basic tools like Jamku advertise ₹6,500?',
-    answer: 'Jamku stores files on shared third-party servers with unrestricted junior downloads. DocketsHQ keeps 100% of your client documents inside your own Google Drive, blocks junior trainees from downloading client PAN/ITR files to personal laptops, and provides SQC-1 maker-checker audit sign-offs for peer review.',
-  },
-  {
-    question: 'What is the Free Pilot, and how do we upgrade?',
-    answer: 'The Free Pilot is our official Proof of Sovereign Isolation sandbox for 2 seats and 5 clients (₹0 forever). You can test live filings, check that DocketsHQ cannot read your private Drive files, and verify that trainee download blocks work. When your firm needs more seats, upgrade to Pioneer 30 or Growth Tier in one click.',
+    question: 'What are the planned team size and client limits for each post-pilot tier?',
+    answer: 'Starter Tier is structured for boutique practices (up to 5 team seats, 50 active clients, unlimited dockets). Growth Tier supports mid-sized practices (up to 12 team seats with add-on seat flexibility, 150 active clients, unlimited dockets). Pro Tier supports corporate and multi-branch firms (up to 25 team seats, unlimited clients and dockets).',
   },
   {
     question: 'What if an assistant or clerk accidentally deletes or moves a folder inside Google Drive?',
@@ -109,7 +105,6 @@ const FAQS = [
 ];
 
 export const PricingPage = () => {
-  const [isAnnual, setIsAnnual] = useState(true);
   const [openFaq, setOpenFaq] = useState(null);
 
   const toggleFaq = (index) => {
@@ -120,91 +115,67 @@ export const PricingPage = () => {
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25">
       <SeoHead
         canonicalPath="/pricing"
-        title="Transparent Practice Operations Pricing | DocketsHQ"
-        description="Predictable, flat-rate pricing for Indian CA, CS, and compliance firms. Sovereign Google Drive BYOS, maker-checker QC, zero setup fees, and transparent yearly plans."
+        title="Plans, Capacity & Pilot Access | DocketsHQ"
+        description="Transparent plan capacities and feature tiers for Indian CA, CS, and compliance firms. Onboard into our 26-firm 1-year unlimited pilot — commercial pricing coming soon."
       />
 
       {/* Header Section */}
       <section className="relative overflow-hidden bg-slate-50/60 pt-20 pb-16 sm:pt-24 sm:pb-20 border-b border-slate-200">
         <Container size="7xl" className="text-center">
           <motion.div {...REVEAL} className="max-w-3xl mx-auto space-y-4">
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl [text-wrap:balance] mx-auto w-full">
-              Transparent pricing for Indian professional practices.
-            </h1>
-            <p className="text-base sm:text-lg text-slate-600 max-w-xl mx-auto leading-relaxed [text-wrap:pretty]">
-              Flat-rate yearly plans with private Google Drive custody.
-            </p>
-
-            {/* Annual / Monthly Toggle */}
-            <div className="pt-6 flex items-center justify-center gap-3">
-              <span className={`text-xs font-semibold ${!isAnnual ? 'text-slate-950' : 'text-slate-500'}`}>
-                Monthly Billing
-              </span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isAnnual}
-                aria-label="Toggle annual billing"
-                onClick={() => setIsAnnual(!isAnnual)}
-                className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-sm border-2 border-transparent bg-slate-900 transition-colors duration-200 ease-in-out focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-xs bg-white shadow-xs ring-0 transition duration-200 ease-in-out motion-reduce:transition-none ${
-                    isAnnual ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-semibold ${isAnnual ? 'text-slate-950' : 'text-slate-500'}`}>
-                  Annual Billing
-                </span>
-                <span className="rounded-xs bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                  Save ₹5,000 yearly
-                </span>
-              </div>
+            <div className="inline-flex items-center gap-2 rounded-xs border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-900">
+              <span>26-Firm Founding Pilot Open</span>
+              <span className="text-amber-400">•</span>
+              <span>1 Year Full Access (Unlimited Usage)</span>
             </div>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl [text-wrap:balance] mx-auto w-full">
+              Transparent plans for Indian professional practices.
+            </h1>
+            <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed [text-wrap:pretty]">
+              We are currently onboarding 26 founding firms with full unlimited access for 1 full year under our pilot. Commercial tier pricing is coming soon.
+            </p>
           </motion.div>
         </Container>
       </section>
 
-      {/* Pricing Cards Grid */}
+      {/* Plans & Capacity Grid */}
       <section className="py-16 sm:py-24 bg-white border-b border-slate-200">
         <Container size="7xl">
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 items-stretch">
-            {/* Free Pilot */}
+            {/* Active 26-Firm Founding Pilot */}
             <motion.div
               {...REVEAL}
-              className="flex flex-col rounded-sm border border-slate-200 bg-white p-6 sm:p-7 hover:border-slate-300 transition-colors shadow-xs"
+              className="relative flex flex-col rounded-sm border-2 border-slate-950 bg-white p-6 sm:p-7 shadow-md"
             >
-              <div className="border-b border-slate-100 pb-6">
-                <span className="text-xs font-semibold text-slate-500 block">
-                  Free evaluation, no payment needed
+              <div className="border-b border-slate-100 pb-6 pt-1">
+                <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-xs border border-emerald-200">
+                  Open Now • First 26 Firms
                 </span>
-                <h2 className="mt-2 text-xl font-bold text-slate-950">Free Pilot</h2>
+                <h2 className="mt-3 text-xl font-bold text-slate-950">Founding Pilot</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  Test Google Drive safety and junior laptop download blocks on 2 seats and 5 clients. ₹0 forever. Upgrade in one click anytime.
+                  1-year free evaluation cohort for Indian CA, CS, and legal firms. Full access across active pilot workflows with zero usage caps.
                 </p>
-                <div className="mt-6 flex items-baseline gap-1 text-slate-950">
-                  <span className="text-4xl font-extrabold tracking-tight">₹0</span>
-                  <span className="text-xs font-medium text-slate-500">/ forever</span>
+                <div className="mt-6 flex items-baseline gap-1.5 text-slate-950">
+                  <span className="text-3xl font-extrabold tracking-tight text-slate-950">1 Year Free</span>
+                  <span className="text-xs font-medium text-slate-500">/ under pilot</span>
                 </div>
-                <div className="mt-2 text-xs text-slate-500">
-                  Up to 2 team seats / 5 clients &amp; 15 dockets
+                <div className="mt-2 text-xs text-slate-700 font-semibold">
+                  Unlimited team seats / Unlimited clients / Unlimited dockets
                 </div>
               </div>
 
               <div className="flex-1 py-6 space-y-3">
                 <span className="text-xs font-semibold text-slate-700 block">
-                  What is included:
+                  What is included for 1 year:
                 </span>
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
                     <CheckIcon />
-                    <span>Connect your firm Google Drive (restricted scope)</span>
+                    <span>No seat, client, or docket limits during pilot</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckIcon />
-                    <span>In-app Google Drive safety check</span>
+                    <span>Connect your firm Google Drive (restricted scope)</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckIcon />
@@ -224,39 +195,31 @@ export const PricingPage = () => {
               <div className="pt-4 border-t border-slate-100">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full h-11 items-center justify-center rounded-xs border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
+                  className="inline-flex w-full h-11 items-center justify-center rounded-xs bg-slate-950 px-4 text-xs font-semibold text-amber-300 shadow-sm hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
                 >
-                  Start Free Pilot (₹0)
+                  Join 1-Year Free Pilot (26 Firms)
                 </Link>
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  No card required / Instant Google Drive setup
+                </p>
               </div>
             </motion.div>
 
-            {/* Starter Tier - Featured Pioneer 30 */}
+            {/* Starter Tier */}
             <motion.div
               {...REVEAL}
-              className="relative flex flex-col rounded-sm border-2 border-slate-950 bg-white p-6 sm:p-7 shadow-md"
+              className="flex flex-col rounded-sm border border-slate-200 bg-white p-6 sm:p-7 hover:border-slate-300 transition-colors shadow-xs"
             >
               <div className="border-b border-slate-100 pb-6 pt-1">
                 <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-xs border border-amber-200">
-                  Pioneer 30 Cohort
+                  Pricing Coming Soon
                 </span>
                 <h2 className="mt-3 text-xl font-bold text-slate-950">Starter Tier</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  Complete practice OS for small firms (2 to 5 members). Replaces messy WhatsApp groups and Excel trackers.
+                  Complete practice OS for boutique firms (2 to 5 members). Replaces messy WhatsApp groups and Excel trackers.
                 </p>
-                <div className="mt-6 flex items-baseline gap-1 text-slate-950">
-                  {isAnnual ? (
-                    <>
-                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹12,990</span>
-                      <span className="text-xs font-medium text-slate-500">/ year</span>
-                      <span className="ml-2 text-xs line-through text-slate-500 tabular-nums">₹17,990</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹1,999</span>
-                      <span className="text-xs font-medium text-slate-500">/ month</span>
-                    </>
-                  )}
+                <div className="mt-6 flex items-baseline gap-2 text-slate-950">
+                  <span className="text-2xl font-bold tracking-tight text-slate-900">Coming Soon</span>
                 </div>
                 <div className="mt-2 text-xs text-slate-700 font-semibold">
                   Up to 5 team seats / 50 active clients / Unlimited dockets
@@ -265,7 +228,7 @@ export const PricingPage = () => {
 
               <div className="flex-1 py-6 space-y-3.5">
                 <span className="text-xs font-semibold text-slate-700 block">
-                  Included with Starter:
+                  Planned inclusions:
                 </span>
                 <ul className="space-y-2.5 text-xs text-slate-700">
                   <li className="flex items-start gap-2.5">
@@ -278,11 +241,11 @@ export const PricingPage = () => {
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckIcon />
-                    <span>Free assisted client onboarding and data import</span>
+                    <span>Assisted client onboarding and data import</span>
                   </li>
                   <li className="flex items-start gap-2.5">
                     <CheckIcon />
-                    <span>Google Drive security &amp; permission setup guide</span>
+                    <span>Google Drive security &amp; permission isolation</span>
                   </li>
                   <li className="flex items-start gap-2.5 pt-1 border-t border-slate-100">
                     <CheckIcon />
@@ -294,12 +257,12 @@ export const PricingPage = () => {
               <div className="pt-4 border-t border-slate-100">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full h-11 items-center justify-center rounded-xs bg-slate-950 px-4 text-xs font-semibold text-amber-300 shadow-sm hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
+                  className="inline-flex w-full h-11 items-center justify-center rounded-xs border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
                 >
-                  Claim Pioneer Annual Pass (₹12,990/yr)
+                  Coming Soon • Try via Pilot
                 </Link>
                 <p className="mt-2 text-center text-xs text-slate-500">
-                  Zero setup fees / Flat rate locked for life
+                  Commercial pricing announced post-pilot
                 </p>
               </div>
             </motion.div>
@@ -307,35 +270,24 @@ export const PricingPage = () => {
             {/* Growth Tier */}
             <motion.div
               {...REVEAL}
-              className="relative flex flex-col rounded-sm border border-slate-300 bg-white p-6 sm:p-7 shadow-sm"
+              className="relative flex flex-col rounded-sm border border-slate-200 bg-white p-6 sm:p-7 hover:border-slate-300 transition-colors shadow-xs"
             >
               <div className="border-b border-slate-100 pb-6 pt-1">
-                <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-xs border border-slate-200">
-                  Growing firms (6 to 12 staff)
+                <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-xs border border-amber-200">
+                  Pricing Coming Soon
                 </span>
                 <h2 className="mt-3 text-xl font-bold text-slate-950">Growth Tier</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  Flat-rate practice OS for mid-sized practices. Department queues, Form 3CD blueprints, and Trainee Shield.
+                  Practice OS for mid-sized firms (6 to 12 staff). Department queues, Form 3CD blueprints, and Trainee Shield.
                 </p>
-                <div className="mt-6 flex items-baseline gap-1 text-slate-950">
-                  {isAnnual ? (
-                    <>
-                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹21,990</span>
-                      <span className="text-xs font-medium text-slate-500">/ year</span>
-                      <span className="ml-2 text-xs line-through text-slate-500 tabular-nums">₹27,990</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹2,499</span>
-                      <span className="text-xs font-medium text-slate-500">/ month</span>
-                    </>
-                  )}
+                <div className="mt-6 flex items-baseline gap-2 text-slate-950">
+                  <span className="text-2xl font-bold tracking-tight text-slate-900">Coming Soon</span>
                 </div>
                 <div className="mt-2 text-xs text-slate-700 font-semibold">
                   Up to 12 team seats / 150 active clients / Unlimited dockets
                 </div>
                 <div className="mt-1 text-xs text-slate-500">
-                  Extra seats: +₹1,200/seat/year
+                  Additional team seat add-ons supported
                 </div>
               </div>
 
@@ -364,22 +316,18 @@ export const PricingPage = () => {
                     <CheckIcon />
                     <span>Department queues: ROC, Tax, GST, and Audit</span>
                   </li>
-                  <li className="flex items-start gap-2.5">
-                    <CheckIcon />
-                    <span>Priority assisted client migration and zero setup fees</span>
-                  </li>
                 </ul>
               </div>
 
               <div className="pt-4 border-t border-slate-100">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full h-11 items-center justify-center rounded-xs bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
+                  className="inline-flex w-full h-11 items-center justify-center rounded-xs border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
                 >
-                  Choose Growth Tier (₹21,990/yr)
+                  Coming Soon • Try via Pilot
                 </Link>
                 <p className="mt-2 text-center text-xs text-slate-500">
-                  No setup fees / Free evaluation available
+                  Commercial pricing announced post-pilot
                 </p>
               </div>
             </motion.div>
@@ -389,28 +337,18 @@ export const PricingPage = () => {
               {...REVEAL}
               className="flex flex-col rounded-sm border border-slate-200 bg-white p-6 sm:p-7 hover:border-slate-300 transition-colors shadow-xs"
             >
-              <div className="border-b border-slate-100 pb-6">
-                <span className="text-xs font-semibold text-slate-500 block">
-                  Larger practices &amp; multi-branch
+              <div className="border-b border-slate-100 pb-6 pt-1">
+                <span className="text-xs font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-xs border border-amber-200">
+                  Pricing Coming Soon
                 </span>
-                <h2 className="mt-2 text-xl font-bold text-slate-950">Pro Tier</h2>
+                <h2 className="mt-3 text-xl font-bold text-slate-950">Pro Tier</h2>
                 <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
-                  For expanding compliance and audit firms requiring multi-branch controls and partner DSC sign-off workflows.
+                  For expanding compliance and audit firms (15+ staff) requiring multi-branch controls and partner DSC sign-off workflows.
                 </p>
-                <div className="mt-6 flex items-baseline gap-1 text-slate-950">
-                  {isAnnual ? (
-                    <>
-                      <span className="text-4xl font-extrabold tracking-tight">₹4,999</span>
-                      <span className="text-xs font-medium text-slate-500">/ mo billed annually</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-4xl font-extrabold tracking-tight">₹5,999</span>
-                      <span className="text-xs font-medium text-slate-500">/ month</span>
-                    </>
-                  )}
+                <div className="mt-6 flex items-baseline gap-2 text-slate-950">
+                  <span className="text-2xl font-bold tracking-tight text-slate-900">Coming Soon</span>
                 </div>
-                <div className="mt-2 text-xs text-slate-500">
+                <div className="mt-2 text-xs text-slate-700 font-semibold">
                   Up to 25 team seats / Unlimited active clients / Unlimited dockets
                 </div>
               </div>
@@ -446,10 +384,13 @@ export const PricingPage = () => {
               <div className="pt-4 border-t border-slate-100">
                 <Link
                   to="/signup"
-                  className="inline-flex w-full h-11 items-center justify-center rounded-xs border border-slate-950 bg-slate-950 px-4 text-xs font-semibold text-white hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
+                  className="inline-flex w-full h-11 items-center justify-center rounded-xs border border-slate-300 bg-white px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-100"
                 >
-                  Onboard Pro Practice
+                  Coming Soon • Try via Pilot
                 </Link>
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  Commercial pricing announced post-pilot
+                </p>
               </div>
             </motion.div>
           </div>
@@ -465,7 +406,7 @@ export const PricingPage = () => {
                 100% In Your Firm’s Google Drive
               </h2>
               <p className="text-sm text-slate-300 leading-relaxed">
-                Start with our Free Pilot for up to 5 clients. All your documents, working papers, and client files stay safely inside your firm’s own Google Drive with zero vendor lock-in.
+                Onboard into our 26-firm Founding Pilot with full 1-year free access and zero usage limits. All your documents, working papers, and client files stay safely inside your firm’s own Google Drive with zero vendor lock-in.
               </p>
             </div>
             <div className="shrink-0 text-center">
@@ -473,7 +414,7 @@ export const PricingPage = () => {
                 to="/signup"
                 className="inline-flex h-12 items-center justify-center rounded-xs bg-amber-400 px-6 text-xs font-bold text-slate-950 transition-colors hover:bg-amber-300 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-400 active:bg-amber-500"
               >
-                Start Free Pilot
+                Start 1-Year Free Pilot
               </Link>
               <div className="mt-2 text-xs text-slate-400">
                 Files stay in your firm’s Drive / Instant setup
@@ -579,14 +520,14 @@ export const PricingPage = () => {
               Take control of your practice with The Company Brain.
             </h2>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Join founding Indian CA &amp; CS practices running audit-ready, zero-stress client operations.
+              Join 26 founding Indian CA &amp; CS practices running audit-ready, zero-stress client operations free for 1 full year.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/signup"
                 className="inline-flex w-full sm:w-auto h-12 items-center justify-center rounded-xs bg-slate-950 px-6 text-xs font-semibold text-amber-300 hover:bg-slate-800 transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:bg-slate-900"
               >
-                <span>Start Free Pilot (₹0)</span>
+                <span>Start 1-Year Free Pilot</span>
               </Link>
               <Link
                 to="/find-workspace"
@@ -596,7 +537,7 @@ export const PricingPage = () => {
               </Link>
             </div>
             <p className="text-xs text-slate-500 pt-1">
-              Zero setup fees / One-click Google Drive connection / Free trial available
+              Zero setup fees / One-click Google Drive connection / Unlimited usage during pilot
             </p>
           </motion.div>
         </Container>

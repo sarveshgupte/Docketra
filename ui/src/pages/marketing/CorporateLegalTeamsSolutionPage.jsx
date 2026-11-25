@@ -98,7 +98,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
       <div className="border-b border-amber-200/90 bg-amber-50/80 px-4 py-2 text-center text-xs">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
           <span className="inline-flex items-center gap-1.5 rounded border border-amber-300 bg-amber-100/80 px-2 py-0.5 font-bold text-amber-900 font-mono text-xs">
-            ⚡ Enterprise Legal Pilot (30 Firms)
+            ⚡ Enterprise Legal Pilot (26 Firms)
           </span>
           <span className="text-slate-800 font-medium">
             1 Year Unrestricted Free Access for In-House Legal Departments • Tier-IV Indian Data Residency
@@ -721,7 +721,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-700">
-              Limited 30-Firm Enterprise Cohort
+              Limited 26-Firm Enterprise Cohort
             </div>
             <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
               Why Join the In-House Legal Pilot?
@@ -738,7 +738,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
               </span>
               <h3 className="text-sm font-bold text-slate-950">Full Enterprise Workspace</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                1 full year of unrestricted access for the first 30 founding teams—covering all in-house counsel, paralegals, and internal business requesters with unlimited matter dockets.
+                1 full year of unrestricted access for the first 26 founding teams—covering all in-house counsel, paralegals, and internal business requesters with unlimited matter dockets.
               </p>
             </div>
 
@@ -821,7 +821,7 @@ export const CorporateLegalTeamsSolutionPage = () => {
         <Container size="7xl">
           <div className="border border-slate-200 bg-white p-8 sm:p-10 rounded-xl max-w-3xl mx-auto space-y-4 shadow-sm">
             <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-700">
-              Zero Financial Risk • 1-Year Enterprise Pilot (30 Firms)
+              Zero Financial Risk • 1-Year Enterprise Pilot (26 Firms)
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight [text-wrap:balance]">
               Bring calm and auditability to your in-house legal ops.

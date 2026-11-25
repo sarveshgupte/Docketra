@@ -10,7 +10,7 @@ const FAQ_ITEMS = [
     id: 'pilot-details',
     question: 'What is included in the 1-year free pilot?',
     answer:
-      'The 1-year pilot provides complete, unrestricted firm-wide access for the first 30 founding firms—covering all partners, associates, and trainees. You get unlimited client entities, dockets, automated MCA/ROC/tax calendar tracking, 4-eye QC review gates, BYOS Google Drive integration, and dedicated 1-on-1 onboarding support with zero setup fees and no credit card required.',
+      'The 1-year pilot provides complete, unrestricted firm-wide access for the first 26 founding firms—covering all partners, associates, and trainees. You get unlimited client entities, dockets, automated MCA/ROC/tax calendar tracking, 4-eye QC review gates, BYOS Google Drive integration, and dedicated 1-on-1 onboarding support with zero setup fees and no credit card required.',
   },
   {
     id: 'migration-ease',
@@ -811,12 +811,12 @@ export const DocketsHQVsExcelWhatsAppPage = () => {
       <section className="py-16 bg-white border-b border-slate-200">
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="font-mono text-xs font-semibold uppercase tracking-wider text-slate-600">Official 30-Firm Pilot Cohort</div>
+            <div className="font-mono text-xs font-semibold uppercase tracking-wider text-slate-600">Official 26-Firm Pilot Cohort</div>
             <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
               Why Join the 1-Year Free Pilot?
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              We are partnering with 30 founding Indian CS, CA, and corporate legal practices to build the definitive institutional practice operating system.
+              We are partnering with 26 founding Indian CS, CA, and corporate legal practices to build the definitive institutional practice operating system.
             </p>
           </div>
 
