@@ -391,7 +391,7 @@ export default function Signup() {
       <SignupShell mode="success">
           <SeoHead
             title="Create Workspace | DocketsHQ"
-            description="Create your firm's DocketsHQ workspace in 2 minutes. Free 3-month pilot, no credit card required."
+            description="Create your firm's DocketsHQ workspace in 2 minutes. Free 1-year pilot for 30 founding firms, no credit card required."
             canonicalPath="/signup"
           />
           <section className="hidden lg:block" aria-label="Workspace signup success">
@@ -481,7 +481,7 @@ export default function Signup() {
     <SignupShell>
         <SeoHead
           title="Create Workspace | DocketsHQ"
-          description="Create your firm's DocketsHQ workspace in 2 minutes. Free 3-month pilot, no credit card required."
+          description="Create your firm's DocketsHQ workspace in 2 minutes. Free 1-year pilot for 30 founding firms, no credit card required."
           canonicalPath="/signup"
         />
         <section className="hidden lg:block" aria-label="Workspace signup context">
@@ -566,7 +566,7 @@ export default function Signup() {
 
             <div className="flex items-center gap-3 my-5 w-full">
               <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-[11px] font-bold tracking-wider text-slate-400 uppercase">or set up with credentials</span>
+              <span className="text-xs font-bold tracking-wider text-slate-500 uppercase">or set up with credentials</span>
               <div className="h-px flex-1 bg-slate-200" />
             </div>
 
@@ -662,7 +662,7 @@ export default function Signup() {
               </div>
               <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
                 <p className="text-xs font-bold uppercase text-sky-700">URL preview</p>
-                <p className="mt-2 break-words font-black">{`docketra.in/${workspaceSlugPreview}`}</p>
+                <p className="mt-2 break-words font-black">{`docketshq.com/${workspaceSlugPreview}`}</p>
                 <p className="mt-3 text-xs leading-5 text-sky-700">Final URL is confirmed after verification.</p>
               </div>
             </div>
@@ -673,7 +673,7 @@ export default function Signup() {
               </p>
             ) : null}
             <div className={`rounded-2xl border ${errors.agreedToPilotTerms ? 'border-rose-400 bg-rose-50/80' : 'border-slate-200 bg-slate-50'} p-4 transition-colors`}>
-              <label className="flex items-start gap-3 cursor-pointer select-none">
+              <div className="flex items-start gap-3">
                 <input
                   id="signup-terms-consent"
                   type="checkbox"
@@ -686,45 +686,41 @@ export default function Signup() {
                     }
                   }}
                   disabled={loading}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-950 focus:ring-slate-950 accent-slate-950"
+                  aria-invalid={errors.agreedToPilotTerms ? 'true' : undefined}
+                  aria-describedby={errors.agreedToPilotTerms ? 'signup-terms-error' : undefined}
+                  className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-slate-950 focus:ring-slate-950 accent-slate-950 cursor-pointer"
                   required
                 />
-                <span className="text-xs leading-5 text-slate-700">
-                  I agree to the <button
+                <div className="text-xs leading-5 text-slate-700">
+                  <label htmlFor="signup-terms-consent" className="cursor-pointer">
+                    I agree to the{' '}
+                  </label>
+                  <button
                     type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openLegalModal('pilot');
-                    }}
-                    className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
+                    onClick={() => openLegalModal('pilot')}
+                    className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 rounded-xs"
                   >
                     Pilot Evaluation Agreement
                   </button>, <button
                     type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openLegalModal('terms');
-                    }}
-                    className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
+                    onClick={() => openLegalModal('terms')}
+                    className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 rounded-xs"
                   >
                     Terms of Service &amp; Disclaimers
                   </button>, and <button
                     type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openLegalModal('privacy');
-                    }}
-                    className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700"
+                    onClick={() => openLegalModal('privacy')}
+                    className="font-bold text-slate-950 underline underline-offset-2 hover:text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 rounded-xs"
                   >
                     Privacy Policy
-                  </button> (Operator: Sarvesh Gupte, Maharashtra, India). I acknowledge that DocketsHQ is an evaluation workflow tool and does not provide legal, tax, or statutory compliance advice.
-                </span>
-              </label>
+                  </button>{' '}
+                  <label htmlFor="signup-terms-consent" className="cursor-pointer">
+                    (Operator: Sarvesh Gupte, Maharashtra, India). I acknowledge that DocketsHQ is an evaluation workflow tool and does not provide legal, tax, or statutory compliance advice.
+                  </label>
+                </div>
+              </div>
               {errors.agreedToPilotTerms && (
-                <p className="mt-2 text-xs font-semibold text-rose-600">
+                <p id="signup-terms-error" role="alert" className="mt-2 text-xs font-semibold text-rose-700">
                   {errors.agreedToPilotTerms}
                 </p>
               )}

@@ -26,6 +26,7 @@ const { coercePrimaryAdminCreationFields } = require('../utils/hierarchy.utils')
 const { setupDefaultFirm } = require('./firmSetup.service');
 const { resolveCanonicalTenantFromFirmId } = require('./tenantIdentity.service');
 const { RESERVED_FIRM_SLUGS } = require('../middleware/firmSlugGuard.middleware');
+const { PIONEER_COHORT_CONFIG } = require('../constants/subscriptionPlans');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 5;
@@ -596,16 +597,16 @@ const createFirmAndAdmin = async ({
     agreementType: 'PILOT_CLICKWRAP',
   } : null);
 
-  // First 10 firms in main get 1 year free with zero limits.
-  // 11th firm onwards receives the standard Free Pilot plan and existing limits.
+  // First 30 founding firms in the Pioneer Cohort receive 1 year free with enterprise limits.
+  // Firms after the cohort receive the standard Free Pilot plan and existing limits.
   const firmNumeric = Number(String(firmId || '').replace('FIRM', '')) || 1;
-  const isEarlyPioneer = firmNumeric <= 10;
-  const oneYearFromNow = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+  const isEarlyPioneer = firmNumeric <= PIONEER_COHORT_CONFIG.maxFirms;
+  const oneYearFromNow = new Date(Date.now() + PIONEER_COHORT_CONFIG.freeDurationDays * 24 * 60 * 60 * 1000);
 
-  const plan = isEarlyPioneer ? 'enterprise' : 'pilot';
-  const maxUsers = isEarlyPioneer ? 100 : 10;
+  const plan = isEarlyPioneer ? PIONEER_COHORT_CONFIG.plan : 'pilot';
+  const maxUsers = isEarlyPioneer ? PIONEER_COHORT_CONFIG.maxUsers : 10;
   const subscriptionStatus = isEarlyPioneer ? 'active' : null;
-  const billingStatus = isEarlyPioneer ? 'free_pioneer_1yr' : null;
+  const billingStatus = isEarlyPioneer ? PIONEER_COHORT_CONFIG.billingStatus : null;
   const subscriptionExpiresAt = isEarlyPioneer ? oneYearFromNow : null;
 
   for (let attempt = 0; attempt < MAX_SLUG_COLLISION_RETRIES; attempt += 1) {

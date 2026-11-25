@@ -69,7 +69,7 @@ test('Next.js App Router page.tsx exists with required metadata and JSON-LD sche
     'Next.js page must include confidentiality FAQ',
   );
   assert.ok(
-    pageContent.includes('What happens to our client records if we decide not to renew after the 3-month free pilot?'),
+    pageContent.includes('What happens to our client records if we decide not to renew after the 1-year free pilot?'),
     'Next.js page must include data export guarantee FAQ',
   );
 });
@@ -86,7 +86,8 @@ test('CompanySecretariesSolutionPage contains all required CRO and SEO sections'
     'Pilot banner badge must be present',
   );
   assert.ok(
-    pageContent.includes('3 Months Unrestricted Free Access • Pre-built with MCA & Companies Act Workflows'),
+    pageContent.includes('1 Year Unrestricted Free Access for Practicing Company Secretaries (PCS)') ||
+    pageContent.includes('1 Year Unrestricted Free Access • Pre-built with MCA & Companies Act Workflows'),
     'Pilot banner microcopy must be present',
   );
 
@@ -104,7 +105,8 @@ test('CompanySecretariesSolutionPage contains all required CRO and SEO sections'
     'Hero subheadline must be present',
   );
   assert.ok(
-    pageContent.includes('Claim 3 Months Free Access'),
+    pageContent.includes('Start 1-Year Free Pilot') ||
+    pageContent.includes('Claim 1 Year Free Access'),
     'Primary CTA must be present',
   );
   assert.ok(pageContent.includes('#preview'), 'Secondary demo CTA must be present');
@@ -144,18 +146,21 @@ test('CompanySecretariesSolutionPage contains all required CRO and SEO sections'
     'FAQ 2 must be present',
   );
   assert.ok(
-    pageContent.includes('What happens to our client records if we decide not to renew after the 3-month free pilot?'),
+    pageContent.includes('What happens to our client data if we decide not to continue after the 1-year free pilot?') ||
+    pageContent.includes('What happens to our client records if we decide not to renew after the 1-year free pilot?'),
     'FAQ 3 must be present',
   );
   assert.ok(pageContent.includes('openFaqIndex'), 'Interactive accordion state must be present');
 
   // Closing Conversion Banner
   assert.ok(
+    pageContent.includes('Upgrade your secretarial practice today.') ||
     pageContent.includes('Upgrade Your Secretarial Practice Today'),
     'Closing headline must be present',
   );
   assert.ok(
-    pageContent.includes('Claim 3 Months Free Access →'),
+    pageContent.includes('Claim Your Free CS Pilot Seat →') ||
+    pageContent.includes('Claim 1 Year Free Access →'),
     'Closing CTA button must be present',
   );
 });

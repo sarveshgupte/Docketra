@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap';
 
 export const PILOT_TERMS_VERSION = 'v1.0_pilot_2026';
 export const OPERATOR_LEGAL_NAME = 'Sarvesh Gupte';
@@ -18,6 +19,7 @@ export const PilotAgreementModal = ({
   onAccept,
 }) => {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const dialogPanelRef = useRef(null);
 
   useEffect(() => {
     if (initialTab) {
@@ -25,20 +27,17 @@ export const PilotAgreementModal = ({
     }
   }, [initialTab]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  useDialogFocusTrap(dialogPanelRef, isOpen, onClose);
 
   if (!isOpen) return null;
+
+  const handleTabKeyDown = (event, index) => {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    const delta = event.key === 'ArrowRight' ? 1 : -1;
+    const nextIndex = (index + delta + TABS.length) % TABS.length;
+    setActiveTab(TABS[nextIndex].id);
+  };
 
   return (
     <div
@@ -49,17 +48,19 @@ export const PilotAgreementModal = ({
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-[90vh] w-full max-w-4xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto"
+        ref={dialogPanelRef}
+        tabIndex={-1}
+        className="relative flex max-h-[90vh] w-full max-w-4xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden my-auto focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-200 bg-slate-50/90 px-6 py-5">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber-900">
+              <span className="rounded-md border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-900">
                 Official Pilot Agreement
               </span>
-              <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-mono text-slate-600">
+              <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs font-mono text-slate-600">
                 {PILOT_TERMS_VERSION}
               </span>
             </div>
@@ -74,9 +75,9 @@ export const PilotAgreementModal = ({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700"
+            className="rounded-full p-2 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
           >
-            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path
                 fillRule="evenodd"
                 d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -87,16 +88,19 @@ export const PilotAgreementModal = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 bg-white px-6">
-          {TABS.map((tab) => (
+        <div role="tablist" aria-label="Legal agreement sections" className="flex border-b border-slate-200 bg-white px-6 overflow-x-auto">
+          {TABS.map((tab, idx) => (
             <button
               key={tab.id}
               type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`border-b-2 py-3 px-3 text-xs font-bold transition-all sm:text-sm ${
+              onKeyDown={(event) => handleTabKeyDown(event, idx)}
+              className={`border-b-2 py-3 px-3 text-xs font-bold transition-colors whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 sm:text-sm ${
                 activeTab === tab.id
                   ? 'border-slate-950 text-slate-950'
-                  : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800'
+                  : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-900'
               }`}
             >
               {tab.label}
@@ -118,9 +122,9 @@ export const PilotAgreementModal = ({
               </div>
 
               <div>
-                <h3 className="text-base font-bold text-slate-950">1. Pilot Cohort &amp; 3-Month Free Evaluation License</h3>
+                <h3 className="text-base font-bold text-slate-950">1. Pilot Cohort &amp; 1-Year Free Evaluation License</h3>
                 <p className="mt-2 text-slate-600">
-                  Subject to your adherence to these terms, the Operator grants your firm a limited, non-exclusive, revocable, non-transferable, and royalty-free evaluation license to access and use the DocketsHQ platform for a duration of <strong>three (3) consecutive months</strong> starting on the date of workspace verification (&quot;Pilot Period&quot;).
+                  Subject to your adherence to these terms, the Operator grants your firm a limited, non-exclusive, revocable, non-transferable, and royalty-free evaluation license to access and use the DocketsHQ platform for a duration of <strong>one (1) full year (12 consecutive months)</strong> for the first 30 founding firms starting on the date of workspace verification (&quot;Pilot Period&quot;).
                 </p>
                 <ul className="mt-2 list-disc pl-5 space-y-1 text-slate-600">
                   <li><strong>Zero Cost:</strong> No subscription fees, platform licensing fees, or credit card commitments are required during the Pilot Period.</li>
@@ -149,7 +153,7 @@ export const PilotAgreementModal = ({
               <div>
                 <h3 className="text-base font-bold text-slate-950">4. Termination &amp; Transition</h3>
                 <p className="mt-2 text-slate-600">
-                  Either party may terminate the pilot evaluation at any time, with or without cause, upon written or electronic notice. Upon expiration or termination of the 3-Month Pilot Period, the Operator will provide a reasonable opportunity (minimum 14 calendar days) for your firm to export its client and docket records prior to workspace deactivation.
+                  Either party may terminate the pilot evaluation at any time, with or without cause, upon written or electronic notice. Upon expiration or termination of the 1-Year Pilot Period, the Operator will provide a reasonable opportunity (minimum 14 calendar days) for your firm to export its client and docket records prior to workspace deactivation.
                 </p>
               </div>
             </div>

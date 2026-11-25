@@ -46,7 +46,7 @@ test('Next.js App Router page.tsx exists with required metadata and JSON-LD sche
   const pageContent = fs.readFileSync(nextAppPath, 'utf8');
   assert.ok(pageContent.includes('export const metadata: Metadata'), 'Must export Next.js Metadata');
   assert.ok(
-    pageContent.includes('Docketra vs Excel & WhatsApp | 3-Month Free Pilot for Indian Compliance Firms'),
+    pageContent.includes('Docketra vs Excel & WhatsApp | 1-Year Free Pilot for Indian Compliance Firms'),
     'Metadata must have exact requested SEO title',
   );
   assert.ok(
@@ -69,14 +69,14 @@ test('DocketraVsExcelWhatsAppPage contains all required CRO and SEO sections', (
     pageContent.includes('🚀 DocketsHQ Pilot Cohort Open') || pageContent.includes('🚀 Docketra Pilot Cohort Open'),
     'Pilot banner badge must be present'
   );
-  assert.ok(pageContent.includes('3 Months Free Access • 0 Setup Fees'), 'Pilot banner microcopy must be present');
+  assert.ok(pageContent.includes('1 Year Free Access • 0 Setup Fees'), 'Pilot banner microcopy must be present');
 
   // Hero Section
   assert.ok(
     pageContent.includes('The Hidden Cost of Managing Indian Compliance on'),
     'Hero title must discuss hidden cost',
   );
-  assert.ok(pageContent.includes('Join Pilot (3 Months Free)'), 'Primary CTA must be present');
+  assert.ok(pageContent.includes('Join Pilot (1 Year Free)'), 'Primary CTA must be present');
   assert.ok(pageContent.includes('#sandbox-preview'), 'Secondary sandbox CTA must be present');
   assert.ok(pageContent.includes('1-Click Excel data import'), 'Risk reversal subtext must be present');
 
@@ -100,7 +100,7 @@ test('DocketraVsExcelWhatsAppPage contains all required CRO and SEO sections', (
   assert.ok(pageContent.includes('Team & Taxonomy Bulk Setup'), 'Migration engine 4 must be present');
 
   // Interactive FAQ Accordion
-  assert.ok(pageContent.includes('What is included in the 3-month free pilot?'), 'FAQ 1 must be present');
+  assert.ok(pageContent.includes('What is included in the 1-year free pilot?'), 'FAQ 1 must be present');
   assert.ok(pageContent.includes('How hard is it to migrate our existing client spreadsheet?'), 'FAQ 2 must be present');
   assert.ok(
     pageContent.includes('How does DocketsHQ handle Indian statutory formats?') || pageContent.includes('How does Docketra handle Indian statutory formats?'),
@@ -110,5 +110,5 @@ test('DocketraVsExcelWhatsAppPage contains all required CRO and SEO sections', (
 
   // Closing CTA Banner
   assert.ok(pageContent.includes('Upgrade Your Firm’s Operating Engine Risk-Free'), 'Closing headline must be present');
-  assert.ok(pageContent.includes('Start Your 3-Month Free Pilot →'), 'Closing CTA button must be present');
+  assert.ok(pageContent.includes('Start Your 1-Year Free Pilot →'), 'Closing CTA button must be present');
 });

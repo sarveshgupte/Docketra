@@ -88,7 +88,7 @@ const FAQS = [
   },
   {
     question: 'How does the Pioneer 30 Launch Cohort rate work?',
-    answer: 'The Pioneer rate (₹12,990 / year flat) is strictly limited to the first 30 verified Indian CA and CS practices. Once you activate your Pioneer Pass, your annual subscription rate is locked for life, protecting your firm from future price increases.',
+    answer: 'The Pioneer 30 Cohort is strictly limited to the first 30 verified Indian CA, CS, and legal practices: you get 1 full year of unrestricted free access during the launch pilot, followed by a ₹12,990 / year flat Starter Pass rate locked for life.',
   },
   {
     question: 'Our firm has 6 to 12 staff. Which plan is right for us, and can we add extra seats?',
@@ -249,7 +249,7 @@ export const PricingPage = () => {
                     <>
                       <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹12,990</span>
                       <span className="text-xs font-medium text-slate-500">/ year</span>
-                      <span className="ml-2 text-xs line-through text-slate-400 tabular-nums">₹17,990</span>
+                      <span className="ml-2 text-xs line-through text-slate-500 tabular-nums">₹17,990</span>
                     </>
                   ) : (
                     <>
@@ -322,7 +322,7 @@ export const PricingPage = () => {
                     <>
                       <span className="text-4xl font-extrabold tracking-tight text-slate-950 tabular-nums">₹21,990</span>
                       <span className="text-xs font-medium text-slate-500">/ year</span>
-                      <span className="ml-2 text-xs line-through text-slate-400 tabular-nums">₹27,990</span>
+                      <span className="ml-2 text-xs line-through text-slate-500 tabular-nums">₹27,990</span>
                     </>
                   ) : (
                     <>
@@ -543,10 +543,11 @@ export const PricingPage = () => {
                   <button
                     type="button"
                     onClick={() => toggleFaq(idx)}
+                    aria-expanded={openFaq === idx}
                     className="flex w-full items-center justify-between text-left text-sm font-semibold text-slate-950 hover:text-amber-800 transition-colors cursor-pointer focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-slate-950 active:text-slate-900"
                   >
                     <span>{faq.question}</span>
-                    <span className="ml-4 text-base font-normal text-slate-400">
+                    <span className="ml-4 text-base font-normal text-slate-500" aria-hidden="true">
                       {openFaq === idx ? '−' : '+'}
                     </span>
                   </button>

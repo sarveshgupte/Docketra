@@ -17,7 +17,7 @@ In B2B SaaS, generic corporate announcements get ignored. Personal founder stori
 ### Why This Works for Indian Professionals
 1. **Human & Authentic**: Senior CAs and CSs respect individuals who build with their own hands rather than faceless venture-backed startups.
 2. **High Social Proof**: Birthday posts on LinkedIn naturally trigger maximum organic algorithmic distribution (comments, wishes, shares).
-3. **The Birthday Gift Offer**: Framing the 90-day free pilot as a founder gift to the community removes sales resistance and creates genuine goodwill.
+3. **The Birthday Gift Offer**: Framing the 1-year free pilot as a founder gift to the first 30 firms removes sales resistance and creates genuine goodwill.
 
 ---
 
@@ -77,7 +77,7 @@ We built DocketsHQ to fix this with absolute architectural discipline:
 To celebrate my birthday, I am opening the "Birthday Pioneer Cohort":
 
 The first 30 Indian compliance firms to join get:
-🎁 3 Months Unrestricted Free Access
+🎁 1 Full Year of Unrestricted Free Access
 🎁 White-glove concierge data migration from your existing Excel rosters
 🎁 Direct WhatsApp hotline with me for custom workflow setup
 
@@ -100,7 +100,7 @@ Today is my birthday, and as a milestone I’ve officially launched DocketsHQ (h
 
 It solves the headache of clients dumping files on WhatsApp and tracks all MCA/Tax dockets with 4-eye partner sign-offs. Most importantly, it keeps 100% of client files inside your firm's own Google Drive with zero vendor lock-in.
 
-As part of our founding launch cohort, I've reserved a 3-Month Free Enterprise Seat for your firm. I would love to personally assist you in setting it up or migrating an ongoing client roster from Excel.
+As part of our founding launch cohort, I've reserved a 1-Year Free Enterprise Seat for your firm. I would love to personally assist you in setting it up or migrating an ongoing client roster from Excel.
 
 Would love your blessings and feedback when you have 5 minutes: https://docketshq.com
 
@@ -130,7 +130,7 @@ DocketsHQ is built to give your firm complete operational peace of mind:
 2. 1-Click Client Drop: No client passwords; instant statutory indexing.
 3. 4-Eye Review Gates: Strict QC sign-offs before any filing leaves the firm.
 
-To celebrate our launch day, the first 30 practices can activate the 3-Month Free Founding Pilot directly here:
+To celebrate our launch day, the first 30 practices can activate the 1-Year Free Founding Pilot directly here:
 
 👉 Start Your Free Practice Pilot: https://docketshq.com/signup
 

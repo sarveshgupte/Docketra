@@ -2,15 +2,15 @@ import React from 'react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Docketra vs Excel & WhatsApp | 3-Month Free Pilot for Indian Compliance Firms',
-  description: 'Outgrow spreadsheet chaos and lost WhatsApp files. Switch to Docketra in minutes with built-in Excel/CSV importers and claim a 3-month free pilot.',
+  title: 'Docketra vs Excel & WhatsApp | 1-Year Free Pilot for Indian Compliance Firms',
+  description: 'Outgrow spreadsheet chaos and lost WhatsApp files. Switch to Docketra in minutes with built-in Excel/CSV importers and claim a 1-year free pilot.',
 };
 
 const FAQ_ITEMS = [
   {
-    question: 'What is included in the 3-month free pilot?',
+    question: 'What is included in the 1-year free pilot?',
     answer:
-      'The 3-month pilot provides complete, unrestricted firm-wide access for all partners, associates, and trainees. You get unlimited client entities, dockets, automated MCA/ROC/tax calendar tracking, 4-eye QC review gates, BYOS Google Drive integration, and dedicated 1-on-1 onboarding support with zero setup fees and no credit card required.',
+      'The 1-year pilot provides complete, unrestricted firm-wide access for the first 30 founding firms—covering all partners, associates, and trainees. You get unlimited client entities, dockets, automated MCA/ROC/tax calendar tracking, 4-eye QC review gates, BYOS Google Drive integration, and dedicated 1-on-1 onboarding support with zero setup fees and no credit card required.',
   },
   {
     question: 'How hard is it to migrate our existing client spreadsheet?',
@@ -91,7 +91,7 @@ export default function DocketraVsExcelWhatsAppPage() {
             🚀 Docketra Pilot Cohort Open
           </span>
           <span className="text-slate-300 font-medium">
-            Exclusive for Indian CS, CA & Corporate Legal Practices • 3 Months Free Access • 0 Setup Fees
+            Exclusive for 30 Indian CS, CA & Corporate Legal Practices • 1 Year Free Access • 0 Setup Fees
           </span>
           <a
             href="/signup"
@@ -124,7 +124,7 @@ export default function DocketraVsExcelWhatsAppPage() {
               href="/signup"
               className="rounded-lg bg-amber-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-sm"
             >
-              Join Pilot (3 Months Free)
+              Join Pilot (1 Year Free)
             </a>
           </div>
         </div>
@@ -156,7 +156,7 @@ export default function DocketraVsExcelWhatsAppPage() {
               href="/signup"
               className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-amber-500 px-6 py-3.5 text-sm font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-lg shadow-amber-500/20"
             >
-              Join Pilot (3 Months Free) →
+              Join Pilot (1 Year Free) →
             </a>
             <a
               href="#sandbox-preview"
@@ -557,21 +557,21 @@ export default function DocketraVsExcelWhatsAppPage() {
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Official Pilot Cohort</h2>
             <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
-              Why Join the 3-Month Free Pilot?
+              Why Join the 1-Year Free Pilot?
             </h3>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
-              We are partnering with select Indian CS, CA, and corporate legal practices to build the definitive institutional practice operating system.
+              We are partnering with 30 founding Indian CS, CA, and corporate legal practices to build the definitive institutional practice operating system.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 space-y-3">
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
-                90d
+                1Y
               </div>
               <h4 className="text-base font-bold text-white">100% Free Full Workspace</h4>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                90 days of unrestricted firm access for all partners, associates, and trainees with unlimited dockets, client entities, and storage.
+                1 full year of unrestricted firm access for all partners, associates, and trainees with unlimited dockets, client entities, and storage.
               </p>
             </div>
 
@@ -641,7 +641,7 @@ export default function DocketraVsExcelWhatsAppPage() {
             Upgrade Your Firm’s Operating Engine Risk-Free
           </h3>
           <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
-            Claim your 3-month pilot access today. Bring your spreadsheets over in minutes and experience calm,
+            Claim your 1-year pilot access today. Bring your spreadsheets over in minutes and experience calm,
             audit-ready practice management.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -649,7 +649,7 @@ export default function DocketraVsExcelWhatsAppPage() {
               href="/signup"
               className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-amber-500 px-8 py-4 text-sm font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-xl shadow-amber-500/20"
             >
-              Start Your 3-Month Free Pilot →
+              Start Your 1-Year Free Pilot →
             </a>
           </div>
           <p className="mt-3 text-xs text-slate-400">

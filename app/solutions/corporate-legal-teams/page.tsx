@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Legal Operations & Matter Management for In-House Teams | Docketra',
   description:
-    'Streamline in-house legal intake, contract dockets, and subsidiary compliance. Purpose-built for Indian corporate legal departments with a 3-month free pilot.',
+    'Streamline in-house legal intake, contract dockets, and subsidiary compliance. Purpose-built for Indian corporate legal departments with a 1-year free pilot.',
 };
 
 const FAQ_ITEMS = [
@@ -164,7 +164,7 @@ export default function CorporateLegalTeamsSolutionPage() {
             🚀 Docketra Enterprise Pilot Cohort
           </span>
           <span className="text-slate-300 font-medium">
-            3 Months Unrestricted Free Access for In-House Legal Teams • Tier-IV Indian Data Residency
+            1 Year Unrestricted Free Access for In-House Legal Teams • Tier-IV Indian Data Residency
           </span>
           <a
             href="/signup"
@@ -197,7 +197,7 @@ export default function CorporateLegalTeamsSolutionPage() {
               href="/signup"
               className="rounded-lg bg-amber-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-sm"
             >
-              Start 3-Month Free Pilot
+              Start 1-Year Free Pilot
             </a>
           </div>
         </div>
@@ -228,7 +228,7 @@ export default function CorporateLegalTeamsSolutionPage() {
               href="/signup"
               className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-amber-500 px-7 py-3.5 text-sm font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-lg shadow-amber-500/20"
             >
-              Start 3-Month Free Pilot →
+              Start 1-Year Free Pilot →
             </a>
             <a
               href="#preview"
@@ -550,11 +550,11 @@ export default function CorporateLegalTeamsSolutionPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 space-y-3">
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
-                90d
+                1Y
               </div>
               <h4 className="text-base font-bold text-white">100% Free Full Enterprise Workspace</h4>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                90 days of unrestricted access for all in-house counsel, paralegals, and internal business requesters with unlimited matter dockets.
+                1 full year of unrestricted access for the first 30 founding teams—covering all in-house counsel, paralegals, and internal business requesters with unlimited matter dockets.
               </p>
             </div>
 
@@ -624,18 +624,18 @@ export default function CorporateLegalTeamsSolutionPage() {
             Bring Calm and Auditability to Your In-House Legal Ops
           </h3>
           <p className="mt-4 text-sm sm:text-base text-slate-300 leading-relaxed">
-            Join legal leaders running high-velocity, risk-managed departments. Get full access for your entire legal team free for 90 days.
+            Join legal leaders running high-velocity, risk-managed departments. Get full access for your entire legal team free for 1 full year.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
               href="/signup"
               className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-amber-500 px-8 py-4 text-sm font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-xl shadow-amber-500/20"
             >
-              Start Your 3-Month Free Pilot →
+              Start Your 1-Year Free Pilot →
             </a>
           </div>
           <p className="mt-3 text-xs text-slate-400">
-            90 Days Free • Zero Financial Commitment • Indian Cloud Sovereignty • Dedicated Legal Ops Onboarding
+            1 Year Free (30 Firms) • Zero Financial Commitment • Indian Cloud Sovereignty • Dedicated Legal Ops Onboarding
           </p>
         </div>
       </section>

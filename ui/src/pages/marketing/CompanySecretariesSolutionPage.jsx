@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
   },
   {
     id: 'data-export-guarantee',
-    question: 'What happens to our client data if we decide not to continue after the 3-month free pilot?',
+    question: 'What happens to our client data if we decide not to continue after the 1-year free pilot?',
     answer:
       'You own 100% of your data. You can export your entire client master, DIN/DSC registries, statutory registers, and filing histories to Excel/CSV with one click at any time. If you connected your Google Drive, your documents never leave your possession.',
   },
@@ -97,11 +97,11 @@ export const CompanySecretariesSolutionPage = () => {
       {/* Pilot Notification Eyebrow */}
       <div className="border-b border-amber-200/90 bg-amber-50/80 px-4 py-2 text-center text-xs">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
-          <span className="inline-flex items-center gap-1.5 rounded border border-amber-300 bg-amber-100/80 px-2 py-0.5 font-bold text-amber-900 font-mono text-[11px]">
-            ⚡ CS Pilot Cohort
+          <span className="inline-flex items-center gap-1.5 rounded border border-amber-300 bg-amber-100/80 px-2 py-0.5 font-bold text-amber-900 font-mono text-xs">
+            ⚡ CS Pilot Cohort (30 Firms)
           </span>
           <span className="text-slate-800 font-medium">
-            3 Months Unrestricted Free Access for Practicing Company Secretaries (PCS)
+            1 Year Unrestricted Free Access for Practicing Company Secretaries (PCS)
           </span>
           <Link
             to="/signup"
@@ -139,10 +139,10 @@ export const CompanySecretariesSolutionPage = () => {
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/signup"
-                className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-all hover:bg-slate-800 shadow-sm"
+                className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-colors hover:bg-slate-800 shadow-sm"
               >
-                <span>Start 3-Month Free Pilot</span>
-                <span>→</span>
+                <span>Start 1-Year Free Pilot</span>
+                <span aria-hidden="true">→</span>
               </Link>
               <a
                 href="#comparison"
@@ -707,15 +707,15 @@ export const CompanySecretariesSolutionPage = () => {
         </Container>
       </section>
 
-      {/* 3-Month Free CS Pilot Cohort Box */}
+      {/* 1-Year Free CS Pilot Cohort Box */}
       <section className="py-16 bg-slate-50/40 border-b border-slate-200">
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-600">
-              Limited Pilot Cohort
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-700">
+              Limited 30-Firm Pilot Cohort
             </div>
             <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Why Join the 3-Month CS Pilot Program?
+              Why Join the 1-Year CS Pilot Program?
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
               We are working directly with leading Indian PCS firms to build the modern standard for corporate secretarial operations.
@@ -724,17 +724,17 @@ export const CompanySecretariesSolutionPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
             <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
-              <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
-                90 DAYS FREE
+              <span className="font-mono text-xs font-bold text-amber-700 tracking-wider">
+                1 YEAR FREE
               </span>
               <h3 className="text-sm font-bold text-slate-950">Full Firm Workspace</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                90 days of unrestricted access for all partners, associates, and trainees with unlimited corporate clients and dockets.
+                1 full year of unrestricted access for the first 30 founding firms—covering all partners, associates, and trainees with unlimited corporate clients and dockets.
               </p>
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
-              <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
+              <span className="font-mono text-xs font-bold text-amber-700 tracking-wider">
                 ASSISTED SETUP
               </span>
               <h3 className="text-sm font-bold text-slate-950">White-Glove Excel Migration</h3>
@@ -744,7 +744,7 @@ export const CompanySecretariesSolutionPage = () => {
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
-              <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
+              <span className="font-mono text-xs font-bold text-amber-700 tracking-wider">
                 FOUNDER ACCESS
               </span>
               <h3 className="text-sm font-bold text-slate-950">Direct Product Priority</h3>
@@ -811,8 +811,8 @@ export const CompanySecretariesSolutionPage = () => {
       <section className="py-16 bg-slate-50/50 border-b border-slate-200 text-center">
         <Container size="7xl">
           <div className="border border-slate-200 bg-white p-8 sm:p-10 rounded-xl max-w-3xl mx-auto space-y-4 shadow-sm">
-            <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-600">
-              Zero Financial Risk • 3-Month Free Pilot
+            <div className="font-mono text-xs font-bold uppercase tracking-wider text-amber-700">
+              Zero Financial Risk • 1-Year Free Pilot (30 Firms)
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight [text-wrap:balance]">
               Upgrade your secretarial practice today.
@@ -823,7 +823,7 @@ export const CompanySecretariesSolutionPage = () => {
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 to="/signup"
-                className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-all hover:bg-slate-800 shadow-sm"
+                className="inline-flex w-full sm:w-auto h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-colors hover:bg-slate-800 shadow-sm"
               >
                 <span>Claim Your Free CS Pilot Seat →</span>
               </Link>

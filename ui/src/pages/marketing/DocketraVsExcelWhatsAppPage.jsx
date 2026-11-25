@@ -8,9 +8,9 @@ import SeoHead from '../../components/common/SeoHead';
 const FAQ_ITEMS = [
   {
     id: 'pilot-details',
-    question: 'What is included in the 3-month free pilot?',
+    question: 'What is included in the 1-year free pilot?',
     answer:
-      'The 3-month pilot provides complete, unrestricted firm-wide access for all partners, associates, and trainees. You get unlimited client entities, dockets, automated MCA/ROC/tax calendar tracking, 4-eye QC review gates, BYOS Google Drive integration, and dedicated 1-on-1 onboarding support with zero setup fees and no credit card required.',
+      'The 1-year pilot provides complete, unrestricted firm-wide access for the first 30 founding firms—covering all partners, associates, and trainees. You get unlimited client entities, dockets, automated MCA/ROC/tax calendar tracking, 4-eye QC review gates, BYOS Google Drive integration, and dedicated 1-on-1 onboarding support with zero setup fees and no credit card required.',
   },
   {
     id: 'migration-ease',
@@ -148,19 +148,19 @@ export const DocketsHQVsExcelWhatsAppPage = () => {
     <div className="w-full bg-white text-slate-900 antialiased selection:bg-amber-500/25 font-sans">
       <SeoHead
         canonicalPath="/compare/docketra-vs-excel-whatsapp"
-        title="DocketsHQ vs Excel & WhatsApp | 3-Month Free Pilot for Indian Compliance Firms"
-        description="Outgrow spreadsheet chaos and lost WhatsApp files. Switch to DocketsHQ in minutes with built-in Excel/CSV importers and claim a 3-month free pilot."
+        title="DocketsHQ vs Excel & WhatsApp | 1-Year Free Pilot for Indian Compliance Firms"
+        description="Outgrow spreadsheet chaos and lost WhatsApp files. Switch to DocketsHQ in minutes with built-in Excel/CSV importers and claim a 1-year free pilot."
         jsonLd={FAQ_SCHEMA}
       />
 
       {/* Top Eyebrow Pilot Banner */}
       <div className="border-b border-amber-200/90 bg-amber-50/70 px-4 py-2 text-center text-xs">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 sm:gap-3 flex-wrap">
-          <span className="inline-flex items-center gap-1.5 rounded border border-amber-300 bg-amber-100/80 px-2 py-0.5 font-bold text-amber-900 font-mono text-[11px]">
+          <span className="inline-flex items-center gap-1.5 rounded border border-amber-300 bg-amber-100/80 px-2 py-0.5 font-bold text-amber-900 font-mono text-xs">
             🚀 DocketsHQ Pilot Cohort Open
           </span>
           <span className="text-slate-700 font-medium">
-            Exclusive for Indian CS, CA & Corporate Legal Practices • 3 Months Free Access • 0 Setup Fees
+            Exclusive for 30 Indian CS, CA & Corporate Legal Practices • 1 Year Free Access • 0 Setup Fees
           </span>
           <Link
             to="/signup"
@@ -203,8 +203,8 @@ export const DocketsHQVsExcelWhatsAppPage = () => {
                 to="/signup"
                 className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 bg-slate-950 px-6 text-xs font-semibold text-amber-400 transition-colors hover:bg-slate-800 rounded-md shadow-xs"
               >
-                <span>Join Pilot (3 Months Free)</span>
-                <span>→</span>
+                <span>Join Pilot (1 Year Free)</span>
+                <span aria-hidden="true">→</span>
               </Link>
               <a
                 href="#sandbox-preview"
@@ -811,28 +811,28 @@ export const DocketsHQVsExcelWhatsAppPage = () => {
       <section className="py-16 bg-white border-b border-slate-200">
         <Container size="7xl">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="font-mono text-[11px] font-semibold uppercase tracking-wider text-slate-500">Official Pilot Cohort</div>
+            <div className="font-mono text-xs font-semibold uppercase tracking-wider text-slate-600">Official 30-Firm Pilot Cohort</div>
             <h2 className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
-              Why Join the 3-Month Free Pilot?
+              Why Join the 1-Year Free Pilot?
             </h2>
             <p className="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-              We are partnering with select Indian CS, CA, and corporate legal practices to build the definitive institutional practice operating system.
+              We are partnering with 30 founding Indian CS, CA, and corporate legal practices to build the definitive institutional practice operating system.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
-              <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
-                90d
+              <span className="font-mono text-xs font-bold text-amber-700 tracking-wider">
+                1Y
               </span>
               <h3 className="text-sm font-bold text-slate-950">100% Free Full Workspace</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                90 days of unrestricted firm access for all partners, associates, and trainees with unlimited dockets, client entities, and storage.
+                1 full year of unrestricted firm access for all partners, associates, and trainees with unlimited dockets, client entities, and storage.
               </p>
             </div>
 
             <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
-              <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
+              <span className="font-mono text-xs font-bold text-amber-700 tracking-wider">
                 02
               </span>
               <h3 className="text-sm font-bold text-slate-950">White-Glove Migration</h3>
@@ -842,7 +842,7 @@ export const DocketsHQVsExcelWhatsAppPage = () => {
             </div>
 
             <div className="rounded-md border border-slate-200 bg-white p-5 space-y-2 hover:border-slate-300 transition-colors shadow-xs">
-              <span className="font-mono text-xs font-bold text-amber-600 tracking-wider">
+              <span className="font-mono text-xs font-bold text-amber-700 tracking-wider">
                 03
               </span>
               <h3 className="text-sm font-bold text-slate-950">Direct Founder Hotline</h3>
@@ -914,7 +914,7 @@ export const DocketsHQVsExcelWhatsAppPage = () => {
               Upgrade Your Firm’s Operating Engine Risk-Free
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-              Claim your 3-month pilot access today. Bring your spreadsheets over in minutes and experience calm,
+              Claim your 1-year pilot access today. Bring your spreadsheets over in minutes and experience calm,
               audit-ready practice management.
             </p>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -922,7 +922,7 @@ export const DocketsHQVsExcelWhatsAppPage = () => {
                 to="/signup"
                 className="inline-flex w-full sm:w-auto h-10 items-center justify-center gap-2 bg-slate-950 px-6 text-xs font-bold text-amber-400 transition-colors hover:bg-slate-800 rounded-md shadow-xs"
               >
-                <span>Start Your 3-Month Free Pilot →</span>
+                <span>Start Your 1-Year Free Pilot →</span>
               </Link>
             </div>
             <p className="text-[11px] font-mono text-slate-500 pt-2">

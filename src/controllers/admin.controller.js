@@ -37,6 +37,7 @@ const { resolveFirmStorageState } = require('../services/storage/resolveFirmStor
 const { EVENTS: STRICT_STORAGE_EVENTS, logStrictStorageEvent } = require('../services/strictStorageAudit.service');
 const { sendOtp, verifyOtp } = require('../services/otp.service');
 const { collectFirmWeeklyAuditLogs, generateAuditCsv, sendWeeklyAuditDigestEmail } = require('../services/weeklyAuditDigest.service');
+const { PIONEER_COHORT_CONFIG } = require('../constants/subscriptionPlans');
 
 /**
  * Admin Controller for Admin Panel Operations
@@ -2186,13 +2187,16 @@ const getFirmPlan = async (req, res) => {
     const traineeShieldActive = Boolean(firm.settings?.firm?.restrictTraineeDownloads);
 
     const rawPlan = String(firm.plan || 'pilot').toLowerCase();
-    const isEarlyPioneer = firm.billingStatus === 'free_pioneer_1yr' || (firm.subscriptionExpiresAt && new Date(firm.subscriptionExpiresAt) > new Date() && rawPlan === 'enterprise');
+    const isEarlyPioneer = firm.billingStatus === PIONEER_COHORT_CONFIG.billingStatus
+      || (firm.subscriptionExpiresAt && new Date(firm.subscriptionExpiresAt) > new Date() && rawPlan === PIONEER_COHORT_CONFIG.plan);
     const isPilot = rawPlan === 'pilot' && !isEarlyPioneer;
-    const currentPlan = isEarlyPioneer ? 'enterprise' : (isPilot ? 'pilot' : (rawPlan === 'growth' ? 'growth' : (rawPlan === 'starter' ? 'starter' : rawPlan)));
+    const currentPlan = isEarlyPioneer ? PIONEER_COHORT_CONFIG.plan : (isPilot ? 'pilot' : (rawPlan === 'growth' ? 'growth' : (rawPlan === 'starter' ? 'starter' : rawPlan)));
 
     const limits = {
-      maxSeats: isEarlyPioneer || currentPlan === 'enterprise' ? (firm.maxUsers || 100) : (firm.maxUsers || (currentPlan === 'growth' ? 12 : (currentPlan === 'starter' ? 5 : 2))),
-      maxClients: isEarlyPioneer || currentPlan === 'enterprise' ? null : (currentPlan === 'growth' ? 150 : (currentPlan === 'starter' ? 50 : 5)),
+      maxSeats: isEarlyPioneer || currentPlan === PIONEER_COHORT_CONFIG.plan
+        ? (firm.maxUsers || PIONEER_COHORT_CONFIG.maxUsers)
+        : (firm.maxUsers || (currentPlan === 'growth' ? 12 : (currentPlan === 'starter' ? 5 : 2))),
+      maxClients: isEarlyPioneer || currentPlan === PIONEER_COHORT_CONFIG.plan ? null : (currentPlan === 'growth' ? 150 : (currentPlan === 'starter' ? 50 : 5)),
       maxDocketsMonthly: isPilot ? 15 : null,
     };
 
@@ -2201,7 +2205,7 @@ const getFirmPlan = async (req, res) => {
       data: {
         plan: currentPlan,
         tierName: isEarlyPioneer
-          ? 'Pioneer Cohort (1 Year Free - Unlimited)'
+          ? PIONEER_COHORT_CONFIG.tierName
           : (isPilot
             ? 'Proof of Sovereign Isolation Pilot'
             : (currentPlan === 'growth' ? 'Growth Tier' : (currentPlan === 'starter' ? 'Pioneer 30 / Starter' : currentPlan.toUpperCase()))),

@@ -1242,8 +1242,8 @@ export const SuperadminDashboard = () => {
                   </div>
                   <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
                     <span className="font-bold text-slate-900 block mb-1">2. Pilot Evaluation License</span>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      3-month revocable evaluation license for internal operations, client tracking, and statutory compliance.
+                    <p className="text-slate-600 text-xs leading-relaxed">
+                      1-year revocable evaluation license for the first 30 founding firms for internal operations, client tracking, and statutory compliance.
                     </p>
                   </div>
                   <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">

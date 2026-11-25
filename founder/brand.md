@@ -65,7 +65,7 @@ A brand is the promise a customer remembers. For an operational platform trusted
 
 ## 4. The First Five Touchpoints
 
-1. **The Homepage (`docketshq.com`)**: No decorative gradients or marketing buzzwords. Immediately displays the Command Center canvas, client memory grid, and risk-free 90-day pilot cohort.
+1. **The Homepage (`docketshq.com`)**: No decorative gradients or marketing buzzwords. Immediately displays the Command Center canvas, client memory grid, and risk-free 1-year pilot cohort for 30 founding firms.
 2. **The Welcome & Confirmation Email**: Sent from `notifications@docketshq.com`. Concise, plain-text styled, includes the firm's sovereign XID (`X000001`), dedicated firm URL (`docketshq.com/{firmSlug}`), and direct WhatsApp onboarding support.
 3. **The 1-Click Client Drop Link**: A clean, white-labeled client intake page showing the firm's verified badge and Google Drive isolation guarantee. Clients drop files without creating passwords.
 4. **The First Social Launch Post (LinkedIn)**: A personal, high-conviction letter from founder Sarvesh Gupte on November 26th (his birthday), explaining why he built DocketsHQ for Indian practice heads.

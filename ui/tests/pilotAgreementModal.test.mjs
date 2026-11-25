@@ -19,8 +19,8 @@ assert(modalSource.includes('pre-incorporation') || modalSource.includes('Pre-In
 assert(modalSource.includes('Maharashtra, India'), 'Modal must state operator location in Maharashtra, India.');
 assert(modalSource.includes('v1.0_pilot_2026'), 'Modal must specify terms version v1.0_pilot_2026.');
 
-// 2. Verify 3 Months Free Evaluation Pilot Scope
-assert(modalSource.includes('three (3) consecutive months') || modalSource.includes('3-Month Free Evaluation License'), 'Modal must clearly define the 3-month free evaluation license.');
+// 2. Verify 1-Year Free Evaluation Pilot Scope
+assert(modalSource.includes('one (1) full year') || modalSource.includes('1-Year Free Evaluation License'), 'Modal must clearly define the 1-year free evaluation license.');
 assert(modalSource.includes('Zero Cost') || modalSource.includes('No subscription fees'), 'Modal must state zero cost during the pilot period.');
 
 // 3. Verify Strict Statutory & Professional Liability Disclaimers

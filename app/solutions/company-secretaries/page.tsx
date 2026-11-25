@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Practice Management Software for Company Secretaries | Docketra',
   description:
-    'Purpose-built practice management for Indian Company Secretaries. Track MCA filings, board governance, and client records with zero spreadsheet anxiety. Claim 3 months free.',
+    'Purpose-built practice management for Indian Company Secretaries. Track MCA filings, board governance, and client records with zero spreadsheet anxiety. Claim 1 year free.',
 };
 
 const FAQ_ITEMS = [
@@ -19,7 +19,7 @@ const FAQ_ITEMS = [
       'We apply bank-grade security and strict data sovereignty standards. All data is hosted on Tier-IV cloud infrastructure located physically within India (Mumbai/Hyderabad). We enforce granular Role-Based Access Control (RBAC), multi-factor authentication, and end-to-end encryption in transit (TLS 1.3) and at rest (AES-256). Furthermore, Docketra supports Bring-Your-Own-Storage (BYOS)—meaning client documents and resolutions can be vaulted directly into your firm’s private Google Drive or AWS S3 bucket, ensuring zero third-party vendor lock-in.',
   },
   {
-    question: 'What happens to our client records if we decide not to renew after the 3-month free pilot?',
+    question: 'What happens to our client records if we decide not to renew after the 1-year free pilot?',
     answer:
       'Your firm owns 100% of its data with zero lock-in. At any point during or after the pilot, you can export your entire client master, docket histories, statutory registers, and audit logs in clean Excel/CSV formats and structured document archives with a single click. We never hold your data hostage, charge zero export fees, and if you connected your own storage (BYOS), your files remain safely in your firm\'s cloud.',
   },
@@ -152,7 +152,7 @@ export default function CompanySecretariesSolutionPage() {
             🚀 Docketra Pilot Cohort for CS Practices
           </span>
           <span className="text-slate-300 font-medium">
-            3 Months Unrestricted Free Access • Pre-built with MCA & Companies Act Workflows
+            1 Year Unrestricted Free Access • Pre-built with MCA & Companies Act Workflows
           </span>
           <a
             href="/signup"
@@ -185,7 +185,7 @@ export default function CompanySecretariesSolutionPage() {
               href="/signup"
               className="rounded-lg bg-amber-500 px-3.5 py-2 text-xs font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-sm"
             >
-              Join CS Pilot (3 Months Free)
+              Join CS Pilot (1 Year Free)
             </a>
           </div>
         </div>
@@ -216,7 +216,7 @@ export default function CompanySecretariesSolutionPage() {
               href="/signup"
               className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-amber-500 px-7 py-3.5 text-sm font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-lg shadow-amber-500/20"
             >
-              Claim 3 Months Free Access →
+              Claim 1 Year Free Access →
             </a>
             <a
               href="#preview"
@@ -519,21 +519,21 @@ export default function CompanySecretariesSolutionPage() {
           <div className="text-center max-w-3xl mx-auto mb-12">
             <h2 className="text-xs font-bold uppercase tracking-widest text-amber-500">Official CS Pilot Cohort</h2>
             <h3 className="mt-2 text-2xl sm:text-4xl font-extrabold text-white">
-              Why Join the 3-Month Free Pilot?
+              Why Join the 1-Year Free Pilot?
             </h3>
             <p className="mt-3 text-sm sm:text-base text-slate-300">
-              We are partnering with select Indian CS practices to establish the new gold standard for secretarial practice management.
+              We are partnering with 30 founding Indian CS practices to establish the new gold standard for secretarial practice management.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="rounded-2xl border border-slate-800 bg-slate-950 p-6 space-y-3">
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold text-lg">
-                90d
+                1Y
               </div>
               <h4 className="text-base font-bold text-white">100% Free Full Firm Workspace</h4>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                90 days of unrestricted firm access for all partners, associates, and CS trainees with unlimited corporate clients and dockets.
+                1 full year of unrestricted firm access for all partners, associates, and CS trainees with unlimited corporate clients and dockets.
               </p>
             </div>
 
@@ -610,11 +610,11 @@ export default function CompanySecretariesSolutionPage() {
               href="/signup"
               className="inline-flex w-full sm:w-auto items-center justify-center rounded-xl bg-amber-500 px-8 py-4 text-sm font-bold text-slate-950 hover:bg-amber-400 active:scale-[0.97] transition-all shadow-xl shadow-amber-500/20"
             >
-              Claim 3 Months Free Access →
+              Claim 1 Year Free Access →
             </a>
           </div>
           <p className="mt-3 text-xs text-slate-400">
-            3 Months Free • Zero Financial Commitment • Instant Excel Import • Dedicated CS Onboarding Specialist
+            1 Year Free (30 Firms) • Zero Financial Commitment • Instant Excel Import • Dedicated CS Onboarding Specialist
           </p>
         </div>
       </section>

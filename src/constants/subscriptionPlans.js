@@ -3,6 +3,15 @@
  * Aligned with founder-pricing economics and /pricing tiers.
  */
 
+const PIONEER_COHORT_CONFIG = {
+  maxFirms: 30,
+  freeDurationDays: 365,
+  billingStatus: 'free_pioneer_1yr',
+  plan: 'enterprise',
+  maxUsers: 100,
+  tierName: 'Pioneer Cohort (1 Year Free - Unlimited)',
+};
+
 const SUBSCRIPTION_PLANS = {
   starter: {
     id: 'starter',
@@ -74,6 +83,7 @@ const PAYMENT_GATEWAY_CONFIG = {
 };
 
 module.exports = {
+  PIONEER_COHORT_CONFIG,
   SUBSCRIPTION_PLANS,
   PAYMENT_GATEWAY_CONFIG,
 };

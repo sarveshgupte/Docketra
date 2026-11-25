@@ -88,8 +88,8 @@ test('CorporateLegalTeamsSolutionPage contains all required CRO and SEO sections
     'Pilot banner badge must be present',
   );
   assert.ok(
-    pageContent.includes('3 Months Unrestricted Free Access for In-House Legal Departments • Tier-IV Indian Data Residency') ||
-    pageContent.includes('3 Months Unrestricted Free Access for In-House Legal Teams • Tier-IV Indian Data Residency'),
+    pageContent.includes('1 Year Unrestricted Free Access for In-House Legal Departments • Tier-IV Indian Data Residency') ||
+    pageContent.includes('1 Year Unrestricted Free Access for In-House Legal Teams • Tier-IV Indian Data Residency'),
     'Pilot banner microcopy must be present',
   );
 
@@ -110,8 +110,8 @@ test('CorporateLegalTeamsSolutionPage contains all required CRO and SEO sections
     'Hero subheadline must be present',
   );
   assert.ok(
-    pageContent.includes('Start 3-Month Free Pilot') ||
-    pageContent.includes('Start 3-Month Enterprise Pilot'),
+    pageContent.includes('Start 1-Year Free Pilot') ||
+    pageContent.includes('Start 1-Year Enterprise Pilot'),
     'Primary CTA must be present',
   );
   assert.ok(
@@ -193,9 +193,9 @@ test('CorporateLegalTeamsSolutionPage contains all required CRO and SEO sections
     'Closing headline must be present',
   );
   assert.ok(
-    pageContent.includes('Start Your 3-Month Free Pilot →') ||
+    pageContent.includes('Start Your 1-Year Free Pilot →') ||
     pageContent.includes('Claim Your Free Enterprise Seat →') ||
-    pageContent.includes('Start 3-Month Enterprise Pilot'),
+    pageContent.includes('Start 1-Year Enterprise Pilot'),
     'Closing CTA button must be present',
   );
 });

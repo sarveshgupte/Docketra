@@ -69,7 +69,7 @@ test('Next.js App Router page.tsx exists with required metadata and JSON-LD sche
     'Next.js page must include data residency FAQ',
   );
   assert.ok(
-    /Can we export our firm.*complete data if we choose not to renew after the 3-month free pilot\?/.test(pageContent),
+    /Can we export our firm.*complete data if we choose not to renew after the 1-year free pilot\?/.test(pageContent),
     'Next.js page must include data export FAQ',
   );
 });
@@ -86,7 +86,8 @@ test('CharteredAccountantsSolutionPage contains all required CRO and SEO section
     'Pilot banner badge must be present',
   );
   assert.ok(
-    pageContent.includes('3 Months Unrestricted Free Access • Pre-configured with Tax, Audit & GST Workbaskets'),
+    pageContent.includes('1 Year Unrestricted Free Access for Chartered Accountants & Audit Firms') ||
+    pageContent.includes('1 Year Unrestricted Free Access • Pre-configured with Tax, Audit & GST Workbaskets'),
     'Pilot banner microcopy must be present',
   );
 
@@ -104,7 +105,7 @@ test('CharteredAccountantsSolutionPage contains all required CRO and SEO section
     'Hero subheadline must be present',
   );
   assert.ok(
-    pageContent.includes('Start 3-Month Free Pilot'),
+    pageContent.includes('Start 1-Year Free Pilot'),
     'Primary CTA must be present',
   );
   assert.ok(pageContent.includes('#preview'), 'Secondary demo CTA must be present');
@@ -145,18 +146,20 @@ test('CharteredAccountantsSolutionPage contains all required CRO and SEO section
     'FAQ 2 must be present',
   );
   assert.ok(
-    /Can we export our firm.*complete data if we choose not to renew after the 3-month free pilot\?/.test(pageContent),
+    /Can we export our firm.*complete data if we choose not to renew after the 1-year free pilot\?/.test(pageContent),
     'FAQ 3 must be present',
   );
   assert.ok(pageContent.includes('openFaqIndex'), 'Interactive accordion state must be present');
 
   // Closing Conversion Banner
   assert.ok(
+    pageContent.includes('Upgrade your CA practice ahead of the next filing cycle.') ||
     pageContent.includes('Upgrade Your CA Practice Ahead of the Next Filing Cycle'),
     'Closing headline must be present',
   );
   assert.ok(
-    pageContent.includes('Start Your 3-Month Free Pilot →'),
+    pageContent.includes('Claim Your Free CA Pilot Seat →') ||
+    pageContent.includes('Start Your 1-Year Free Pilot →'),
     'Closing CTA button must be present',
   );
 });
