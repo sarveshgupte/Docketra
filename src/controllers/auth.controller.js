@@ -4053,6 +4053,94 @@ const redirectGoogleResult = (res, params = {}, returnOrigin = null) => {
   return res.redirect(target.toString());
 };
 
+const resolveClientIp = (req) => (
+  req.headers?.['x-forwarded-for']
+    ? String(req.headers['x-forwarded-for']).split(',')[0].trim()
+    : (req.ip || '127.0.0.1')
+);
+
+const buildGoogleLinkedAuthProviders = (user, googleId, linkedAt = new Date()) => ({
+  ...(user?.authProviders || {}),
+  google: {
+    ...((user?.authProviders || {}).google || {}),
+    googleId,
+    linkedAt,
+  },
+});
+
+const issueGoogleExchangeToken = async ({ userId, firmId, xID }) => {
+  const exchangeToken = generateLoginSessionToken();
+  await LoginSession.deleteMany({ userId, consumedAt: null });
+  await LoginSession.create({
+    tokenHash: hashLoginSessionToken(exchangeToken),
+    userId,
+    firmId,
+    xID,
+    expiresAt: new Date(Date.now() + GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES * 60 * 1000),
+    consumedAt: null,
+  });
+  return exchangeToken;
+};
+
+const provisionGoogleWorkspaceAccount = async ({
+  req,
+  name,
+  email,
+  firmName,
+  phone,
+  googleSubject,
+}) => {
+  const session = await mongoose.startSession();
+  let created = null;
+  try {
+    await session.withTransaction(async () => {
+      created = await signupService.createFirmAndAdmin({
+        name: name || 'Primary Admin',
+        email,
+        firmName,
+        phone: phone || null,
+        authProvider: 'google',
+        googleSubject,
+        legalConsent: {
+          agreedToPilotTerms: true,
+          agreedAt: new Date(),
+          ipAddress: resolveClientIp(req),
+          userAgent: req.headers?.['user-agent'] || 'Google OAuth',
+          termsVersion: 'v1.0_pilot_2026',
+          privacyVersion: 'v1.0_pilot_2026',
+          agreementType: 'PILOT_CLICKWRAP',
+        },
+        session,
+        req,
+      });
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  if (!created) {
+    return null;
+  }
+
+  await signupService.sendSignupWelcomeEmail({
+    name: name || 'Primary Admin',
+    email,
+    xid: created.adminXID,
+    firmName,
+    firmSlug: created.firmSlug,
+    authProvider: 'google',
+    req,
+  });
+
+  const exchangeToken = await issueGoogleExchangeToken({
+    userId: created.userId,
+    firmId: created.firmId,
+    xID: created.adminXID,
+  });
+
+  return { created, exchangeToken };
+};
+
 const startGoogleAuth = async (req, res) => {
   try {
     ensureGoogleAuthEnabled();
@@ -4196,27 +4284,15 @@ const googleAuthCallback = async (req, res) => {
         const tenantContext = await resolveCanonicalTenantForUser(existingUser);
         if (tenantContext && isActiveStatus(tenantContext.status)) {
           if (!existingUser.authProviders?.google?.googleId) {
-            existingUser.authProviders = {
-              ...(existingUser.authProviders || {}),
-              google: {
-                ...((existingUser.authProviders || {}).google || {}),
-                googleId: googleSub,
-                linkedAt: new Date(),
-              },
-            };
+            existingUser.authProviders = buildGoogleLinkedAuthProviders(existingUser, googleSub);
             await existingUser.save();
           }
 
           await ensureCanonicalXid(existingUser);
-          const exchangeToken = generateLoginSessionToken();
-          await LoginSession.deleteMany({ userId: existingUser._id, consumedAt: null });
-          await LoginSession.create({
-            tokenHash: hashLoginSessionToken(exchangeToken),
+          const exchangeToken = await issueGoogleExchangeToken({
             userId: existingUser._id,
             firmId: existingUser.firmId,
             xID: existingUser.xID || existingUser.xid,
-            expiresAt: new Date(Date.now() + GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES * 60 * 1000),
-            consumedAt: null,
           });
 
           return respond({
@@ -4230,64 +4306,21 @@ const googleAuthCallback = async (req, res) => {
       // 2. New user: if firmName provided, create immediately!
       const firmName = String(state.firmName || '').trim();
       if (firmName) {
-        const session = await mongoose.startSession();
-        let created = null;
-        try {
-          await session.withTransaction(async () => {
-            created = await signupService.createFirmAndAdmin({
-              name: googleName || 'Primary Admin',
-              email: googleEmail,
-              firmName,
-              phone: state.phone || null,
-              authProvider: 'google',
-              googleSubject: googleSub,
-              legalConsent: {
-                agreedToPilotTerms: true,
-                agreedAt: new Date(),
-                ipAddress: req.headers?.['x-forwarded-for']
-                  ? String(req.headers['x-forwarded-for']).split(',')[0].trim()
-                  : (req.ip || '127.0.0.1'),
-                userAgent: req.headers?.['user-agent'] || 'Google OAuth',
-                termsVersion: 'v1.0_pilot_2026',
-                privacyVersion: 'v1.0_pilot_2026',
-                agreementType: 'PILOT_CLICKWRAP',
-              },
-              session,
-              req,
-            });
-          });
-        } finally {
-          await session.endSession();
-        }
-
-        if (!created) {
+        const provisioned = await provisionGoogleWorkspaceAccount({
+          req,
+          name: googleName,
+          email: googleEmail,
+          firmName,
+          phone: state.phone || null,
+          googleSubject: googleSub,
+        });
+        if (!provisioned) {
           return respond({ error: 'SIGNUP_FAILED' });
         }
 
-        await signupService.sendSignupWelcomeEmail({
-          name: googleName || 'Primary Admin',
-          email: googleEmail,
-          xid: created.adminXID,
-          firmName,
-          firmSlug: created.firmSlug,
-          authProvider: 'google',
-          req,
-        });
-
-        const exchangeToken = generateLoginSessionToken();
-        await LoginSession.deleteMany({ userId: created.userId, consumedAt: null });
-        await LoginSession.create({
-          tokenHash: hashLoginSessionToken(exchangeToken),
-          userId: created.userId,
-          firmId: created.firmId,
-          xID: created.adminXID,
-          expiresAt: new Date(Date.now() + GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES * 60 * 1000),
-          consumedAt: null,
-        });
-
         return respond({
-          exchangeToken,
-          firmSlug: created.firmSlug,
+          exchangeToken: provisioned.exchangeToken,
+          firmSlug: provisioned.created.firmSlug,
           mode: 'signup',
         });
       }
@@ -4363,14 +4396,7 @@ const googleAuthCallback = async (req, res) => {
       user.emailVerified = true;
       user.emailVerifiedAt = now;
       user.verificationMethod = 'GOOGLE';
-      user.authProviders = {
-        ...(user.authProviders || {}),
-        google: {
-          ...((user.authProviders || {}).google || {}),
-          googleId: googleSub,
-          linkedAt: now,
-        },
-      };
+      user.authProviders = buildGoogleLinkedAuthProviders(user, googleSub, now);
       await user.save();
 
       if (tenant.legacyFirmId) {
@@ -4414,28 +4440,16 @@ const googleAuthCallback = async (req, res) => {
       }
 
       if (!existingGoogleId) {
-        user.authProviders = {
-          ...(user.authProviders || {}),
-          google: {
-            ...((user.authProviders || {}).google || {}),
-            googleId: googleSub,
-            linkedAt: new Date(),
-          },
-        };
+        user.authProviders = buildGoogleLinkedAuthProviders(user, googleSub);
         await user.save();
       }
     }
 
-    const exchangeToken = generateLoginSessionToken();
     await ensureCanonicalXid(user);
-    await LoginSession.deleteMany({ userId: user._id, consumedAt: null });
-    await LoginSession.create({
-      tokenHash: hashLoginSessionToken(exchangeToken),
+    const exchangeToken = await issueGoogleExchangeToken({
       userId: user._id,
       firmId: user.firmId,
       xID: user.xID || user.xid,
-      expiresAt: new Date(Date.now() + GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES * 60 * 1000),
-      consumedAt: null,
     });
 
     return respond({
@@ -4488,61 +4502,19 @@ const completeGoogleSignup = async (req, res) => {
       return res.status(409).json({ success: false, message: 'An account with this Google email already exists.' });
     }
 
-    const session = await mongoose.startSession();
-    let created = null;
-    try {
-      await session.withTransaction(async () => {
-        created = await signupService.createFirmAndAdmin({
-          name: googleName || 'Primary Admin',
-          email: googleEmail,
-          firmName,
-          phone: resolvedPhone,
-          authProvider: 'google',
-          googleSubject: googleSub,
-          legalConsent: {
-            agreedToPilotTerms: true,
-            agreedAt: new Date(),
-            ipAddress: req.headers?.['x-forwarded-for']
-              ? String(req.headers['x-forwarded-for']).split(',')[0].trim()
-              : (req.ip || '127.0.0.1'),
-            userAgent: req.headers?.['user-agent'] || 'Google OAuth',
-            termsVersion: 'v1.0_pilot_2026',
-            privacyVersion: 'v1.0_pilot_2026',
-            agreementType: 'PILOT_CLICKWRAP',
-          },
-          session,
-          req,
-        });
-      });
-    } finally {
-      await session.endSession();
-    }
-
-    if (!created) {
+    const provisioned = await provisionGoogleWorkspaceAccount({
+      req,
+      name: googleName,
+      email: googleEmail,
+      firmName,
+      phone: resolvedPhone,
+      googleSubject: googleSub,
+    });
+    if (!provisioned) {
       return res.status(500).json({ success: false, message: 'Failed to create firm and admin.' });
     }
 
-    await signupService.sendSignupWelcomeEmail({
-      name: googleName || 'Primary Admin',
-      email: googleEmail,
-      xid: created.adminXID,
-      firmName,
-      firmSlug: created.firmSlug,
-      authProvider: 'google',
-      req,
-    });
-
-    const exchangeToken = generateLoginSessionToken();
-    await LoginSession.deleteMany({ userId: created.userId, consumedAt: null });
-    await LoginSession.create({
-      tokenHash: hashLoginSessionToken(exchangeToken),
-      userId: created.userId,
-      firmId: created.firmId,
-      xID: created.adminXID,
-      expiresAt: new Date(Date.now() + GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES * 60 * 1000),
-      consumedAt: null,
-    });
-
+    const { created, exchangeToken } = provisioned;
     return res.status(201).json({
       success: true,
       message: 'Workspace created successfully with Google authentication.',

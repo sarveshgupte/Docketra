@@ -37,6 +37,7 @@ import { StatusMessageStack } from './platform/PlatformShared';
 import { ROUTES } from '../constants/routes';
 import { invalidateStorageStatusSummaryCache } from '../hooks/useStorageStatusSummary';
 import { DriveIsolationCertificateModal } from '../components/storage/DriveIsolationCertificateModal';
+import { isAlternativeStorageEnabled } from '../utils/storageOptions';
 
 const PAGE_SUBTITLE = 'DocketsHQ-managed storage works by default. You can optionally connect your firm’s own cloud storage bucket or drive.';
 
@@ -101,12 +102,14 @@ export function StorageSettingsPage() {
   const { user } = useAuth();
   const location = useLocation();
 
+  const showAltStorageOptions = isAlternativeStorageEnabled();
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [savingProvider, setSavingProvider] = useState(false);
   const [providerTab, setProviderTab] = useState('google-drive');
+  const activeProviderTab = showAltStorageOptions ? providerTab : 'google-drive';
   const [otpCode, setOtpCode] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [oneDriveRefreshToken, setOneDriveRefreshToken] = useState('');
@@ -787,15 +790,19 @@ export function StorageSettingsPage() {
             <div>
               <span className="text-xs uppercase font-bold tracking-wider text-slate-400">Storage Providers</span>
               <h2 className="text-xl font-bold text-slate-800 mt-1">Configure Provider Settings</h2>
-              <p className="text-slate-500 text-sm mt-1">Connect firm-owned Google Drive directly, or configure advanced manual providers (OneDrive, Amazon S3).</p>
+              <p className="text-slate-500 text-sm mt-1">
+                {showAltStorageOptions
+                  ? 'Connect firm-owned Google Drive directly, or configure advanced manual providers (OneDrive, Amazon S3).'
+                  : 'Connect firm-owned Google Drive directly to keep all dockets and attachments in your firm’s drive.'}
+              </p>
             </div>
 
-            {/* Premium Three-Way Card Tab System */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Provider Card Tab System */}
+            <div className={showAltStorageOptions ? 'grid grid-cols-1 md:grid-cols-3 gap-4' : 'grid grid-cols-1 max-w-xs gap-4'}>
               <button
                 type="button"
                 className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 text-center ${
-                  providerTab === 'google-drive'
+                  activeProviderTab === 'google-drive'
                     ? 'border-indigo-600 bg-indigo-50/30 shadow-sm'
                     : 'border-slate-100 bg-slate-50/30 hover:border-slate-200 hover:bg-slate-50/60'
                 }`}
@@ -811,48 +818,52 @@ export function StorageSettingsPage() {
                 )}
               </button>
 
-              <button
-                type="button"
-                className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 text-center ${
-                  providerTab === 'onedrive'
-                    ? 'border-indigo-600 bg-indigo-50/30 shadow-sm'
-                    : 'border-slate-100 bg-slate-50/30 hover:border-slate-200 hover:bg-slate-50/60'
-                }`}
-                onClick={() => setProviderTab('onedrive')}
-              >
-                <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100 mb-3">
-                  <OneDriveIcon className="h-8 w-8" />
-                </div>
-                <h3 className="font-bold text-slate-800 text-sm">Microsoft OneDrive</h3>
-                <span className="text-xs text-slate-400 mt-1 block">Graph API Token Rotation</span>
-                {currentProvider === 'onedrive' && config?.isConfigured && (
-                  <span className="mt-2 text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold uppercase rounded-full">Currently Active</span>
-                )}
-              </button>
+              {showAltStorageOptions && (
+                <>
+                  <button
+                    type="button"
+                    className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 text-center ${
+                      activeProviderTab === 'onedrive'
+                        ? 'border-indigo-600 bg-indigo-50/30 shadow-sm'
+                        : 'border-slate-100 bg-slate-50/30 hover:border-slate-200 hover:bg-slate-50/60'
+                    }`}
+                    onClick={() => setProviderTab('onedrive')}
+                  >
+                    <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100 mb-3">
+                      <OneDriveIcon className="h-8 w-8" />
+                    </div>
+                    <h3 className="font-bold text-slate-800 text-sm">Microsoft OneDrive</h3>
+                    <span className="text-xs text-slate-400 mt-1 block">Graph API Token Rotation</span>
+                    {currentProvider === 'onedrive' && config?.isConfigured && (
+                      <span className="mt-2 text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold uppercase rounded-full">Currently Active</span>
+                    )}
+                  </button>
 
-              <button
-                type="button"
-                className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 text-center ${
-                  providerTab === 's3'
-                    ? 'border-indigo-600 bg-indigo-50/30 shadow-sm'
-                    : 'border-slate-100 bg-slate-50/30 hover:border-slate-200 hover:bg-slate-50/60'
-                }`}
-                onClick={() => setProviderTab('s3')}
-              >
-                <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100 mb-3">
-                  <S3Icon className="h-8 w-8" />
-                </div>
-                <h3 className="font-bold text-slate-800 text-sm">Amazon AWS S3</h3>
-                <span className="text-xs text-slate-400 mt-1 block">IAM Secured Bucket Mode</span>
-                {currentProvider === 's3' && config?.isConfigured && (
-                  <span className="mt-2 text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold uppercase rounded-full">Currently Active</span>
-                )}
-              </button>
+                  <button
+                    type="button"
+                    className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 text-center ${
+                      activeProviderTab === 's3'
+                        ? 'border-indigo-600 bg-indigo-50/30 shadow-sm'
+                        : 'border-slate-100 bg-slate-50/30 hover:border-slate-200 hover:bg-slate-50/60'
+                    }`}
+                    onClick={() => setProviderTab('s3')}
+                  >
+                    <div className="p-3 bg-white rounded-xl shadow-sm border border-slate-100 mb-3">
+                      <S3Icon className="h-8 w-8" />
+                    </div>
+                    <h3 className="font-bold text-slate-800 text-sm">Amazon AWS S3</h3>
+                    <span className="text-xs text-slate-400 mt-1 block">IAM Secured Bucket Mode</span>
+                    {currentProvider === 's3' && config?.isConfigured && (
+                      <span className="mt-2 text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold uppercase rounded-full">Currently Active</span>
+                    )}
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Tab Panels */}
             <div className="border-t border-slate-100 pt-6">
-              {providerTab === 'google-drive' && (
+              {activeProviderTab === 'google-drive' && (
                 <div className="space-y-6 max-w-2xl">
                   <div>
                     <h3 className="font-bold text-slate-800 text-base">Firm-owned Google Drive</h3>
@@ -962,7 +973,7 @@ export function StorageSettingsPage() {
                 </div>
               )}
 
-              {providerTab === 'onedrive' && (
+              {showAltStorageOptions && activeProviderTab === 'onedrive' && (
                 <div className="space-y-5">
                   <div>
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Advanced manual providers</span>
@@ -1003,7 +1014,7 @@ export function StorageSettingsPage() {
                 </div>
               )}
 
-              {providerTab === 's3' && (
+              {showAltStorageOptions && activeProviderTab === 's3' && (
                 <div className="space-y-5">
                   <div>
                     <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Advanced manual providers</span>

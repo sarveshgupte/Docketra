@@ -33,6 +33,7 @@ import {
   verifyStorageBoundary,
 } from '../../services/storageService';
 import { ROUTES } from '../../constants/routes';
+import { isAlternativeStorageEnabled } from '../../utils/storageOptions';
 
 const PRACTICE_TYPES = [
   { id: 'PCS', label: 'Company Secretary (PCS)', desc: 'MCA, ROC filings, secretarial audits, board resolutions' },
@@ -56,6 +57,7 @@ export function WorkspaceSetupPage() {
 
   const firmSlug = routeFirmSlug || user?.firmSlug || user?.firm?.firmSlug || '';
   const initialStep = Number(searchParams.get('step')) || 1;
+  const showAltStorageOptions = isAlternativeStorageEnabled();
 
   const isPrimaryAdmin = user?.role === 'PRIMARY_ADMIN';
   const isSetupComplete = user?.firm?.isSetupComplete === true || user?.isSetupComplete === true;
@@ -343,7 +345,7 @@ export function WorkspaceSetupPage() {
   };
 
   // Exit directly to workspace (marking setup completed safely in database)
-  const handleExitToWorkspace = async () => {
+  const finalizeWorkspaceSetup = async ({ showCompletionToast = false, includeTourParam = false } = {}) => {
     setLoading(true);
     try {
       if (typeof window !== 'undefined' && firmSlug) {
@@ -364,45 +366,22 @@ export function WorkspaceSetupPage() {
           },
         });
       }
-      showSuccess('Workspace setup completed');
-    } catch (_err) {
-      // Non-blocking
-    } finally {
-      setLoading(false);
-      navigate(ROUTES.WORKLIST(firmSlug), { replace: true });
-    }
-  };
-
-  // Step 4 Finish: Complete Setup and Enter WebApp
-  const handleEnterWorkspace = async () => {
-    setLoading(true);
-    try {
-      if (typeof window !== 'undefined' && firmSlug) {
-        window.localStorage?.setItem(`setupDismissed:${firmSlug}`, 'true');
-      }
-      await adminApi.completeFirmSetup({
-        name: firmName.trim() || user?.firm?.name || 'Firm',
-        practiceType,
-      });
-      const refreshed = await fetchProfile({ force: true });
-      if (refreshed?.data) {
-        updateUser({
-          ...refreshed.data,
-          isSetupComplete: true,
-          firm: {
-            ...(refreshed.data.firm || {}),
-            isSetupComplete: true,
-          },
-        });
+      if (showCompletionToast) {
+        showSuccess('Workspace setup completed');
       }
     } catch (_err) {
       // Non-blocking
     } finally {
       setLoading(false);
-      const destination = `${ROUTES.WORKLIST(firmSlug)}${startTour ? '?tour=start' : ''}`;
+      const destination = `${ROUTES.WORKLIST(firmSlug)}${includeTourParam ? '?tour=start' : ''}`;
       navigate(destination, { replace: true });
     }
   };
+
+  const handleExitToWorkspace = () => finalizeWorkspaceSetup({ showCompletionToast: true });
+
+  // Step 4 Finish: Complete Setup and Enter WebApp
+  const handleEnterWorkspace = () => finalizeWorkspaceSetup({ includeTourParam: startTour });
 
   const selectedPractice = PRACTICE_TYPES.find((p) => p.id === practiceType) || PRACTICE_TYPES[0];
 
@@ -728,18 +707,20 @@ export function WorkspaceSetupPage() {
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-sm bg-sky-50 border border-sky-200 text-sky-900 text-xs font-mono font-semibold uppercase">
                 <HardDrive className="h-3.5 w-3.5 text-sky-700" />
-                Step 2: Choose where to store your files
+                {showAltStorageOptions ? 'Step 2: Choose where to store your files' : 'Step 2: Connect Firm Google Drive'}
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-950">
                 Your files stay in your hands
               </h1>
               <p className="text-sm text-slate-600">
-                Choose where DocketsHQ saves your client documents, filings, and notices. DocketsHQ never stores copies of your private files on its own servers.
+                {showAltStorageOptions
+                  ? 'Choose where DocketsHQ saves your client documents, filings, and notices. DocketsHQ never stores copies of your private files on its own servers.'
+                  : 'Connect your firm’s Google Drive so DocketsHQ stores client documents, filings, and notices directly in your own drive—never on DocketsHQ servers.'}
               </p>
             </div>
 
-            {/* 3 Practical Options Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Storage Options Grid */}
+            <div className={showAltStorageOptions ? 'grid grid-cols-1 lg:grid-cols-3 gap-4' : 'max-w-xl'}>
               {/* Option 1: Google Drive (Cloud + Computer Sync) */}
               <div
                 className={`p-5 rounded-lg border flex flex-col justify-between transition-all ${
@@ -832,6 +813,8 @@ export function WorkspaceSetupPage() {
                 </div>
               </div>
 
+              {showAltStorageOptions && (
+                <>
               {/* Option 2: This Computer's Hard Drive */}
               <div
                 className={`p-5 rounded-lg border flex flex-col justify-between transition-all ${
@@ -1024,6 +1007,8 @@ export function WorkspaceSetupPage() {
                   )}
                 </div>
               </div>
+                </>
+              )}
             </div>
 
             {/* Privacy Assurance Note */}
@@ -1269,7 +1254,7 @@ export function WorkspaceSetupPage() {
                     {storageConfig?.connectedEmail || 'Google Drive'}
                   </p>
                 </div>
-              ) : localFolderPath ? (
+              ) : showAltStorageOptions && localFolderPath ? (
                 <div className="p-3 rounded-md bg-sky-50 border border-sky-200 text-sky-950 space-y-1">
                   <div className="flex items-center gap-1.5 text-sky-800 font-bold">
                     <Laptop className="h-4 w-4 shrink-0 text-sky-600" />
@@ -1279,7 +1264,7 @@ export function WorkspaceSetupPage() {
                     {localFolderPath}
                   </p>
                 </div>
-              ) : officeServerPath ? (
+              ) : showAltStorageOptions && officeServerPath ? (
                 <div className="p-3 rounded-md bg-purple-50 border border-purple-200 text-purple-950 space-y-1">
                   <div className="flex items-center gap-1.5 text-purple-800 font-bold">
                     <Server className="h-4 w-4 shrink-0 text-purple-600" />

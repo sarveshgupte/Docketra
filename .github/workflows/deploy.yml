@@ -33,6 +33,7 @@ jobs:
           VITE_GOOGLE_CLIENT_ID="1078507569854-c24hg50jkar8p68ooumkdebr3qtrcoe5.apps.googleusercontent.com" \
           VITE_SUPPORT_EMAIL="sarveshgupte@gmail.com" \
           VITE_TURNSTILE_SITE_KEY="0x4AAAAAADUM0lvwvSX_G56o" \
+          VITE_ENABLE_ALT_STORAGE="false" \
           npm run build
           cd ..
 

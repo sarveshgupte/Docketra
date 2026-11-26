@@ -18,6 +18,27 @@ const getWorkspaceSlugPreview = (firmName) => {
   return slug || 'your-firm';
 };
 
+const exchangeAndResolveRoute = async ({
+  exchangeToken,
+  firmSlug,
+  fetchProfile,
+  resolvePostAuthRoute,
+}) => {
+  const payload = await authApi.exchangeGoogleAuth({ exchangeToken, firmSlug });
+  authService.setSessionTokens(payload);
+
+  // CRITICAL FIX: Use force:true to bypass the single-attempt guard.
+  // The AuthProvider boot effect already called fetchProfile() which failed
+  // with 401 (no session yet) and set authFailureResolvedRef=true.
+  // Without force:true, the subsequent fetchProfile() call returns
+  // {success:false} immediately without hitting the network.
+  const profileResult = await fetchProfile({ force: true });
+  if (profileResult?.success && profileResult.data) {
+    return resolvePostAuthRoute(profileResult.data);
+  }
+  return null;
+};
+
 export const OAuthPostAuthPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -58,17 +79,14 @@ export const OAuthPostAuthPage = () => {
 
     const completeGoogleAuth = async () => {
       try {
-        const payload = await authApi.exchangeGoogleAuth({ exchangeToken, firmSlug });
-        authService.setSessionTokens(payload);
-
-        // CRITICAL FIX: Use force:true to bypass the single-attempt guard.
-        // The AuthProvider boot effect already called fetchProfile() which failed
-        // with 401 (no session yet) and set authFailureResolvedRef=true.
-        // Without force:true, the subsequent fetchProfile() call returns
-        // {success:false} immediately without hitting the network.
-        const profileResult = await fetchProfile({ force: true });
-        if (profileResult?.success && profileResult.data) {
-          navigate(resolvePostAuthRoute(profileResult.data), { replace: true });
+        const route = await exchangeAndResolveRoute({
+          exchangeToken,
+          firmSlug,
+          fetchProfile,
+          resolvePostAuthRoute,
+        });
+        if (route) {
+          navigate(route, { replace: true });
           return;
         }
 
@@ -115,13 +133,13 @@ export const OAuthPostAuthPage = () => {
 
       if (newExchangeToken) {
         try {
-          const payload = await authApi.exchangeGoogleAuth({ exchangeToken: newExchangeToken, firmSlug: newFirmSlug });
-          authService.setSessionTokens(payload);
-          const profileResult = await fetchProfile({ force: true });
-          if (profileResult?.success && profileResult.data) {
-            sessionHydrated = true;
-            targetRoute = resolvePostAuthRoute(profileResult.data);
-          }
+          targetRoute = await exchangeAndResolveRoute({
+            exchangeToken: newExchangeToken,
+            firmSlug: newFirmSlug,
+            fetchProfile,
+            resolvePostAuthRoute,
+          });
+          sessionHydrated = Boolean(targetRoute);
         } catch (_authErr) {
           // If profile/exchange fails, fallback to firm login route with clear notice
         }
