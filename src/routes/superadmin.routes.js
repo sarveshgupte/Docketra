@@ -78,7 +78,7 @@ router.get('/onboarding-insights', authorize(SuperAdminPolicy.canViewPlatformSta
 router.get('/onboarding-insights/details', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingInsightDetails);
 router.get('/onboarding-alerts', authorize(SuperAdminPolicy.canViewPlatformStats), getOnboardingAlerts);
 router.get('/health', getOperationalHealth);
-router.get('/diagnostics', getSupportDiagnostics);
+router.get('/diagnostics', requireSuperadmin, getSupportDiagnostics);
 router.get('/firm-health', requireSuperadmin, authorize(SuperAdminPolicy.canViewPlatformStats), getFirmHealth);
 router.get('/audit-logs', authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminAuditLogs);
 router.get('/search', authorize(SuperAdminPolicy.canViewPlatformStats), getSuperadminGlobalSearch);

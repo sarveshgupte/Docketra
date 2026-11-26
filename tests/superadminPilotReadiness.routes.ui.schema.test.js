@@ -35,5 +35,7 @@ assert.ok(!layout.includes('href="#"'), 'no placeholder href links');
 const page = fs.readFileSync(path.resolve(__dirname, '../ui/src/pages/SuperadminPilotReadinessPage.jsx'), 'utf8');
 assert.ok(page.includes('platform metadata only'), 'privacy text should exist');
 assert.ok(!page.includes('href="#"'), 'page must not include placeholder href links');
+assert.ok(!page.includes('Inspect Bound'), 'page must not contain Inspect Bound typo');
+assert.ok(/\bInspect\b/.test(page), 'page CTA button should use Inspect label');
 
 console.log('superadminPilotReadiness.routes.ui.schema.test.js passed');

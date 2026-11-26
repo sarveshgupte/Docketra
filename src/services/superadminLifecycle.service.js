@@ -77,19 +77,31 @@ const resolveSessionQuery = (query, session) => {
   return Promise.resolve(query);
 };
 
+const isUnconnectedNativeCreate = (model, session) => (
+  !session
+  && mongoose.connection?.readyState !== 1
+  && typeof mongoose.Model?.create === 'function'
+  && model?.create === mongoose.Model.create
+);
+
 const logSuperadminAction = async ({ actionType, description, performedBy, performedById, targetEntityType, targetEntityId, metadata = {}, req, session = null }) => {
   try {
+    if (isUnconnectedNativeCreate(SuperadminAudit, session)) {
+      log.warn('[SUPERADMIN_AUDIT] Skipping persistence while database is disconnected', { actionType });
+      return;
+    }
+
     const isSystemAction = !performedById
       || (typeof performedById === 'string' && !mongoose.Types.ObjectId.isValid(performedById));
 
     const auditEntry = {
       actionType,
       description,
-      performedBy,
+      performedBy: performedBy || req?.user?.email || req?.user?.xID || 'SUPERADMIN',
       targetEntityType,
       targetEntityId,
       ipAddress: req?.ip,
-      userAgent: req?.headers?.['user-agent'],
+      userAgent: req?.headers?.['user-agent'] || req?.get?.('user-agent'),
       metadata,
     };
 

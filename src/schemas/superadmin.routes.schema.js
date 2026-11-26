@@ -14,7 +14,7 @@ module.exports = {
   'GET /diagnostics': {
     query: z.object({
       limit: z.coerce.number().int().min(5).max(30).optional(),
-    }).strict(),
+    }).passthrough(),
   },
   'GET /firm-health': {
     query: z.object({

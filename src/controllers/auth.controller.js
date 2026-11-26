@@ -43,6 +43,7 @@ const {
 } = require('../services/tenantIdentity.service');
 const wrapWriteHandler = require('../middleware/wrapWriteHandler');
 const { ensureGoogleAuthEnabled } = require('../services/featureGate.service');
+const { logSuperadminAction } = require('../services/superadminLifecycle.service');
 const {
   getGoogleOAuthClient,
   signGoogleState,
@@ -944,6 +945,20 @@ const handleSuperadminLogin = async (req, res, normalizedXID, password, loginSco
     userAgent: req.get('user-agent'),
     metadata: { eventType: 'LOGIN_SUCCESS', email: superadminEmail || null, timestamp: new Date().toISOString() },
   }, req);
+  await logSuperadminAction({
+    actionType: 'SuperadminLogin',
+    description: `SuperAdmin login successful (${superadminXIDRaw || normalizedXID || DEFAULT_XID})`,
+    performedBy: superadminEmail || normalizedXID || DEFAULT_XID,
+    performedById: SUPERADMIN_USER_ID() || null,
+    targetEntityType: 'User',
+    targetEntityId: String(SUPERADMIN_USER_ID() || normalizedXID || DEFAULT_XID),
+    metadata: {
+      xID: superadminXIDRaw || normalizedXID || DEFAULT_XID,
+      loginScope,
+      requestId: req?.requestId || null,
+    },
+    req,
+  });
 
   const user = {
     id: SUPERADMIN_USER_ID(),
@@ -3882,6 +3897,7 @@ const authSessionService = createAuthSessionService({
     DEFAULT_FIRM_ID,
     getSuperadminEnv,
     SUPERADMIN_USER_ID,
+    logSuperadminAction,
   },
   services: {
     jwtService,

@@ -3,6 +3,7 @@ const Category = require('../models/Category.model');
 const Team = require('../models/Team.model');
 const FirmSetupTemplate = require('../models/FirmSetupTemplate.model');
 const Firm = require('../models/Firm.model');
+const { ensureLinkedQcWorkbasket } = require('./workbasketGuardrails.service');
 const { logAuthEvent } = require('./audit.service');
 const log = require('../utils/log');
 
@@ -184,6 +185,10 @@ const createDefaultWorkbaskets = async (firmId, adminUserId, { session, template
         session: session || undefined,
       },
     );
+
+    if (resolvedType === 'PRIMARY' && resolved?._id) {
+      await ensureLinkedQcWorkbasket({ firmId, primaryWorkbasket: resolved, session });
+    }
 
     workbasketMap.set(workbasket.name, resolved);
   }

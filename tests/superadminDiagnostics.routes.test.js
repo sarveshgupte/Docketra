@@ -71,6 +71,11 @@ Module._load = function(request, parent, isMain) {
       getFirmHealth: () => {},
       getSuperadminAuditLogs: () => {},
       getSuperadminGlobalSearch: () => {},
+      getPlansCapacity: () => {},
+      getPilotReadiness: () => {},
+      getSuperadminFeatureFlags: () => {},
+      updateSuperadminFeatureFlag: () => {},
+      updateFirmPlanCapacity: () => {},
     };
   }
 

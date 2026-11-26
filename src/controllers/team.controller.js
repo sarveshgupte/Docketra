@@ -2,7 +2,21 @@ const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const { assertPrimaryAdmin } = require('../utils/hierarchy.utils');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
-const { createPrimaryWithQc, isValidObjectId } = require('../services/workbasketGuardrails.service');
+const { createPrimaryWithQc, isValidObjectId, isDuplicateKeyError } = require('../services/workbasketGuardrails.service');
+
+const resolveCreateTeamError = (error) => {
+  if (isDuplicateKeyError(error)) {
+    return { statusCode: 409, message: error.message || 'A workbasket with this name already exists for this firm' };
+  }
+  if (/Only PRIMARY_ADMIN/i.test(String(error?.message || ''))) {
+    return { statusCode: 403, message: error.message };
+  }
+  const statusCode = error?.statusCode || 500;
+  return {
+    statusCode,
+    message: statusCode >= 500 ? 'Failed to create team' : (error?.message || 'Failed to create team'),
+  };
+};
 
 const ensureSameFirm = (doc, firmId) => doc && String(doc.firmId) === String(firmId);
 
@@ -18,15 +32,19 @@ const listTeams = async (req, res) => {
 const createTeam = async (req, res) => {
   try {
     assertPrimaryAdmin(req.user);
-    const name = String(req.body?.name || '').trim();
-    const managerId = req.body?.managerId || null;
-    if (!name) return res.status(400).json({ success: false, message: 'Team name is required' });
-    if (managerId && !isValidObjectId(managerId)) return res.status(400).json({ success: false, message: 'Invalid managerId' });
     const effectiveFirmId = req.user?.firmId || req.ownershipFirmId || req.firmId || req.tenant?.id;
-    const { primary: team } = await createPrimaryWithQc({ firmId: effectiveFirmId, name, managerId });
-    return res.status(201).json({ success: true, data: team });
+    if (!effectiveFirmId) {
+      return res.status(400).json({ success: false, message: 'Firm context is required' });
+    }
+    const { primary: team, qc: qcWorkbasket } = await createPrimaryWithQc({
+      firmId: effectiveFirmId,
+      name: req.body?.name,
+      managerId: req.body?.managerId || null,
+    });
+    return res.status(201).json({ success: true, data: team, qcWorkbasket });
   } catch (error) {
-    return res.status(400).json({ success: false, message: error.message || 'Failed to create team' });
+    const { statusCode, message } = resolveCreateTeamError(error);
+    return res.status(statusCode).json({ success: false, message });
   }
 };
 

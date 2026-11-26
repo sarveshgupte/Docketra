@@ -620,7 +620,7 @@ const getOnboardingAlerts = async (req, res) => {
 const listFirms = async (req, res) => {
   try {
     const firms = await Firm.find()
-      .select('firmId firmSlug name status createdAt plan maxUsers subscriptionStatus billingStatus billingOwnerId defaultClientId legalConsent')
+      .select('firmId firmSlug name status createdAt plan maxUsers subscriptionStatus billingStatus billingOwnerId defaultClientId legalConsent storage storageProvider')
       .sort({ createdAt: -1 });
 
     const allTenantKeys = [];
@@ -717,6 +717,14 @@ const listFirms = async (req, res) => {
         name: firm.name,
         status: firm.status,
         isActive: firm.status === 'active',
+        plan: firm.plan || 'starter',
+        maxUsers: Number.isFinite(firm.maxUsers) ? firm.maxUsers : 10,
+        subscriptionStatus: firm.subscriptionStatus || 'trial',
+        billingStatus: firm.billingStatus || 'active',
+        billingOwnerId: firm.billingOwnerId || null,
+        storageMode: firm.storage?.mode || 'docketra_managed',
+        storageProvider: firm.storage?.provider || firm.storageProvider || 'docketra',
+        storage: firm.storage || { mode: 'docketra_managed', provider: 'docketra' },
         clientCount,
         userCount,
         adminEmail: admin?.email || null,

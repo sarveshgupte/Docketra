@@ -2,110 +2,232 @@ const mongoose = require('mongoose');
 const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 
+const WORKBASKET_NAME_MAX_LENGTH = 80;
+const RESERVED_QC_SUFFIX_REGEX = /\s*[-—–]\s*qc$/i;
+const CONTROL_CHAR_REGEX = /[\u0000-\u001F\u007F]/;
+
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(String(id || ''));
 
-async function createPrimaryWithQc({ firmId, name, managerId = null, candidateFirmIds = [] }) {
-  if (!name || !String(name).trim()) throw new Error('Workbasket name is required');
-  if (managerId && !isValidObjectId(managerId)) throw new Error('Invalid managerId');
-  if (!firmId) throw new Error('Firm context is required');
+const createHttpError = (message, statusCode) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
 
-  const trimmedName = String(name).trim();
-  const escapedName = trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const isDuplicateKeyError = (error) => (
+  error?.statusCode === 409
+  || error?.code === 11000
+  || /duplicate key|E11000|already exists/i.test(String(error?.message || ''))
+);
 
+const normalizeWorkbasketName = (rawName) => String(rawName || '').replace(/\s+/g, ' ').trim();
+
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const buildFirmQueryScope = ({ firmId, candidateFirmIds = [] }) => {
   const allFirmIds = [...new Set([String(firmId), ...(candidateFirmIds || []).map(String)].filter(Boolean))];
-  const objectIds = allFirmIds.filter((id) => mongoose.Types.ObjectId.isValid(id)).map((id) => new mongoose.Types.ObjectId(id));
-  const firmFilter = allFirmIds.length > 1 ? { $in: [...allFirmIds, ...objectIds] } : firmId;
+  const objectIds = allFirmIds
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+  return allFirmIds.length > 1 ? { $in: [...allFirmIds, ...objectIds] } : firmId;
+};
 
-  // Check if primary or QC with this name already exists for this firm
-  const existing = await Team.findOne({
-    firmId: firmFilter,
-    $or: [
-      { name: new RegExp(`^${escapedName}$`, 'i') },
-      { name: new RegExp(`^${escapedName}\\s*[-—–]\\s*QC$`, 'i') },
-    ],
-  });
-  if (existing) {
-    const error = new Error('A workbasket with this name or linked QC already exists');
-    error.statusCode = 409;
-    throw error;
+const validateWorkbasketName = (rawName) => {
+  if (CONTROL_CHAR_REGEX.test(String(rawName || ''))) {
+    throw createHttpError('Workbasket name contains invalid characters', 400);
+  }
+  const normalized = normalizeWorkbasketName(rawName);
+  if (!normalized) {
+    throw createHttpError('Workbasket name is required', 400);
+  }
+  if (normalized.length > WORKBASKET_NAME_MAX_LENGTH) {
+    throw createHttpError(`Workbasket name must be ${WORKBASKET_NAME_MAX_LENGTH} characters or fewer`, 400);
+  }
+  if (RESERVED_QC_SUFFIX_REGEX.test(normalized)) {
+    throw createHttpError('Workbasket name cannot end with "- QC"; linked QC workbaskets are created automatically', 400);
+  }
+  return normalized;
+};
+
+const buildWhitespaceNormalizedPattern = (normalizedName) => (
+  normalizedName.split(' ').map(escapeRegex).join('\\s+')
+);
+
+const findConflictingWorkbasket = async ({ firmFilter, normalizedName, session = null }) => {
+  const namePattern = buildWhitespaceNormalizedPattern(normalizedName);
+  return Team.findOne(
+    {
+      firmId: firmFilter,
+      $or: [
+        { name: new RegExp(`^${namePattern}$`, 'i') },
+        { name: new RegExp(`^${namePattern}\\s*[-—–]\\s*QC$`, 'i') },
+      ],
+    },
+    null,
+    session ? { session } : undefined,
+  );
+};
+
+async function ensureLinkedQcWorkbasket({ firmId, primaryWorkbasket, session = null } = {}) {
+  if (!firmId || !primaryWorkbasket?._id) return null;
+  const baseName = normalizeWorkbasketName(primaryWorkbasket.name || 'Workbasket');
+  return Team.findOneAndUpdate(
+    { firmId, type: 'QC', parentWorkbasketId: primaryWorkbasket._id },
+    {
+      $setOnInsert: {
+        firmId,
+        name: `${baseName} — QC`,
+        isActive: primaryWorkbasket.isActive !== false,
+        type: 'QC',
+        parentWorkbasketId: primaryWorkbasket._id,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true, session: session || undefined },
+  );
+}
+
+const isUnsupportedTransactionError = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('transaction')
+    || message.includes('replica set')
+    || message.includes('standalone')
+    || message.includes('topology')
+  );
+};
+
+const cleanupOrphanWorkbaskets = async ({ firmId, ids = [] }) => {
+  const validIds = ids.filter(Boolean);
+  if (validIds.length === 0) return;
+  try {
+    if (typeof Team.deleteMany === 'function') {
+      await Team.deleteMany({ _id: { $in: validIds }, firmId });
+    } else if (typeof Team.deleteOne === 'function') {
+      await Promise.all(validIds.map((id) => Team.deleteOne({ _id: id, firmId })));
+    }
+  } catch (_) {
+    // Best-effort compensation when running without multi-document transactions
+  }
+};
+
+async function createPrimaryWithQc({ firmId, name, managerId = null, candidateFirmIds = [] }) {
+  if (!firmId) throw createHttpError('Firm context is required', 400);
+  const trimmedName = validateWorkbasketName(name);
+  if (managerId && !isValidObjectId(managerId)) {
+    throw createHttpError('Invalid managerId', 400);
+  }
+
+  const firmFilter = buildFirmQueryScope({ firmId, candidateFirmIds });
+
+  if (managerId) {
+    const manager = await User.findOne({
+      _id: managerId,
+      firmId: firmFilter,
+      status: { $ne: 'deleted' },
+    });
+    if (!manager || manager.isActive === false) {
+      throw createHttpError('Selected manager must be an active user in this firm', 400);
+    }
+  }
+
+  const preflightConflict = await findConflictingWorkbasket({ firmFilter, normalizedName: trimmedName });
+  if (preflightConflict) {
+    throw createHttpError('A workbasket with this name or linked QC already exists', 409);
   }
 
   const session = await mongoose.startSession();
-  let primary;
-  let qc;
-  try {
-    const transactionSupported = typeof session.withTransaction === 'function';
-    const worker = async (opts = {}) => {
-      try {
-        [primary] = await Team.create(
-          [{ firmId, name: trimmedName, managerId: managerId || null, type: 'PRIMARY', parentWorkbasketId: null, isActive: true }],
-          opts.session ? opts : undefined,
-        );
-      } catch (err) {
-        if (err.code === 11000 || err.message?.includes('duplicate key') || err.message?.includes('E11000')) {
-          const dupErr = new Error('A workbasket with this name already exists');
-          dupErr.statusCode = 409;
-          throw dupErr;
-        }
-        throw err;
-      }
+  let primary = null;
+  let qc = null;
 
-      try {
-        [qc] = await Team.create(
-          [{ firmId, name: `${trimmedName} — QC`, type: 'QC', parentWorkbasketId: primary._id, isActive: true }],
-          opts.session ? opts : undefined,
-        );
-      } catch (error) {
-        if (!opts.session && primary?._id) {
-          try {
-            await Team.deleteOne({ _id: primary._id, firmId });
-          } catch (_) {}
-        }
-        if (error.code === 11000 || error.message?.includes('duplicate key') || error.message?.includes('E11000')) {
-          const dupErr = new Error('A linked QC workbasket with this name already exists');
-          dupErr.statusCode = 409;
-          throw dupErr;
-        }
-        throw error;
-      }
+  const createPair = async (activeSession = null) => {
+    const createOpts = activeSession ? { session: activeSession } : undefined;
+    const inTxConflict = activeSession
+      ? await findConflictingWorkbasket({ firmFilter, normalizedName: trimmedName, session: activeSession })
+      : null;
+    if (inTxConflict) {
+      throw createHttpError('A workbasket with this name or linked QC already exists', 409);
+    }
 
-      if (managerId) {
+    try {
+      [primary] = await Team.create(
+        [{ firmId, name: trimmedName, managerId: managerId || null, type: 'PRIMARY', parentWorkbasketId: null, isActive: true }],
+        createOpts,
+      );
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        throw createHttpError('A workbasket with this name already exists', 409);
+      }
+      throw error;
+    }
+
+    try {
+      [qc] = await Team.create(
+        [{ firmId, name: `${trimmedName} — QC`, type: 'QC', parentWorkbasketId: primary._id, isActive: true }],
+        createOpts,
+      );
+    } catch (error) {
+      if (!activeSession) {
+        await cleanupOrphanWorkbaskets({ firmId, ids: [primary?._id] });
+      }
+      if (isDuplicateKeyError(error)) {
+        throw createHttpError('A linked QC workbasket with this name already exists', 409);
+      }
+      throw error;
+    }
+
+    if (managerId) {
+      try {
         await User.updateOne(
           { _id: managerId, firmId: firmFilter, status: { $ne: 'deleted' } },
           { $addToSet: { teamIds: qc._id } },
-          opts.session ? { session: opts.session } : undefined,
+          createOpts,
         );
+      } catch (error) {
+        if (!activeSession) {
+          await cleanupOrphanWorkbaskets({ firmId, ids: [qc?._id, primary?._id] });
+        }
+        throw error;
       }
-    };
+    }
+  };
 
+  try {
+    const transactionSupported = typeof session.withTransaction === 'function';
     if (transactionSupported) {
       try {
-        await session.withTransaction(async () => worker({ session }));
+        await session.withTransaction(async () => createPair(session));
       } catch (error) {
-        const msg = String(error?.message || '').toLowerCase();
-        const unsupported = msg.includes('transaction') || msg.includes('replica set') || msg.includes('standalone') || msg.includes('topology');
-        if (!unsupported) {
-          if (error.code === 11000 || error.message?.includes('duplicate key') || error.message?.includes('E11000')) {
-            error.statusCode = 409;
-          }
+        if (!isUnsupportedTransactionError(error)) {
+          if (isDuplicateKeyError(error)) error.statusCode = 409;
           throw error;
         }
         primary = null;
         qc = null;
-        await worker();
+        await createPair(null);
       }
     } else {
-      await worker();
+      await createPair(null);
     }
   } catch (outerErr) {
-    if (outerErr.code === 11000 || outerErr.message?.includes('duplicate key') || outerErr.message?.includes('E11000')) {
+    if (isDuplicateKeyError(outerErr)) {
       outerErr.statusCode = 409;
     }
     throw outerErr;
   } finally {
     await session.endSession();
   }
+
   return { primary, qc };
 }
 
-module.exports = { isValidObjectId, createPrimaryWithQc };
+module.exports = {
+  WORKBASKET_NAME_MAX_LENGTH,
+  RESERVED_QC_SUFFIX_REGEX,
+  isValidObjectId,
+  createHttpError,
+  isDuplicateKeyError,
+  normalizeWorkbasketName,
+  validateWorkbasketName,
+  ensureLinkedQcWorkbasket,
+  createPrimaryWithQc,
+};

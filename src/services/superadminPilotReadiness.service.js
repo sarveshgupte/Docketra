@@ -6,6 +6,10 @@ const Firm = require('../models/Firm.model');
 const User = require('../models/User.model');
 const { CHECKLIST_KEYS, clampScore, deriveOverallStatus } = require('./superadminPilotReadiness.helpers');
 const { getFeatureFlagsSnapshot, getFeatureFlagRegistry } = require('./featureFlags.service');
+const log = require('../utils/log');
+
+const AUDIT_LOOKBACK_DAYS = 14;
+const DEFAULT_PLAN_TOTALS = { firms: 0, pilot: 0, nearCapacity: 0, overCapacity: 0 };
 
 const PRIMARY_ADMIN_ROUTE_CONTRACT = [
   '/api/clients',
@@ -13,6 +17,20 @@ const PRIMARY_ADMIN_ROUTE_CONTRACT = [
   '/api/storage/configuration',
   '/api/ai/configuration',
 ];
+
+const settledValue = (result, fallback = null) => (
+  result.status === 'fulfilled' && result.value != null ? result.value : fallback
+);
+
+const getRecentAuditStatus = async (sinceDate) => {
+  try {
+    const count = Number(await SuperadminAudit.countDocuments({ timestamp: { $gte: sinceDate } })) || 0;
+    return { count, queryFailed: false };
+  } catch (error) {
+    log.warn('[PILOT_READINESS] Failed to count recent superadmin audit events', { error: error?.message });
+    return { count: 0, queryFailed: true };
+  }
+};
 
 const getPlansCapacityTotals = async () => {
   try {
@@ -36,41 +54,61 @@ const getPlansCapacityTotals = async () => {
       if (maxUsers > 0 && used > maxUsers) acc.overCapacity += 1;
       else if (maxUsers > 0 && usedPct >= 85) acc.nearCapacity += 1;
       return acc;
-    }, { firms: 0, pilot: 0, nearCapacity: 0, overCapacity: 0 });
+    }, { ...DEFAULT_PLAN_TOTALS });
   } catch {
-    return { firms: 0, pilot: 0, nearCapacity: 0, overCapacity: 0 };
+    return { ...DEFAULT_PLAN_TOTALS };
   }
 };
 
+const buildAuditReadinessItem = ({ count, queryFailed }) => {
+  if (queryFailed) {
+    return {
+      key: CHECKLIST_KEYS[7],
+      label: 'Audit logging readiness',
+      status: 'watch',
+      summary: 'Unable to verify recent superadmin audit metadata events (query failed).',
+      evidence: 'SuperadminAudit count query failed; no payload details returned.',
+      nextAction: 'Check database connectivity and SuperadminAudit query logs.',
+      href: '/app/superadmin/audit',
+    };
+  }
+  const hasEvents = count > 0;
+  return {
+    key: CHECKLIST_KEYS[7],
+    label: 'Audit logging readiness',
+    status: hasEvents ? 'pass' : 'watch',
+    summary: `Recent superadmin audit metadata events (${AUDIT_LOOKBACK_DAYS}d): ${count}.`,
+    evidence: 'Audit metadata count only; no payload details returned.',
+    nextAction: hasEvents ? 'Continue monitoring audit pipeline.' : 'Verify superadmin login/action audit events in audit logs.',
+    href: '/app/superadmin/audit',
+  };
+};
+
 const buildPilotReadinessSnapshot = async () => {
-  const fourteenDaysAgo = new Date(Date.now() - (14 * 24 * 60 * 60 * 1000));
+  const sinceDate = new Date(Date.now() - (AUDIT_LOOKBACK_DAYS * 24 * 60 * 60 * 1000));
 
   const [
     firmHealthResult,
     diagnosticsResult,
     onboardingResult,
     planTotalsResult,
-    recentAuditCountResult,
+    auditResult,
     featureFlagsResult,
   ] = await Promise.allSettled([
     getFirmHealthSnapshot({ limit: 100 }).catch(() => null),
     getSupportDiagnosticsSnapshot({ limit: 20 }).catch(() => null),
     onboardingAnalyticsService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }).catch(() => null),
     getPlansCapacityTotals(),
-    SuperadminAudit.countDocuments({
-      $or: [{ timestamp: { $gte: fourteenDaysAgo } }, { createdAt: { $gte: fourteenDaysAgo } }],
-    }).catch(() => 0),
+    getRecentAuditStatus(sinceDate),
     getFeatureFlagsSnapshot().catch(() => null),
   ]);
 
-  const firmHealth = firmHealthResult.status === 'fulfilled' ? firmHealthResult.value : null;
-  const diagnostics = diagnosticsResult.status === 'fulfilled' ? diagnosticsResult.value : null;
-  const onboarding = onboardingResult.status === 'fulfilled' ? onboardingResult.value : null;
-  const planTotals = planTotalsResult.status === 'fulfilled' && planTotalsResult.value
-    ? planTotalsResult.value
-    : { firms: 0, pilot: 0, nearCapacity: 0, overCapacity: 0 };
-  const recentAuditCount = recentAuditCountResult.status === 'fulfilled' ? Number(recentAuditCountResult.value || 0) : 0;
-  const featureFlags = featureFlagsResult.status === 'fulfilled' ? featureFlagsResult.value : null;
+  const firmHealth = settledValue(firmHealthResult);
+  const diagnostics = settledValue(diagnosticsResult);
+  const onboarding = settledValue(onboardingResult);
+  const planTotals = settledValue(planTotalsResult, { ...DEFAULT_PLAN_TOTALS });
+  const auditStatus = settledValue(auditResult, { count: 0, queryFailed: true });
+  const featureFlags = settledValue(featureFlagsResult);
 
   const failedHealth = Number(firmHealth?.totals?.critical || 0);
   const warnedHealth = Number(firmHealth?.totals?.atRisk || 0);
@@ -88,15 +126,16 @@ const buildPilotReadinessSnapshot = async () => {
     { key: CHECKLIST_KEYS[4], label: 'Onboarding readiness', status: staleUsers > 0 ? 'watch' : 'pass', summary: `Stale onboarding users: ${staleUsers}.`, evidence: 'Onboarding insights aggregate totals only.', nextAction: staleUsers > 0 ? 'Follow up stale onboarding flows.' : 'Onboarding flow is healthy for pilots.', href: '/app/superadmin/onboarding-insights' },
     { key: CHECKLIST_KEYS[5], label: 'Storage/BYOS readiness', status: storageIssues > 0 ? 'watch' : 'pass', summary: `Firms with storage non-healthy status: ${storageIssues}.`, evidence: 'Storage health metadata from diagnostics snapshot.', nextAction: storageIssues > 0 ? 'Resolve storage health warnings for pilot firms.' : 'Storage posture appears ready.', href: '/app/superadmin/diagnostics' },
     { key: CHECKLIST_KEYS[6], label: 'Support diagnostics readiness', status: diagnostics ? 'pass' : 'fail', summary: diagnostics ? 'Support diagnostics snapshot is available.' : 'Diagnostics snapshot unavailable.', evidence: diagnostics ? `Diagnostics generated at ${diagnostics.generatedAt}` : 'No diagnostics payload', nextAction: diagnostics ? 'Continue monitoring.' : 'Restore diagnostics endpoint.', href: '/app/superadmin/diagnostics' },
-    { key: CHECKLIST_KEYS[7], label: 'Audit logging readiness', status: recentAuditCount > 0 ? 'pass' : 'watch', summary: `Recent superadmin audit metadata events (14d): ${recentAuditCount}.`, evidence: 'Audit metadata count only; no payload details returned.', nextAction: recentAuditCount > 0 ? 'Continue monitoring audit pipeline.' : 'Verify audit event flow in staging.', href: '/app/superadmin/audit' },
+    buildAuditReadinessItem(auditStatus),
     { key: CHECKLIST_KEYS[8], label: 'Primary-admin sidebar route readiness', status: 'pass', summary: 'Primary-admin API contract paths are fixed and covered by dedicated route-boundary checks.', evidence: `tests/primaryAdminSidebarRouteBoundaries.test.js covers ${PRIMARY_ADMIN_ROUTE_CONTRACT.join(', ')} (see docs/PRIMARY_ADMIN_SIDEBAR_API_CONTRACT.md).`, nextAction: 'Keep boundary test and API contract doc in sync.', href: '/app/superadmin/diagnostics' },
     { key: 'feature_flag_rollout_readiness', label: 'Feature flag rollout readiness', status: !registryValid ? 'fail' : highRiskGlobal > 0 ? 'watch' : 'pass', summary: `High-risk flags enabled globally: ${highRiskGlobal}.`, evidence: `Registry valid=${registryValid}; flags=${(featureFlags?.flags || []).length}`, nextAction: !registryValid ? 'Repair feature flag registry state.' : highRiskGlobal > 0 ? 'Move high-risk flags to internal/pilot.' : 'Maintain pilot/internal stage for high-risk flags.', href: '/app/superadmin/feature-flags' },
     { key: CHECKLIST_KEYS[9], label: 'No public billing/payment flows during pilot', status: 'pass', summary: 'No payment processor/public checkout flow included in pilot readiness surface.', evidence: 'Plans/capacity readiness uses internal metadata-only counters.', nextAction: 'Do not enable public billing flows during pilot.', href: '/app/superadmin/plans' },
   ];
 
-  let score = 100;
-  checklist.forEach((item) => { if (item.status === 'fail') score -= 30; if (item.status === 'watch') score -= 10; });
-  score = clampScore(score);
+  const scorePenalty = checklist.reduce((sum, item) => (
+    item.status === 'fail' ? sum + 30 : item.status === 'watch' ? sum + 10 : sum
+  ), 0);
+  const score = clampScore(100 - scorePenalty);
   const failCount = checklist.filter((item) => item.status === 'fail').length;
   return {
     overallStatus: deriveOverallStatus({ score, failCount }),
@@ -108,4 +147,4 @@ const buildPilotReadinessSnapshot = async () => {
   };
 };
 
-module.exports = { buildPilotReadinessSnapshot, _private: { PRIMARY_ADMIN_ROUTE_CONTRACT, getPlansCapacityTotals } };
+module.exports = { buildPilotReadinessSnapshot, _private: { PRIMARY_ADMIN_ROUTE_CONTRACT, getPlansCapacityTotals, buildAuditReadinessItem } };

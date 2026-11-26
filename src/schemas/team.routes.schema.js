@@ -6,8 +6,8 @@ module.exports = {
   },
   'POST /': {
     body: z.object({
-      name: nonEmptyString,
-      managerId: objectIdString.optional(),
+      name: nonEmptyString.max(80, 'Team name must be 80 characters or fewer'),
+      managerId: objectIdString.nullish(),
     }).strict(),
   },
   'PATCH /:id': {

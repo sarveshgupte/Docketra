@@ -297,10 +297,15 @@ module.exports = {
   'POST /cms-intake-settings/intake-api-key/regenerate': { body: z.object({}).strict() },
   'GET /workbaskets': { query: passthroughQuery },
   'POST /work-settings/default-routing': { body: z.object({}).strict() },
-  'POST /workbaskets': { body: z.object({ name: nonEmptyString }).strict() },
+  'POST /workbaskets': {
+    body: z.object({
+      name: nonEmptyString.max(80, 'Workbasket name must be 80 characters or fewer'),
+      managerId: objectIdString.nullish(),
+    }).strict(),
+  },
   'PUT /workbaskets/:workbasketId': {
     params: z.object({ workbasketId: objectIdOrString }),
-    body: z.object({ name: nonEmptyString }).strict(),
+    body: z.object({ name: nonEmptyString.max(80, 'Workbasket name must be 80 characters or fewer') }).strict(),
   },
   'PATCH /workbaskets/:workbasketId/status': {
     params: z.object({ workbasketId: objectIdOrString }),

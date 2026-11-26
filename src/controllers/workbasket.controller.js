@@ -2,7 +2,12 @@ const Team = require('../models/Team.model');
 const User = require('../models/User.model');
 const { mapUserResponse } = require('../mappers/user.mapper');
 const mongoose = require('mongoose');
-const { createPrimaryWithQc, isValidObjectId } = require('../services/workbasketGuardrails.service');
+const {
+  createPrimaryWithQc,
+  isValidObjectId,
+  isDuplicateKeyError,
+  validateWorkbasketName,
+} = require('../services/workbasketGuardrails.service');
 const { resolveFirmScopedTeams, normalizeMembership, buildWorkbasketVisibilityQuery, normalizeObjectIdStrings } = require('../services/userWorkbasketMembership.service');
 const { ensureDefaultRoutingForFirm } = require('../services/defaultRouting.service');
 const { normalizeRole } = require('../utils/role.utils');
@@ -173,8 +178,7 @@ const createDefaultRouting = async (req, res) => {
 
 const createWorkbasket = async (req, res) => {
   try {
-    const name = String(req.body?.name || '').trim();
-    if (!name) return res.status(400).json({ success: false, message: 'Workbasket name is required' });
+    const name = validateWorkbasketName(req.body?.name);
 
     const effectiveFirmId = resolveEffectiveFirmId(req);
     if (!effectiveFirmId) {
@@ -196,9 +200,11 @@ const createWorkbasket = async (req, res) => {
       message: 'Workbasket created',
     });
   } catch (error) {
-    const isDuplicate = error.statusCode === 409 || error.code === 11000 || error.message?.includes('duplicate key') || error.message?.includes('already exists');
+    const isDuplicate = isDuplicateKeyError(error);
     const statusCode = isDuplicate ? 409 : (error.statusCode || 500);
-    const message = isDuplicate ? (error.message || 'A workbasket with this name already exists for this firm') : (error.message || 'Failed to create workbasket');
+    const message = isDuplicate
+      ? (error.message || 'A workbasket with this name already exists for this firm')
+      : (statusCode >= 500 ? 'Failed to create workbasket' : (error.message || 'Failed to create workbasket'));
     log.error('[WORKBASKET] createWorkbasket error', { error: error.message, code: error.code, statusCode });
     return res.status(statusCode).json({ success: false, message });
   }
@@ -236,18 +242,18 @@ const getCoreWork = async (req, res) => {
 const renameWorkbasket = async (req, res) => {
   try {
     const workbasketId = String(req.params?.workbasketId || '').trim();
-    const name = String(req.body?.name || '').trim();
-    if (!name) return res.status(400).json({ success: false, message: 'Workbasket name is required' });
+    const name = validateWorkbasketName(req.body?.name);
 
     if (!isValidObjectId(workbasketId)) return res.status(400).json({ success: false, message: 'Invalid workbasketId' });
     const firmFilter = resolveFirmQueryFilter(req);
     const workbasket = await Team.findOne({ _id: workbasketId, firmId: firmFilter });
     if (!workbasket) return res.status(404).json({ success: false, message: 'Workbasket not found' });
 
+    const escapedPattern = name.split(' ').map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
     const duplicate = await Team.findOne({
       _id: { $ne: workbasket._id },
       firmId: firmFilter,
-      name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'),
+      name: new RegExp(`^${escapedPattern}$`, 'i'),
     });
     if (duplicate) return res.status(409).json({ success: false, message: 'Workbasket already exists' });
 
@@ -272,7 +278,12 @@ const renameWorkbasket = async (req, res) => {
 
     return res.json({ success: true, data: workbasket, message: 'Workbasket renamed' });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Failed to rename workbasket' });
+    const isDuplicate = isDuplicateKeyError(error);
+    const statusCode = isDuplicate ? 409 : (error.statusCode || 500);
+    const message = isDuplicate
+      ? 'Workbasket already exists'
+      : (statusCode >= 500 ? 'Failed to rename workbasket' : (error.message || 'Failed to rename workbasket'));
+    return res.status(statusCode).json({ success: false, message });
   }
 };
 

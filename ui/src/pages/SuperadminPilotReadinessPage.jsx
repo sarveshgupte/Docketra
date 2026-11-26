@@ -1,33 +1,32 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SuperAdminLayout } from '../components/common/SuperAdminLayout';
-import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
 import { superadminService } from '../services/superadminService';
 
+const STATUS_BADGE_MAP = {
+  pass: { label: 'Pass', badgeClass: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', dotClass: 'bg-emerald-500' },
+  ready: { label: 'Pass', badgeClass: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', dotClass: 'bg-emerald-500' },
+  watch: { label: 'Warning', badgeClass: 'bg-amber-50 text-amber-700 ring-amber-600/20', dotClass: 'bg-amber-500' },
+  fail: { label: 'Blocker', badgeClass: 'bg-rose-50 text-rose-700 ring-rose-600/20', dotClass: 'bg-rose-500' },
+};
+
+const RELATED_SURFACES = [
+  { label: 'Firm Health', path: '/app/superadmin/firm-health' },
+  { label: 'Plans & Capacity', path: '/app/superadmin/plans' },
+  { label: 'Onboarding Insights', path: '/app/superadmin/onboarding-insights' },
+  { label: 'Support Diagnostics', path: '/app/superadmin/diagnostics' },
+  { label: 'Audit Logs', path: '/app/superadmin/audit' },
+];
+
 const getStatusBadge = (status) => {
   const norm = String(status || '').toLowerCase();
-  if (norm === 'pass' || norm === 'ready') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        Pass
-      </span>
-    );
-  }
-  if (norm === 'watch') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-600/20">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-        Warning
-      </span>
-    );
-  }
+  const config = STATUS_BADGE_MAP[norm] || STATUS_BADGE_MAP.fail;
   return (
-    <span className="inline-flex items-center gap-1 rounded bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-rose-600/20">
-      <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-      Blocker
+    <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-semibold ring-1 ${config.badgeClass}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${config.dotClass}`} />
+      {config.label}
     </span>
   );
 };
@@ -203,39 +202,24 @@ export const SuperadminPilotReadinessPage = () => {
 
                 {/* Filter buttons */}
                 <div className="inline-flex rounded-lg bg-slate-100 p-0.5 text-xs font-semibold">
-                  <button
-                    type="button"
-                    onClick={() => setFilter('all')}
-                    className={`rounded-md px-3 py-1 transition-colors ${
-                      filter === 'all'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    All ({summary.total})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilter('issues')}
-                    className={`rounded-md px-3 py-1 transition-colors ${
-                      filter === 'issues'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    Issues ({summary.fail + summary.watch})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilter('pass')}
-                    className={`rounded-md px-3 py-1 transition-colors ${
-                      filter === 'pass'
-                        ? 'bg-white text-slate-900 shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    Passed ({summary.pass})
-                  </button>
+                  {[
+                    { key: 'all', label: `All (${summary.total})` },
+                    { key: 'issues', label: `Issues (${summary.fail + summary.watch})` },
+                    { key: 'pass', label: `Passed (${summary.pass})` },
+                  ].map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setFilter(option.key)}
+                      className={`rounded-md px-3 py-1 transition-colors ${
+                        filter === option.key
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -281,7 +265,7 @@ export const SuperadminPilotReadinessPage = () => {
                             onClick={() => navigate(item.href)}
                             className="shrink-0 self-start sm:self-center"
                           >
-                            Inspect Bound
+                            Inspect
                           </Button>
                         ) : null}
                       </div>
@@ -328,21 +312,11 @@ export const SuperadminPilotReadinessPage = () => {
                 Related Diagnostic & Control Surfaces
               </h3>
               <div className="flex flex-wrap gap-2.5">
-                <Button variant="outline" size="sm" onClick={() => navigate('/app/superadmin/firm-health')}>
-                  Firm Health
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('/app/superadmin/plans')}>
-                  Plans & Capacity
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('/app/superadmin/onboarding-insights')}>
-                  Onboarding Insights
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('/app/superadmin/diagnostics')}>
-                  Support Diagnostics
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => navigate('/app/superadmin/audit')}>
-                  Audit Logs
-                </Button>
+                {RELATED_SURFACES.map((surface) => (
+                  <Button key={surface.path} variant="outline" size="sm" onClick={() => navigate(surface.path)}>
+                    {surface.label}
+                  </Button>
+                ))}
               </div>
             </div>
           </>

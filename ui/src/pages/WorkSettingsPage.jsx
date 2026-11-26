@@ -8,6 +8,11 @@ import { ROUTES } from '../constants/routes';
 import { StatusMessageStack } from './platform/PlatformShared';
 import { PageHeader } from '../components/layout/PageHeader';
 import { useToast } from '../hooks/useToast';
+import {
+  normalizeWorkbasketName,
+  resolveWorkSettingsError,
+  validateWorkbasketDraft,
+} from '../utils/workbasketValidation';
 
 // Custom vector SVG for Workbasket
 const WorkbasketIcon = ({ className = 'h-5 w-5' }) => (
@@ -64,8 +69,16 @@ export const WorkSettingsPage = () => {
   ), [workbaskets]);
 
   const createWorkbasketByName = async (name) => {
-    const nextName = String(name || '').trim();
-    if (!nextName) return;
+    const validation = validateWorkbasketDraft(name, workbaskets);
+    if (!validation.valid) {
+      if (validation.normalized || normalizeWorkbasketName(name)) {
+        setStatusMessage({ type: 'error', text: validation.error });
+        showError(validation.error);
+      }
+      return;
+    }
+
+    const nextName = validation.normalized;
     setWorkbasketSaving(true);
     setStatusMessage({ type: 'info', text: `Creating workbasket "${nextName}"…` });
     try {
@@ -75,17 +88,11 @@ export const WorkSettingsPage = () => {
       setStatusMessage({ type: 'success', text: `Workbasket "${nextName}" created.` });
       showSuccess(`Workbasket "${nextName}" created successfully.`);
     } catch (error) {
-      const serverMessage = error?.data?.message || error?.message;
-      let userMessage = 'Could not create the workbasket. Please retry.';
-      if (error?.status === 409) {
-        userMessage = serverMessage || 'A workbasket with this name already exists for this firm.';
-      } else if (error?.status === 400) {
-        userMessage = serverMessage || 'Workbasket name is required and must be valid.';
-      } else if (error?.status === 403) {
-        userMessage = serverMessage || 'You do not have permission to manage work settings for this firm.';
-      } else if (serverMessage) {
-        userMessage = serverMessage;
-      }
+      const userMessage = resolveWorkSettingsError(error, {
+        409: 'A workbasket with this name already exists for this firm.',
+        400: 'Workbasket name is required and must be valid.',
+        403: 'You do not have permission to manage work settings for this firm.',
+      }, 'Could not create the workbasket. Please retry.');
       setStatusMessage({ type: 'error', text: userMessage });
       showError(userMessage);
     } finally {
@@ -107,13 +114,9 @@ export const WorkSettingsPage = () => {
       setStatusMessage({ type: 'success', text: 'Default routing configured.' });
       showSuccess('Default routing configured.');
     } catch (error) {
-      const serverMessage = error?.data?.message || error?.message;
-      let userMessage = 'Could not configure default routing. Please retry.';
-      if (error?.status === 403) {
-        userMessage = serverMessage || 'You do not have permission to configure default routing for this firm.';
-      } else if (serverMessage) {
-        userMessage = serverMessage;
-      }
+      const userMessage = resolveWorkSettingsError(error, {
+        403: 'You do not have permission to configure default routing for this firm.',
+      }, 'Could not configure default routing. Please retry.');
       setStatusMessage({ type: 'error', text: userMessage });
       showError(userMessage);
     } finally {
@@ -122,16 +125,23 @@ export const WorkSettingsPage = () => {
   };
 
   const handleRenameWorkbasket = async (workbasket) => {
-    const nextName = window.prompt('Rename workbasket', workbasket.name || '');
-    if (!nextName || !nextName.trim() || nextName.trim() === workbasket.name) return;
+    const prompted = window.prompt('Rename workbasket', workbasket.name || '');
+    if (prompted === null) return;
+    const validation = validateWorkbasketDraft(prompted, workbaskets, workbasket._id);
+    if (!validation.valid) {
+      setStatusMessage({ type: 'error', text: validation.error });
+      showError(validation.error);
+      return;
+    }
+    if (validation.normalized === normalizeWorkbasketName(workbasket.name)) return;
     setStatusMessage({ type: 'info', text: 'Updating workbasket name…' });
     try {
-      await adminApi.renameWorkbasket(workbasket._id, nextName.trim());
+      await adminApi.renameWorkbasket(workbasket._id, validation.normalized);
       await loadWorkbaskets();
       setStatusMessage({ type: 'success', text: 'Workbasket renamed.' });
-      showSuccess(`Workbasket renamed to "${nextName.trim()}".`);
+      showSuccess(`Workbasket renamed to "${validation.normalized}".`);
     } catch (error) {
-      const msg = error?.data?.message || error?.message || 'Could not rename this workbasket.';
+      const msg = resolveWorkSettingsError(error, {}, 'Could not rename this workbasket.');
       setStatusMessage({ type: 'error', text: msg });
       showError(msg);
     }
@@ -146,7 +156,7 @@ export const WorkSettingsPage = () => {
       setStatusMessage({ type: 'success', text: `Workbasket status updated to ${statusLabel}.` });
       showSuccess(`Workbasket "${workbasket.name}" ${statusLabel}.`);
     } catch (error) {
-      const msg = error?.data?.message || error?.message || 'Could not update workbasket status.';
+      const msg = resolveWorkSettingsError(error, {}, 'Could not update workbasket status.');
       setStatusMessage({ type: 'error', text: msg });
       showError(msg);
     }

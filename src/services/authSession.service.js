@@ -117,6 +117,7 @@ const createAuthSessionService = (deps) => {
   } = services;
   const {
     SUPERADMIN_USER_ID = deps.SUPERADMIN_USER_ID,
+    logSuperadminAction = deps.logSuperadminAction,
   } = utils;
 
   const resolveRefreshScope = ({ scope, userId, firmId }) => {
@@ -203,7 +204,23 @@ const createAuthSessionService = (deps) => {
       ];
 
       try {
-        if (!shouldBypassUserDbUpdates) {
+        if (shouldBypassUserDbUpdates) {
+          if (typeof logSuperadminAction === 'function') {
+            await logSuperadminAction({
+              actionType: 'SuperadminLogout',
+              description: `SuperAdmin logged out (${user?.xID || 'SUPERADMIN'})`,
+              performedBy: user?.email || user?.xID || 'SUPERADMIN',
+              performedById: user?._id || user?.id || null,
+              targetEntityType: 'User',
+              targetEntityId: String(user?._id || user?.id || user?.xID || 'SUPERADMIN'),
+              metadata: {
+                xID: user?.xID || 'SUPERADMIN',
+                requestId: req?.requestId || null,
+              },
+              req,
+            });
+          }
+        } else {
           await logAuthAudit({
             xID: user.xID,
             firmId: user.firmId || DEFAULT_FIRM_ID,

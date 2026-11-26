@@ -37,11 +37,13 @@ export const SuperadminFirmDetailPage = () => {
       superadminService.listFirms(),
       superadminService.listFirmAdmins(firmId),
       superadminService.getOnboardingInsightDetails({ firmId, completionState: 'all', staleAfterDays: 7, sinceDays: 30, limit: 100 }),
-      superadminService.getSupportDiagnostics({ limit: 50 }),
+      superadminService.getSupportDiagnostics({ limit: 20 }),
     ]);
 
     const firmsData = firmsRes.status === 'fulfilled' && firmsRes.value?.success ? firmsRes.value.data : null;
-    const firmMatch = Array.isArray(firmsData) ? firmsData.find((entry) => String(entry?._id) === String(firmId)) : null;
+    const firmMatch = Array.isArray(firmsData)
+      ? firmsData.find((entry) => String(entry?._id) === String(firmId) || String(entry?.firmId) === String(firmId) || String(entry?.firmSlug) === String(firmId))
+      : null;
     const adminData = adminsRes.status === 'fulfilled' && adminsRes.value?.success ? adminsRes.value.data : [];
     const onboardingData = onboardingRes.status === 'fulfilled' && onboardingRes.value?.success ? onboardingRes.value.data : null;
     const diagnosticsData = diagnosticsRes.status === 'fulfilled' && diagnosticsRes.value?.success ? diagnosticsRes.value.data : null;
@@ -73,9 +75,51 @@ export const SuperadminFirmDetailPage = () => {
     return firm?.firmSlug && origin ? `${origin}/${firm.firmSlug}/login` : null;
   }, [firm?.firmSlug]);
 
-  const firmDiagnostics = useMemo(() => (diagnostics?.firms || []).find((item) => String(item?.firmId) === String(firmId)), [diagnostics, firmId]);
+  const firmDiagnostics = useMemo(() => {
+    const list = diagnostics?.firms || [];
+    return list.find((item) =>
+      String(item?.firmId) === String(firmId)
+      || String(item?.firmCode) === String(firmId)
+      || (firm?.firmId && String(item?.firmCode) === String(firm?.firmId))
+      || (firm?._id && String(item?.firmId) === String(firm?._id))
+    ) || null;
+  }, [diagnostics, firmId, firm]);
 
-  const onboardingFirm = useMemo(() => (onboarding?.firms || []).find((item) => String(item?.firmId) === String(firmId)) || null, [onboarding, firmId]);
+  const onboardingFirm = useMemo(() => {
+    const list = onboarding?.firms || [];
+    return list.find((item) =>
+      String(item?.firmId) === String(firmId)
+      || String(item?.firmCode) === String(firmId)
+      || (firm?.firmId && String(item?.firmCode) === String(firm?.firmId))
+      || (firm?._id && String(item?.firmId) === String(firm?._id))
+    ) || list[0] || null;
+  }, [onboarding, firmId, firm]);
+
+  const onboardingState = useMemo(() => {
+    if (!onboardingFirm) return 'Unknown';
+    if (onboardingFirm.completionState) return pretty(onboardingFirm.completionState);
+    if ((onboardingFirm.incompleteUsers || 0) === 0 && (onboardingFirm.users || 0) > 0) return 'Completed';
+    if ((onboardingFirm.staleUsers || 0) > 0) return 'Stale';
+    if ((onboardingFirm.incompleteUsers || 0) > 0) return 'Incomplete';
+    return 'Pending setup';
+  }, [onboardingFirm]);
+
+  const storageDetails = useMemo(() => {
+    const mode = firmDiagnostics?.storageMode || firm?.storageMode || firm?.storage?.mode || 'docketra_managed';
+    const provider = firmDiagnostics?.storageProvider || firm?.storageProvider || firm?.storage?.provider || 'docketra';
+    const health = firmDiagnostics?.storageHealthStatus || (mode === 'firm_connected' ? 'UNKNOWN' : 'HEALTHY');
+    const isConnected = String(health).toUpperCase() === 'HEALTHY';
+    return { mode, provider, health, isConnected };
+  }, [firmDiagnostics, firm]);
+
+  const capacityDetails = useMemo(() => {
+    const maxUsers = firm?.maxUsers ?? 10;
+    const userCount = firm?.userCount ?? 0;
+    const status = userCount > maxUsers
+      ? 'over_capacity'
+      : (maxUsers > 0 && ((userCount / maxUsers) * 100 >= 85) ? 'near_capacity' : 'within_capacity');
+    return { maxUsers, userCount, status };
+  }, [firm]);
 
   const getApiErrorMessage = (error, fallback) => error?.response?.data?.message || error?.message || fallback;
 
@@ -160,13 +204,43 @@ export const SuperadminFirmDetailPage = () => {
               <Button variant="secondary" onClick={() => navigate('/app/superadmin/firms')}>Add additional admin (via Firms Management)</Button>
             </Card>
 
-            <Card className="space-y-2"><h2 className="text-lg font-semibold">Onboarding health</h2><p className="text-sm">Completion state: {onboardingFirm?.completionState || 'Unknown'}</p><p className="text-sm">Stale users: {onboardingFirm?.staleUsers || 0} · Incomplete users: {onboardingFirm?.incompleteUsers || 0}</p><p className="text-sm">Blockers: {(onboardingFirm?.blockers || []).join(', ') || 'None'}</p><p className="text-sm">Next suggested action: {onboardingFirm?.nextAction || 'Continue monitoring'}</p><Link className="text-sm text-blue-600 underline" to={`/app/superadmin/onboarding-insights/${firmId}`}>Open onboarding insight detail</Link></Card>
+            <Card className="space-y-2">
+              <h2 className="text-lg font-semibold">Onboarding health</h2>
+              <p className="text-sm">Completion state: {onboardingState}</p>
+              <p className="text-sm">Stale users: {onboardingFirm?.staleUsers || 0} · Incomplete users: {onboardingFirm?.incompleteUsers || 0}</p>
+              <p className="text-sm">Blockers: {(onboardingFirm?.blockers || []).join(', ') || 'None'}</p>
+              <p className="text-sm">Next suggested action: {onboardingFirm?.nextAction || 'Continue monitoring'}</p>
+              <Link className="text-sm text-blue-600 underline" to={`/app/superadmin/onboarding-insights/${firmId}`}>Open onboarding insight detail</Link>
+            </Card>
 
-            <Card className="space-y-2"><h2 className="text-lg font-semibold">Storage / BYOS</h2><p className="text-sm">Storage mode: {pretty(firmDiagnostics?.storageMode || firm?.storageMode || 'unknown')}</p><p className="text-sm">Provider: {pretty(firmDiagnostics?.storageProvider || firm?.storageProvider || 'unknown')}</p><p className="text-sm">Health: {pretty(firmDiagnostics?.storageHealthStatus || 'unknown')}</p><p className="text-sm">Connected: {String(firmDiagnostics?.storageHealthStatus || '').toUpperCase() === 'HEALTHY' ? 'Yes' : 'Unknown'}</p></Card>
+            <Card className="space-y-2">
+              <h2 className="text-lg font-semibold">Storage / BYOS</h2>
+              <p className="text-sm">Storage mode: {pretty(storageDetails.mode)}</p>
+              <p className="text-sm">Provider: {pretty(storageDetails.provider)}</p>
+              <p className="text-sm">Health: {pretty(storageDetails.health)}</p>
+              <p className="text-sm">Connected: {storageDetails.isConnected ? 'Yes' : 'Unknown'}</p>
+            </Card>
 
-            <Card className="space-y-2"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Plan / limits</h2><Link className="text-sm text-blue-600 underline" to="/app/superadmin/plans">Open Plans & Capacity</Link></div><p className="text-sm">Plan: {firm?.plan || 'N/A'}</p><p className="text-sm">Max users: {firm?.maxUsers ?? 'N/A'}</p><p className="text-sm">Subscription status: {pretty(firm?.subscriptionStatus || 'unknown')}</p><p className="text-sm">Billing status: {pretty(firm?.billingStatus || 'unknown')}</p><p className="text-sm">Billing owner ID: {firm?.billingOwnerId || 'N/A'}</p><p className="text-sm">Capacity status: {(firm?.userCount ?? 0) > (firm?.maxUsers ?? 0) ? 'over_capacity' : ((firm?.maxUsers ?? 0) > 0 && (((firm?.userCount ?? 0)/(firm?.maxUsers ?? 1))*100 >= 85) ? 'near_capacity' : 'within_capacity')}</p></Card>
+            <Card className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Plan / limits</h2>
+                <Link className="text-sm text-blue-600 underline" to="/app/superadmin/plans">Open Plans & Capacity</Link>
+              </div>
+              <p className="text-sm">Plan: {pretty(firm?.plan || 'Starter')}</p>
+              <p className="text-sm">Max users: {capacityDetails.maxUsers}</p>
+              <p className="text-sm">Subscription status: {pretty(firm?.subscriptionStatus || 'trial')}</p>
+              <p className="text-sm">Billing status: {pretty(firm?.billingStatus || 'active')}</p>
+              <p className="text-sm">Billing owner ID: {firm?.billingOwnerId || 'N/A'}</p>
+              <p className="text-sm">Capacity status: {capacityDetails.status}</p>
+            </Card>
 
-            <Card className="space-y-2"><h2 className="text-lg font-semibold">Support diagnostics</h2><p className="text-sm">Platform recent login/OTP issue count: {(diagnostics?.loginAndOtpIssues || []).length}</p><p className="text-sm break-all">Platform request IDs: {(diagnostics?.requestIds || []).join(', ') || 'N/A'}</p><p className="text-sm">Storage issue summary: {pretty(firmDiagnostics?.storageHealthStatus || 'unknown')}</p><p className="text-sm">Slow endpoint p95: {diagnostics?.slowEndpointSummary?.p95Ms ?? 'N/A'} ms</p></Card>
+            <Card className="space-y-2">
+              <h2 className="text-lg font-semibold">Support diagnostics</h2>
+              <p className="text-sm">Platform recent login/OTP issue count: {(diagnostics?.loginAndOtpIssues || []).length}</p>
+              <p className="text-sm break-all">Platform request IDs: {(diagnostics?.requestIds || []).join(', ') || 'N/A'}</p>
+              <p className="text-sm">Storage issue summary: {pretty(storageDetails.health)}</p>
+              <p className="text-sm">Slow endpoint p95: {diagnostics?.slowEndpointSummary?.p95Ms ?? 'N/A'} ms</p>
+            </Card>
           </>
         )}
       </div>

@@ -1,4 +1,5 @@
 const Team = require('../models/Team.model');
+const { ensureLinkedQcWorkbasket } = require('./workbasketGuardrails.service');
 
 const DEFAULT_PRIMARY_WORKBASKET_NAME = 'Default Workbasket';
 
@@ -10,7 +11,10 @@ async function ensureDefaultWorkbasketForFirm(firmId, { session } = {}) {
     type: 'PRIMARY',
   }).session(session || null);
 
-  if (existingPrimary) return existingPrimary;
+  if (existingPrimary) {
+    await ensureLinkedQcWorkbasket({ firmId, primaryWorkbasket: existingPrimary, session });
+    return existingPrimary;
+  }
 
   const [createdPrimary] = await Team.create([{
     firmId,
@@ -20,19 +24,7 @@ async function ensureDefaultWorkbasketForFirm(firmId, { session } = {}) {
     parentWorkbasketId: null,
   }], session ? { session } : undefined);
 
-  await Team.findOneAndUpdate(
-    { firmId, type: 'QC', parentWorkbasketId: createdPrimary._id },
-    {
-      $setOnInsert: {
-        firmId,
-        name: `${DEFAULT_PRIMARY_WORKBASKET_NAME} — QC`,
-        isActive: true,
-        type: 'QC',
-        parentWorkbasketId: createdPrimary._id,
-      },
-    },
-    { upsert: true, new: true, setDefaultsOnInsert: true, session: session || undefined },
-  );
+  await ensureLinkedQcWorkbasket({ firmId, primaryWorkbasket: createdPrimary, session });
 
   return createdPrimary;
 }
