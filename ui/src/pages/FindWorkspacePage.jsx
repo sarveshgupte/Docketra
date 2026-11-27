@@ -137,7 +137,7 @@ export const FindWorkspacePage = () => {
                 error={error || undefined}
                 aria-live="polite"
               />
-              <Button type="submit" fullWidth loading={loading} disabled={loading} aria-live="polite">
+              <Button type="submit" variant="primary" fullWidth loading={loading} disabled={loading} aria-live="polite">
                 {loading ? 'Finding workspace…' : 'Continue to workspace'}
               </Button>
               <p className="find-workspace-page__security-note">Don&apos;t know your xID? Contact your firm admin.</p>

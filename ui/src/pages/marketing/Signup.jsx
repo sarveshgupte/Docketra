@@ -6,7 +6,6 @@ import { Button } from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { STRONG_PASSWORD_MESSAGE, validateStrongPassword } from '../../utils/validators';
 import { spacingClasses } from '../../theme/tokens';
-import { ROUTES } from '../../constants/routes';
 import { PilotAgreementModal, PILOT_TERMS_VERSION } from '../../components/marketing/PilotAgreementModal';
 import { SeoHead } from '../../components/common/SeoHead';
 import { DocketraLogo } from '../../components/common/DocketraLogo';
@@ -151,16 +150,6 @@ export default function Signup() {
     setErrors((prev) => ({ ...prev, [name]: '' }));
     setApiError('');
   };
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const firmSlug = user?.firmSlug;
-    if (firmSlug) {
-      navigate(ROUTES.DASHBOARD(firmSlug), { replace: true });
-      return;
-    }
-    navigate('/find-workspace', { replace: true });
-  }, [isAuthenticated, user?.firmSlug, navigate]);
 
   useEffect(() => {
     if (step === 2) {
@@ -538,6 +527,12 @@ export default function Signup() {
             </p>
             <SignupStepDots step={step} />
           </div>
+
+        {isAuthenticated && !signupSuccessData && (
+          <div role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs font-medium text-amber-900">
+            Signed in as <span className="font-mono font-bold">{user?.xid || user?.email || 'active session'}</span>. You can still create a separate firm workspace below.
+          </div>
+        )}
 
         {apiError && <div role="alert" className="auth-public-page__error auth-alert">{apiError}</div>}
 

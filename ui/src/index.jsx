@@ -8,6 +8,14 @@ import { queryClient } from './queryClient';
 import { preloadMatchingRoute } from './routes/lazyPages';
 
 const container = document.getElementById('root');
+const normalizedPath = (typeof window !== 'undefined' ? window.location.pathname.replace(/\/+$/, '') || '/' : '/');
+const prerenderedRoute = container?.getAttribute('data-prerendered-route');
+const shouldHydrate = Boolean(
+  container
+  && container.hasChildNodes()
+  && prerenderedRoute
+  && prerenderedRoute === normalizedPath
+);
 const app = (
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
@@ -18,7 +26,7 @@ const app = (
   </React.StrictMode>
 );
 
-if (container && container.hasChildNodes()) {
+if (shouldHydrate) {
   preloadMatchingRoute().finally(() => {
     ReactDOM.hydrateRoot(container, app, {
       onRecoverableError(error, errorInfo) {

@@ -116,6 +116,13 @@ async function prerender() {
         // Wait a brief moment for document.title & meta tags to flush
         await page.waitForTimeout(200);
 
+        await page.evaluate((prerenderedPath) => {
+          const rootEl = document.getElementById('root');
+          if (rootEl) {
+            rootEl.setAttribute('data-prerendered-route', prerenderedPath);
+          }
+        }, route);
+
         const renderedHtml = await page.content();
 
         // Determine destination file paths
