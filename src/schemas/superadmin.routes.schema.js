@@ -46,9 +46,15 @@ module.exports = {
 
   'POST /firms': {
     body: z.object({
-      name: nonEmptyString,
+      firmName: nonEmptyString.optional(),
+      name: nonEmptyString.optional(),
       slug: z.string().trim().min(1).optional(),
-    }).strict(),
+      adminName: nonEmptyString.optional(),
+      adminEmail: z.string().trim().email().optional(),
+      phoneNumber: z.string().trim().max(30).optional(),
+    }).strict().refine((data) => Boolean(data.firmName || data.name), {
+      message: 'Firm name is required.',
+    }),
   },
   'GET /firms': { query: passthroughQuery },
   'PATCH /firms/:id': {

@@ -146,15 +146,38 @@ const PASSWORD_SETUP_TOKEN_EXPIRY = '24h';
  * - Firm Creation FAILED to SuperAdmin (on error)
  */
 const createFirm = async (req, res) => {
-  const result = await createFirmWithAdmin(req.body);
+  const payload = {
+    ...(req.body || {}),
+    firmName: req.body?.firmName || req.body?.name,
+  };
+  const result = await createFirmWithAdmin(payload);
+  const createdFirm = result?.firm || result?.defaultClient;
+  const createdAdmin = result?.admin;
+
+  await logSuperadminAction({
+    actionType: 'FirmCreated',
+    description: `Firm created: ${createdFirm?.businessName || createdFirm?.name || payload.firmName} (${createdFirm?.firmSlug || createdFirm?._id || 'unknown'})`,
+    performedBy: req.user?.email || req.user?.xID || 'SUPERADMIN',
+    performedById: req.user?._id || null,
+    targetEntityType: 'Firm',
+    targetEntityId: createdFirm?._id ? String(createdFirm._id) : null,
+    metadata: {
+      firmId: createdFirm?.clientId || createdFirm?.firmId || null,
+      firmSlug: createdFirm?.firmSlug || null,
+      firmName: createdFirm?.businessName || createdFirm?.name || payload.firmName || null,
+      requestId: req?.requestId || null,
+    },
+    req,
+  });
+
   return {
     success: true,
     message: 'Firm onboarding started.',
     data: {
-      firmId: result.firm._id,
-      adminId: result.admin._id,
-      firmStatus: result.firm.status,
-      adminStatus: result.admin.status,
+      firmId: createdFirm?._id || null,
+      adminId: createdAdmin?._id || null,
+      firmStatus: createdFirm?.status || null,
+      adminStatus: createdAdmin?.status || null,
     },
   };
 };

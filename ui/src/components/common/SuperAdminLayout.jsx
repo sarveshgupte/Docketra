@@ -3,12 +3,10 @@
  * Dashboard shell for platform-level management
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { useToast } from '../../hooks/useToast';
 import { Loading } from './Loading';
-import { USER_ROLES } from '../../utils/constants';
 import { superadminService } from '../../services/superadminService';
 import { SUPERADMIN_PILOT_SURFACE } from '../../constants/pilotSurface';
 
@@ -17,16 +15,31 @@ const navItemClass = (isActive) =>
     isActive ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
   }`;
 
+const SidebarLink = ({ to, label, isActive, visible = true, onNavigate }) => {
+  if (!visible) return null;
+  return (
+    <Link
+      to={to}
+      onClick={onNavigate}
+      className={navItemClass(isActive(to))}
+      aria-current={isActive(to) ? 'page' : undefined}
+    >
+      {label}
+    </Link>
+  );
+};
+
 export const SuperAdminLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { showSuccess } = useToast();
+  const searchContainerRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [searchResults, setSearchResults] = useState({ firms: [], admins: [], audit: [] });
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const totalResults = useMemo(
     () => (searchResults.firms.length + searchResults.admins.length + searchResults.audit.length),
@@ -82,60 +95,74 @@ export const SuperAdminLayout = ({ children }) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setSearchOpen(false);
+        setMobileMenuOpen(false);
+      }
+    };
+    const handleClickOutside = (event) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Guard: Only render children if user is loaded and is SuperAdmin
   const isSuperAdminUser = user?.isSuperAdmin === true || ['SUPER_ADMIN', 'SUPERADMIN', 'SuperAdmin'].includes(String(user?.role || '').trim());
   if (user === null || !isSuperAdminUser) {
     return <Loading message="Preparing platform dashboard..." />;
   }
 
+  const closeMobileNav = () => setMobileMenuOpen(false);
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <aside aria-label="SuperAdmin Sidebar" className="w-72 shrink-0 border-r border-gray-200 bg-white px-6 py-8">
-        <div className="flex items-start justify-between gap-3 md:block">
+    <div className="flex min-h-screen flex-col md:flex-row bg-gray-50">
+      <aside aria-label="SuperAdmin Sidebar" className="w-full md:w-64 lg:w-72 shrink-0 border-b md:border-b-0 md:border-r border-gray-200 bg-white px-4 py-4 md:px-6 md:py-8">
+        <div className="flex items-center justify-between gap-3 md:block">
           <div>
             <h1 className="text-lg font-semibold text-gray-900">DocketsHQ Platform</h1>
-            <span className="mt-2 inline-flex rounded-xs bg-gray-900 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
+            <span className="mt-1 md:mt-2 inline-flex rounded-xs bg-gray-900 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-white">
               SuperAdmin
             </span>
           </div>
-          <button aria-label="Logout" onClick={handleLogout} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 md:hidden">
-            Logout
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <button
+              type="button"
+              aria-expanded={mobileMenuOpen}
+              aria-label="Toggle navigation menu"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            >
+              {mobileMenuOpen ? 'Close' : 'Menu'}
+            </button>
+            <button aria-label="Logout" onClick={handleLogout} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2 md:hidden">
+              Logout
+            </button>
+          </div>
         </div>
 
-        <nav aria-label="SuperAdmin Navigation" className="mt-6 flex gap-2 md:flex-col">
-          <Link to="/app/superadmin" className={navItemClass(isActive('/app/superadmin'))} aria-current={isActive('/app/superadmin') ? 'page' : undefined}>
-            Platform Dashboard
-          </Link>
-          <Link to="/app/superadmin/firms" className={navItemClass(isActive('/app/superadmin/firms'))} aria-current={isActive('/app/superadmin/firms') ? 'page' : undefined}>
-            Firms
-          </Link>
-          {showSuperadminNavItem('/app/superadmin/onboarding-insights') ? <Link to="/app/superadmin/onboarding-insights" className={navItemClass(isActive('/app/superadmin/onboarding-insights'))} aria-current={isActive('/app/superadmin/onboarding-insights') ? 'page' : undefined}>
-            Onboarding Insights
-          </Link> : null}
-          {showSuperadminNavItem('/app/superadmin/firm-health') ? <Link to="/app/superadmin/firm-health" className={navItemClass(isActive('/app/superadmin/firm-health'))} aria-current={isActive('/app/superadmin/firm-health') ? 'page' : undefined}>
-            Firm Health
-          </Link> : null}
-          {showSuperadminNavItem('/app/superadmin/feature-flags') ? <Link to="/app/superadmin/feature-flags" className={navItemClass(isActive('/app/superadmin/feature-flags'))} aria-current={isActive('/app/superadmin/feature-flags') ? 'page' : undefined}>
-            Feature Flags
-          </Link> : null}
-          <Link to="/app/superadmin/pilot-readiness" className={navItemClass(isActive('/app/superadmin/pilot-readiness'))} aria-current={isActive('/app/superadmin/pilot-readiness') ? 'page' : undefined}>
-            Pilot Readiness
-          </Link>
-          {showSuperadminNavItem('/app/superadmin/plans') ? <Link to="/app/superadmin/plans" className={navItemClass(isActive('/app/superadmin/plans'))} aria-current={isActive('/app/superadmin/plans') ? 'page' : undefined}>
-            Plans & Capacity
-          </Link> : null}
-          <Link to="/app/superadmin/diagnostics" className={navItemClass(isActive('/app/superadmin/diagnostics'))} aria-current={isActive('/app/superadmin/diagnostics') ? 'page' : undefined}>
-            Support Diagnostics
-          </Link>
-          {showSuperadminNavItem('/app/superadmin/ai-assistant') ? <Link to="/app/superadmin/ai-assistant" className={navItemClass(isActive('/app/superadmin/ai-assistant'))} aria-current={isActive('/app/superadmin/ai-assistant') ? 'page' : undefined}>
-            AI Assistant
-          </Link> : null}
-          {showSuperadminNavItem('/app/superadmin/audit') ? <Link to="/app/superadmin/audit" className={navItemClass(isActive('/app/superadmin/audit'))} aria-current={isActive('/app/superadmin/audit') ? 'page' : undefined}>
-            Audit Logs
-          </Link> : null}
+        <nav aria-label="SuperAdmin Navigation" className={`mt-4 md:mt-6 flex-col gap-1.5 ${mobileMenuOpen ? 'flex' : 'hidden md:flex'}`}>
+          <SidebarLink to="/app/superadmin" label="Platform Dashboard" isActive={isActive} onNavigate={closeMobileNav} />
+          <SidebarLink to="/app/superadmin/firms" label="Firms" isActive={isActive} onNavigate={closeMobileNav} />
+          <SidebarLink to="/app/superadmin/onboarding-insights" label="Onboarding Insights" visible={showSuperadminNavItem('/app/superadmin/onboarding-insights')} isActive={isActive} onNavigate={closeMobileNav} />
+          <SidebarLink to="/app/superadmin/firm-health" label="Firm Health" visible={showSuperadminNavItem('/app/superadmin/firm-health')} isActive={isActive} onNavigate={closeMobileNav} />
+          <SidebarLink to="/app/superadmin/feature-flags" label="Feature Flags" visible={showSuperadminNavItem('/app/superadmin/feature-flags')} isActive={isActive} onNavigate={closeMobileNav} />
+          <SidebarLink to="/app/superadmin/pilot-readiness" label="Pilot Readiness" isActive={isActive} onNavigate={closeMobileNav} />
+          <SidebarLink to="/app/superadmin/plans" label="Plans & Capacity" visible={showSuperadminNavItem('/app/superadmin/plans')} isActive={isActive} onNavigate={closeMobileNav} />
+          <SidebarLink to="/app/superadmin/diagnostics" label="Support Diagnostics" isActive={isActive} onNavigate={closeMobileNav} />
+          <SidebarLink to="/app/superadmin/audit" label="Audit Logs" visible={showSuperadminNavItem('/app/superadmin/audit')} isActive={isActive} onNavigate={closeMobileNav} />
+          <SidebarLink to="/app/superadmin/ai-assistant" label="AI Assistant" visible={showSuperadminNavItem('/app/superadmin/ai-assistant')} isActive={isActive} onNavigate={closeMobileNav} />
         </nav>
-        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-3">
+
+        <div ref={searchContainerRef} className={`mt-4 md:mt-6 rounded-xl border border-gray-200 bg-white p-3 ${mobileMenuOpen ? 'block' : 'hidden md:block'}`}>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Global search</p>
           <div className="mt-2 flex gap-2">
             <input
@@ -147,6 +174,8 @@ export const SuperAdminLayout = ({ children }) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
                   void runSearch();
+                } else if (e.key === 'Escape') {
+                  setSearchOpen(false);
                 }
               }}
               placeholder="Search firms, admins, audit refs"
@@ -159,28 +188,31 @@ export const SuperAdminLayout = ({ children }) => {
             <div className="mt-3 max-h-72 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-2 text-sm">
               {searching ? <p className="text-gray-600">Searching...</p> : null}
               {!searching && searchError ? <p className="text-red-700">{searchError}</p> : null}
-              {!searching && !searchError && searchQuery.trim().length === 1 ? <p className="text-gray-600">Enter at least 2 characters.</p> : null}
+              {!searching && !searchError && searchQuery.trim().length < 2 ? <p className="text-gray-600">Enter at least 2 characters.</p> : null}
               {!searching && !searchError && !totalResults && searchQuery.trim().length >= 2 ? <p className="text-gray-600">No matches found.</p> : null}
               {!searching && !searchError && totalResults > 0 ? (
                 <div className="space-y-2">
                   {[['Firms', searchResults.firms], ['Admins', searchResults.admins], ['Audit references', searchResults.audit]].map(([label, rows]) => (
-                    <div key={label}>
-                      <p className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-                      {(rows || []).map((row) => (
-                        <button
-                          key={`${row.type}-${row.id}`}
-                          type="button"
-                          className="mt-1 w-full rounded px-2 py-1.5 text-left hover:bg-white"
-                          onClick={() => {
-                            setSearchOpen(false);
-                            navigate(row.href);
-                          }}
-                        >
-                          <p className="text-sm font-medium text-gray-900">{row.name || row.firmName || row.actionType || row.targetEntityId || row.firmId}</p>
-                          <p className="text-xs text-gray-500">{row.firmId || row.xID || row.requestId || row.targetEntityType || ''}</p>
-                        </button>
-                      ))}
-                    </div>
+                    rows?.length ? (
+                      <div key={label}>
+                        <p className="px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+                        {rows.map((row) => (
+                          <button
+                            key={`${row.type}-${row.id}`}
+                            type="button"
+                            className="mt-1 w-full rounded px-2 py-1.5 text-left hover:bg-white"
+                            onClick={() => {
+                              setSearchOpen(false);
+                              closeMobileNav();
+                              navigate(row.href);
+                            }}
+                          >
+                            <p className="text-sm font-medium text-gray-900">{row.name || row.firmName || row.actionType || row.targetEntityId || row.firmId}</p>
+                            <p className="text-xs text-gray-500">{row.firmId || row.xID || row.requestId || row.targetEntityType || ''}</p>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null
                   ))}
                 </div>
               ) : null}

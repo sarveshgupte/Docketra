@@ -1,10 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SuperAdminLayout } from '../components/common/SuperAdminLayout';
-import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Loading } from '../components/common/Loading';
-import { EmptyState } from '../components/ui/EmptyState';
 import { superadminService } from '../services/superadminService';
 import { useToast } from '../hooks/useToast';
 import { productUpdatesService } from '../services/productUpdatesService';
@@ -12,16 +10,56 @@ import { APP_VERSION } from '../utils/constants';
 import { CreateFirmModal } from './admin/components/CreateFirmModal';
 import { LegalConsentCertificateModal } from '../components/superadmin/LegalConsentCertificateModal';
 import { SuperadminFeedbackView } from '../components/superadmin/SuperadminFeedbackView';
+import { SuperadminLiveClock } from '../components/superadmin/SuperadminLiveClock';
+import { SuperadminAuditStreamTab } from '../components/superadmin/SuperadminAuditStreamTab';
+import { SuperadminPerformanceTab } from '../components/superadmin/SuperadminPerformanceTab';
+import { SuperadminLaunchChecklistTab } from '../components/superadmin/SuperadminLaunchChecklistTab';
+import { SuperadminFeatureFlagsTab } from '../components/superadmin/SuperadminFeatureFlagsTab';
 import { PILOT_TERMS_VERSION } from '../components/marketing/PilotAgreementModal';
 
 const safeCount = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
+
+const settledData = (result, fallback = null) => (
+  result.status === 'fulfilled' && result.value?.success ? (result.value.data ?? fallback) : fallback
+);
 
 const getStorageIssueCount = (diagnostics) => (diagnostics?.firms || []).filter((firm) => {
   const health = String(firm?.storageHealthStatus || '').toUpperCase();
   return health && health !== 'HEALTHY';
 }).length;
 
-// Beautiful inline SVG Icons for a premium Light Glassmorphism Cockpit
+const DASHBOARD_TABS = [
+  { id: 'vitals', label: 'Ecosystem Vitals' },
+  { id: 'security', label: 'Security Audits' },
+  { id: 'performance', label: 'Performance Traces' },
+  { id: 'launch', label: 'Launch Checklist' },
+  { id: 'flags', label: 'Feature Flags' },
+  { id: 'legal', label: 'Legal & Consent' },
+  { id: 'feedback', label: 'User Feedback & Bugs' },
+];
+
+const VALID_TAB_IDS = new Set(DASHBOARD_TABS.map((tab) => tab.id));
+
+const QUICK_LINKS = [
+  { label: 'Firms Management', description: 'Manage, suspend, or provision tenant workspaces.', path: '/app/superadmin/firms' },
+  { label: 'Onboarding Insights', description: 'Track registration velocity and onboarding stalls.', path: '/app/superadmin/onboarding-insights' },
+  { label: 'Firm Health', description: 'Inspect tenant risk scores and operational alerts.', path: '/app/superadmin/firm-health' },
+  { label: 'Plans & Capacity', description: 'Adjust subscription plans and seat limits.', path: '/app/superadmin/plans' },
+  { label: 'Feature Flags', description: 'Control module rollouts and pilot overrides.', path: '/app/superadmin/feature-flags' },
+  { label: 'Pilot Readiness', description: 'Review readiness gates and audit coverage.', path: '/app/superadmin/pilot-readiness' },
+  { label: 'Support Diagnostics', description: 'Trace failed auth attempts and slow endpoints.', path: '/app/superadmin/diagnostics' },
+  { label: 'AI Assistant', description: 'Ask product, engineering, or marketing copilot.', path: '/app/superadmin/ai-assistant', highlight: true },
+];
+
+const MASTER_TERMS_CLAUSES = [
+  { title: '1. Pre-incorporation Operator', body: 'Executed with Sarvesh Gupte in individual founder capacity prior to formal corporate incorporation.' },
+  { title: '2. Pilot Evaluation License', body: '1-year revocable evaluation license for the first 26 founding firms for internal operations, client tracking, and statutory compliance.' },
+  { title: '3. Zero Advisory Disclaimer', body: 'Software workflow utility only. No legal, tax, chartered accounting, or company secretarial advice is rendered.' },
+  { title: '4. Explicit ₹0 Liability Cap', body: 'Offered on an as-evaluated basis without monetary liability for pilot phase operational testing.' },
+  { title: '5. Sovereign Data Residency (BYOS)', body: 'Working papers and client filings remain in practice-owned storage under Indian data jurisdiction.' },
+  { title: '6. Exclusive Jurisdiction', body: 'Subject to Indian laws, with exclusive legal jurisdiction in the Courts of Mumbai / Thane, Maharashtra.' },
+];
+
 const Icons = {
   Firms: () => (
     <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -53,140 +91,112 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
     </svg>
   ),
-  VitalsTab: () => (
-    <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.003 9.003 0 1020.945 13H11V3.055z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-    </svg>
-  ),
-  AuditTab: () => (
-    <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-  ),
-  PerformanceTab: () => (
-    <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  ),
-  LaunchTab: () => (
-    <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-    </svg>
-  ),
-  FlagsTab: () => (
-    <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  ),
   ConsoleLink: () => (
-    <svg className="h-5 w-5 text-indigo-400 group-hover:text-indigo-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  ),
-  Info: () => (
-    <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
 };
 
 export const SuperadminDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
+
+  const tabParam = searchParams.get('tab');
+  const activeTab = VALID_TAB_IDS.has(tabParam) ? tabParam : 'vitals';
+
+  const setActiveTab = useCallback((nextTab) => {
+    setSearchParams((prev) => {
+      const updated = new URLSearchParams(prev);
+      if (nextTab === 'vitals') {
+        updated.delete('tab');
+      } else {
+        updated.set('tab', nextTab);
+      }
+      return updated;
+    }, { replace: true });
+  }, [setSearchParams]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
-  // Platform telemetry hooks
+
+  // Core telemetry state (loaded on initial mount)
   const [stats, setStats] = useState(null);
   const [insights, setInsights] = useState(null);
   const [diagnostics, setDiagnostics] = useState(null);
   const [firmHealth, setFirmHealth] = useState(null);
   const [plans, setPlans] = useState(null);
+
+  // On-demand tab telemetry state
   const [pilotReadiness, setPilotReadiness] = useState(null);
   const [featureFlags, setFeatureFlags] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
-  const [onboardingAlerts, setOnboardingAlerts] = useState([]);
-
-  // UI Interactive States
-  const [activeTab, setActiveTab] = useState('vitals'); // 'vitals' | 'security' | 'performance' | 'launch' | 'flags' | 'legal'
-  const [expandedLogId, setExpandedLogId] = useState(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [showOnboardModal, setShowOnboardModal] = useState(false);
   const [firmsList, setFirmsList] = useState([]);
+  const [tabLoading, setTabLoading] = useState({});
+  const loadedTabsRef = useRef(new Set());
+
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
+  const [showReleasePublisher, setShowReleasePublisher] = useState(false);
   const [selectedCertFirm, setSelectedCertFirm] = useState(null);
   const [legalSearchQuery, setLegalSearchQuery] = useState('');
 
-  // Real-time HUD Clock ticks
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const MAX_UPDATE_BULLETS = 5;
+  const [updateForm, setUpdateForm] = useState({
+    title: '',
+    bullets: ['', '', ''],
+    isPublished: true,
+    version: '',
+  });
+  const [publishingUpdate, setPublishingUpdate] = useState(false);
 
-  const formattedClock = useMemo(() => {
-    const dateStr = currentTime.toLocaleDateString([], {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-    const timeStr = currentTime.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-    return { dateStr, timeStr };
-  }, [currentTime]);
+  const loadTabData = useCallback(async (tab, { force = false } = {}) => {
+    if (!['security', 'launch', 'flags', 'legal'].includes(tab)) return;
+    if (!force && loadedTabsRef.current.has(tab)) return;
+
+    setTabLoading((prev) => ({ ...prev, [tab]: true }));
+    try {
+      if (tab === 'security') {
+        const res = await superadminService.getAuditLogs({ limit: 12 });
+        if (res?.success) setAuditLogs(res.data || []);
+      } else if (tab === 'launch') {
+        const res = await superadminService.getPilotReadiness();
+        if (res?.success) setPilotReadiness(res.data || null);
+      } else if (tab === 'flags') {
+        const res = await superadminService.getFeatureFlags();
+        if (res?.success) setFeatureFlags(res.data || null);
+      } else if (tab === 'legal') {
+        const res = await superadminService.listFirms();
+        if (res?.success) setFirmsList(Array.isArray(res.data) ? res.data : []);
+      }
+      loadedTabsRef.current.add(tab);
+    } finally {
+      setTabLoading((prev) => ({ ...prev, [tab]: false }));
+    }
+  }, []);
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError('');
+    loadedTabsRef.current.clear();
 
-    const [
-      statsRes,
-      insightsRes,
-      diagnosticsRes,
-      healthRes,
-      plansRes,
-      pilotRes,
-      featureRes,
-      auditRes,
-      alertsRes,
-      firmsRes,
-    ] = await Promise.allSettled([
+    const [statsRes, insightsRes, diagnosticsRes, healthRes, plansRes] = await Promise.allSettled([
       superadminService.getPlatformStats(),
       superadminService.getOnboardingInsights({ sinceDays: 30, staleAfterDays: 7, recentLimit: 20 }),
       superadminService.getSupportDiagnostics({ limit: 20 }),
       superadminService.getFirmHealth({ limit: 100 }),
       superadminService.getPlansCapacity(),
-      superadminService.getPilotReadiness(),
-      superadminService.getFeatureFlags(),
-      superadminService.getAuditLogs({ limit: 12 }),
-      superadminService.getOnboardingAlerts({ status: 'open', limit: 8 }),
-      superadminService.listFirms(),
     ]);
 
-    const statsData = statsRes.status === 'fulfilled' && statsRes.value?.success ? statsRes.value.data : null;
-    const insightsData = insightsRes.status === 'fulfilled' && insightsRes.value?.success ? insightsRes.value.data : null;
-    const diagnosticsData = diagnosticsRes.status === 'fulfilled' && diagnosticsRes.value?.success ? diagnosticsRes.value.data : null;
-    const healthData = healthRes.status === 'fulfilled' && healthRes.value?.success ? healthRes.value.data : null;
-    const loadedFirms = firmsRes.status === 'fulfilled' && firmsRes.value?.success
-      ? (Array.isArray(firmsRes.value.data) ? firmsRes.value.data : [])
-      : [];
+    const statsData = settledData(statsRes);
+    const insightsData = settledData(insightsRes);
+    const diagnosticsData = settledData(diagnosticsRes);
 
     setStats(statsData);
     setInsights(insightsData);
     setDiagnostics(diagnosticsData);
-    setFirmHealth(healthData);
-    setPlans(plansRes.status === 'fulfilled' && plansRes.value?.success ? plansRes.value.data : null);
-    setPilotReadiness(pilotRes.status === 'fulfilled' && pilotRes.value?.success ? pilotRes.value.data : null);
-    setFeatureFlags(featureRes.status === 'fulfilled' && featureRes.value?.success ? featureRes.value.data : null);
-    setAuditLogs(auditRes.status === 'fulfilled' && auditRes.value?.success ? (auditRes.value.data || []) : []);
-    setOnboardingAlerts(alertsRes.status === 'fulfilled' && alertsRes.value?.success ? (alertsRes.value.data?.alerts || []) : []);
-    setFirmsList(loadedFirms);
+    setFirmHealth(settledData(healthRes));
+    setPlans(settledData(plansRes));
 
     if (!statsData && !insightsData && !diagnosticsData) {
       setError('Platform command center is temporarily unavailable.');
@@ -201,7 +211,13 @@ export const SuperadminDashboard = () => {
     void loadDashboard();
   }, [loadDashboard]);
 
-  // Telemetry mappings
+  useEffect(() => {
+    if (!loading) {
+      void loadTabData(activeTab);
+    }
+  }, [activeTab, loading, loadTabData]);
+
+  // Core KPI values
   const totalFirms = safeCount(stats?.totalFirms);
   const activeFirms = safeCount(stats?.activeFirms);
   const inactiveFirms = safeCount(stats?.inactiveFirms);
@@ -215,25 +231,23 @@ export const SuperadminDashboard = () => {
     pricingReviewTriggered: totalFirms >= 20,
     cohortFull: totalFirms >= 26,
   };
-  
-  const averageUsersPerFirm = useMemo(() => {
-    return totalFirms > 0 ? (totalUsers / totalFirms).toFixed(1) : '0';
-  }, [totalUsers, totalFirms]);
+
+  const averageUsersPerFirm = useMemo(
+    () => (totalFirms > 0 ? (totalUsers / totalFirms).toFixed(1) : '0'),
+    [totalUsers, totalFirms]
+  );
 
   const otpFailures = safeCount((diagnostics?.loginAndOtpIssues || []).length);
   const slowP95 = diagnostics?.slowEndpointSummary?.p95Ms;
-
   const staleOnboarding = safeCount(insights?.summary?.staleUsers || insights?.totals?.staleUsers);
   const storageIssues = getStorageIssueCount(diagnostics);
   const unverifiedAdmins = safeCount((diagnostics?.firms || []).filter((firm) => firm?.admin?.emailVerified === false).length);
-  const authIssues = safeCount((diagnostics?.loginAndOtpIssues || []).length);
+  const authIssues = otpFailures;
 
-  // Filtered lists for rendering
-  const criticalFirms = useMemo(() => {
-    return (firmHealth?.firms || [])
-      .filter((f) => f.riskLevel === 'critical' || f.riskLevel === 'at_risk')
-      .slice(0, 4);
-  }, [firmHealth]);
+  const criticalFirms = useMemo(
+    () => (firmHealth?.firms || []).filter((f) => f.riskLevel === 'critical' || f.riskLevel === 'at_risk').slice(0, 4),
+    [firmHealth]
+  );
 
   const pilotReadySummary = useMemo(() => {
     const checklist = pilotReadiness?.checklist || [];
@@ -242,28 +256,18 @@ export const SuperadminDashboard = () => {
       watch: checklist.filter((i) => i.status === 'watch').length,
       fail: checklist.filter((i) => i.status === 'fail').length,
       overall: pilotReadiness?.overallStatus || 'NOT_READY',
-      score: safeCount(pilotReadiness?.score || 0)
+      score: safeCount(pilotReadiness?.score || 0),
     };
   }, [pilotReadiness]);
 
-  // Pilot Circular Progress Stroke math
-  const radialGaugeCircumference = 2 * Math.PI * 35; // 219.91
-  const radialGaugeDashoffset = useMemo(() => {
-    const score = Math.min(100, Math.max(0, pilotReadySummary.score));
-    return radialGaugeCircumference - (radialGaugeCircumference * score) / 100;
-  }, [pilotReadySummary.score]);
-
   const consentStats = useMemo(() => {
     const total = firmsList.length;
-    const acceptedFirms = firmsList.filter((f) => f.termsAccepted === true);
-    const acceptedCount = acceptedFirms.length;
-    const percentage = total > 0 ? Math.round((acceptedCount / total) * 100) : 100;
-    const pendingCount = total - acceptedCount;
+    const acceptedCount = firmsList.filter((f) => f.termsAccepted === true).length;
     return {
       total,
       acceptedCount,
-      percentage,
-      pendingCount,
+      percentage: total > 0 ? Math.round((acceptedCount / total) * 100) : 100,
+      pendingCount: total - acceptedCount,
       activeVersion: PILOT_TERMS_VERSION || 'v1.0_pilot_2026',
     };
   }, [firmsList]);
@@ -280,15 +284,46 @@ export const SuperadminDashboard = () => {
     );
   }, [firmsList, legalSearchQuery]);
 
-  // Product Updates Sentinel States & Handlers
-  const MAX_UPDATE_BULLETS = 5;
-  const [updateForm, setUpdateForm] = useState({
-    title: '',
-    bullets: ['', '', ''],
-    isPublished: true,
-    version: '',
-  });
-  const [publishingUpdate, setPublishingUpdate] = useState(false);
+  const attentionCards = [
+    {
+      label: 'Stale Onboarding',
+      count: staleOnboarding,
+      hasIssue: staleOnboarding > 0,
+      statusText: staleOnboarding > 0 ? 'Review users' : 'Clean funnel',
+      tone: 'amber',
+      path: '/app/superadmin/onboarding-insights',
+    },
+    {
+      label: 'Storage Issues',
+      count: storageIssues,
+      hasIssue: storageIssues > 0,
+      statusText: storageIssues > 0 ? 'Drives unlinked' : 'All drives online',
+      tone: 'rose',
+      path: '/app/superadmin/diagnostics',
+    },
+    {
+      label: 'Unverified Admins',
+      count: unverifiedAdmins,
+      hasIssue: unverifiedAdmins > 0,
+      statusText: unverifiedAdmins > 0 ? 'Invite pending' : 'All validated',
+      tone: 'amber',
+      path: '/app/superadmin/firms',
+    },
+    {
+      label: 'Auth Locks',
+      count: authIssues,
+      hasIssue: authIssues > 0,
+      statusText: authIssues > 0 ? 'Auth failures' : 'No locks detected',
+      tone: 'rose',
+      path: '/app/superadmin/diagnostics',
+    },
+  ];
+
+  const capacityMetrics = [
+    { label: 'Pilot firms allocation', count: plans?.totals?.pilot ?? 0, valueClass: 'text-slate-700', barClass: 'bg-indigo-500' },
+    { label: 'Near capacity limits', count: plans?.totals?.nearCapacity ?? 0, valueClass: 'text-amber-600', barClass: 'bg-amber-400' },
+    { label: 'Over capacity boundaries', count: plans?.totals?.overCapacity ?? 0, valueClass: 'text-rose-600', barClass: plans?.totals?.overCapacity > 0 ? 'bg-rose-500' : 'bg-slate-300' },
+  ];
 
   const handleCreateUpdate = async (event) => {
     event.preventDefault();
@@ -316,8 +351,8 @@ export const SuperadminDashboard = () => {
       } else {
         toast.error(response?.message || 'Failed to publish update.');
       }
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'Failed to publish update.');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to publish update.');
     } finally {
       setPublishingUpdate(false);
     }
@@ -349,7 +384,7 @@ export const SuperadminDashboard = () => {
   if (loading) {
     return (
       <SuperAdminLayout>
-        <Loading message="Preparing platform Command Cockpit..." />
+        <Loading message="Preparing Platform Command Center..." />
       </SuperAdminLayout>
     );
   }
@@ -357,9 +392,8 @@ export const SuperadminDashboard = () => {
   return (
     <SuperAdminLayout>
       <div className="mx-auto w-full max-w-7xl space-y-6 relative">
-        
-        {/* 1. OPERATIONAL COMMAND HUD HEADER */}
-        <div className="relative overflow-hidden rounded-xl bg-white p-5 border border-slate-200 shadow-xs z-10">
+        {/* Operational Header */}
+        <div className="rounded-xl bg-white p-5 border border-slate-200 shadow-xs">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1.5">
@@ -371,28 +405,16 @@ export const SuperadminDashboard = () => {
                 <span className="text-xs text-slate-500 font-medium">Multi-Tenant Oversight</span>
               </div>
               <h1 className="text-xl font-bold tracking-tight text-slate-900">Platform Command Center</h1>
-              <p className="text-xs text-slate-500 mt-0.5">Real-time health, risk sentinels, security telemetry, and firm diagnostics.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Operational health, risk queues, security telemetry, and tenant diagnostics.</p>
             </div>
-            
-            {/* System HUD Clock & Actions */}
-            <div className="bg-slate-50 rounded-lg border border-slate-200/80 p-2.5 flex items-center gap-3 self-start md:self-auto">
-              <div className="text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{formattedClock.dateStr}</p>
-                <p className="text-base font-mono font-bold tracking-wider text-slate-800">{formattedClock.timeStr}</p>
-              </div>
-              <div className="h-7 w-px bg-slate-200" />
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={loadDashboard}
-              >
+
+            <div className="bg-slate-50 rounded-lg border border-slate-200/80 p-2.5 flex flex-wrap items-center gap-3 self-start md:self-auto">
+              <SuperadminLiveClock />
+              <div className="hidden sm:block h-7 w-px bg-slate-200" />
+              <Button variant="outline" size="sm" onClick={loadDashboard}>
                 Reload Diagnostics
               </Button>
-              <Button 
-                variant="primary"
-                size="sm"
-                onClick={() => setShowOnboardModal(true)}
-              >
+              <Button variant="primary" size="sm" onClick={() => setShowOnboardModal(true)}>
                 + Onboard Firm
               </Button>
             </div>
@@ -400,30 +422,25 @@ export const SuperadminDashboard = () => {
         </div>
 
         {error ? (
-          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs z-10 relative">
+          <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-xs">
             <div>
-              <h4 className="font-semibold text-rose-600 text-sm">Command center telemetry failure</h4>
-              <p className="text-xs text-slate-500">{error}</p>
+              <h4 className="font-semibold text-rose-700 text-sm">Command center telemetry failure</h4>
+              <p className="text-xs text-slate-600">{error}</p>
             </div>
             <Button variant="secondary" size="sm" onClick={loadDashboard}>Retry Diagnostics</Button>
           </div>
         ) : null}
 
-        {/* 2. TELEMETRY VIEW CONTROLLER (ENTERPRISE SEGMENTED CONTROL) */}
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-2 z-10 relative">
-          {[
-            { id: 'vitals', label: 'Ecosystem Vitals' },
-            { id: 'security', label: 'Security Audits' },
-            { id: 'performance', label: 'Performance Traces' },
-            { id: 'launch', label: 'Launch Checklist' },
-            { id: 'flags', label: 'Feature Flags' },
-            { id: 'legal', label: 'Legal & Consent' },
-            { id: 'feedback', label: 'User Feedback & Bugs' },
-          ].map((tab) => (
+        {/* URL-Synced Section Tabs */}
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-2" role="tablist" aria-label="SuperAdmin Dashboard Sections">
+          {DASHBOARD_TABS.map((tab) => (
             <button
               key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`rounded-md px-3.5 py-1.5 text-xs font-semibold tracking-normal transition-colors ${
+              className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                 activeTab === tab.id
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -434,20 +451,15 @@ export const SuperadminDashboard = () => {
           ))}
         </div>
 
-        {/* 3. DYNAMIC HUD SUB-VIEWS */}
-        <div className="z-10 relative">
-          
-          {/* ==================== TAB A: ECOSYSTEM VITALS ==================== */}
+        {/* Active Tab View */}
+        <div>
           {activeTab === 'vitals' && (
             <div className="space-y-6">
-
-              {/* 26-FIRM PILOT COHORT TRACKER & 20-FIRM MILESTONE TRIGGER */}
+              {/* Pilot Cohort Progress & 20-Firm Trigger */}
               <div
                 role="status"
                 className={`rounded-xl border p-4 shadow-xs transition-colors ${
-                  pilotCohort.pricingReviewTriggered
-                    ? 'border-amber-300 bg-amber-50/70'
-                    : 'border-slate-200 bg-white'
+                  pilotCohort.pricingReviewTriggered ? 'border-amber-300 bg-amber-50/70' : 'border-slate-200 bg-white'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -470,7 +482,7 @@ export const SuperadminDashboard = () => {
                       </span>
                       <span className="text-xs font-semibold text-slate-800">
                         {pilotCohort.pricingReviewTriggered
-                          ? '20-firm milestone reached — time to decide final pricing & post-cohort plan.'
+                          ? '20-firm milestone reached — review final pricing & post-cohort plan.'
                           : `${pilotCohort.remainingSlots} unlimited pilot slots remaining (20-firm review trigger armed).`}
                       </span>
                     </div>
@@ -487,11 +499,7 @@ export const SuperadminDashboard = () => {
                     <div className="relative h-2 w-full rounded-full bg-slate-200 overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${
-                          pilotCohort.cohortFull
-                            ? 'bg-rose-600'
-                            : pilotCohort.pricingReviewTriggered
-                              ? 'bg-amber-500'
-                              : 'bg-slate-900'
+                          pilotCohort.cohortFull ? 'bg-rose-600' : pilotCohort.pricingReviewTriggered ? 'bg-amber-500' : 'bg-slate-900'
                         }`}
                         style={{ width: `${Math.min(100, (pilotCohort.onboardedFirms / pilotCohort.maxFirms) * 100)}%` }}
                       />
@@ -499,229 +507,162 @@ export const SuperadminDashboard = () => {
                   </div>
                 </div>
               </div>
-              
-              {/* PLATFORM VITALS GRID */}
+
+              {/* Platform Vitals Grid */}
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                
-                {/* VITALS TILE 1: REGISTERED FIRMS */}
-                <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">Registered Firms</span>
-                    <div className="rounded-lg bg-indigo-50 p-2 border border-indigo-100">
-                      <Icons.Firms />
-                    </div>
+                    <div className="rounded-lg bg-indigo-50 p-2 border border-indigo-100"><Icons.Firms /></div>
                   </div>
                   <div className="mt-4">
-                    <h3 className="text-3xl font-extrabold tracking-tight text-slate-900">{totalFirms}</h3>
+                    <h3 className="text-3xl font-extrabold tracking-tight font-mono text-slate-900">{totalFirms}</h3>
                     <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
                       <span className="font-semibold text-indigo-600">{activeFirms} Active</span>
                       <span>{inactiveFirms} Suspended</span>
                     </div>
-                    {/* Ratio visual indicator bar */}
                     <div className="mt-2.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden flex">
-                      <div 
-                        className="h-full bg-indigo-500 rounded-l" 
-                        style={{ width: `${totalFirms > 0 ? (activeFirms / totalFirms) * 100 : 0}%` }}
-                      />
-                      <div 
-                        className="h-full bg-slate-300 rounded-r" 
-                        style={{ width: `${totalFirms > 0 ? (inactiveFirms / totalFirms) * 100 : 0}%` }}
-                      />
+                      <div className="h-full bg-indigo-500 rounded-l" style={{ width: `${totalFirms > 0 ? (activeFirms / totalFirms) * 100 : 0}%` }} />
+                      <div className="h-full bg-slate-300 rounded-r" style={{ width: `${totalFirms > 0 ? (inactiveFirms / totalFirms) * 100 : 0}%` }} />
                     </div>
                   </div>
                 </div>
 
-                {/* VITALS TILE 2: TOTAL PLATFORM USERS */}
-                <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">User Footprint</span>
-                    <div className="rounded-lg bg-sky-50 p-2 border border-sky-100">
-                      <Icons.Users />
-                    </div>
+                    <div className="rounded-lg bg-sky-50 p-2 border border-sky-100"><Icons.Users /></div>
                   </div>
                   <div className="mt-4">
-                    <h3 className="text-3xl font-extrabold tracking-tight text-slate-900">{totalUsers}</h3>
+                    <h3 className="text-3xl font-extrabold tracking-tight font-mono text-slate-900">{totalUsers}</h3>
                     <p className="mt-3 text-xs text-slate-500 flex items-center justify-between">
-                      <span>Total Allocated Seats</span>
-                      <span className="font-semibold text-slate-700">{averageUsersPerFirm} users/firm avg</span>
+                      <span>Average per firm</span>
+                      <span className="font-semibold text-slate-700 font-mono">{averageUsersPerFirm} users/firm</span>
                     </p>
-                    <div className="mt-2.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                      <div className="h-full bg-sky-400 w-3/4 rounded-full" />
-                    </div>
+                    <p className="mt-2 text-[11px] text-slate-500">
+                      {plans?.totals?.overCapacity > 0
+                        ? `${plans.totals.overCapacity} over capacity`
+                        : plans?.totals?.nearCapacity > 0
+                          ? `${plans.totals.nearCapacity} near seat limit`
+                          : 'All firms within seat limits'}
+                    </p>
                   </div>
                 </div>
 
-                {/* VITALS TILE 3: PERFORMANCE LATENCY */}
-                <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">Endpoint p95</span>
-                    <div className="rounded-lg bg-emerald-50 p-2 border border-emerald-100">
-                      <Icons.Performance />
-                    </div>
+                    <div className="rounded-lg bg-emerald-50 p-2 border border-emerald-100"><Icons.Performance /></div>
                   </div>
                   <div className="mt-4">
-                    <h3 className="text-3xl font-extrabold tracking-tight text-slate-900">
+                    <h3 className="text-3xl font-extrabold tracking-tight font-mono text-slate-900">
                       {Number.isFinite(Number(slowP95)) ? `${slowP95}ms` : 'N/A'}
                     </h3>
                     <p className="mt-3 text-xs text-slate-500 flex items-center gap-1.5">
                       <span className={`inline-block h-2 w-2 rounded-full ${Number(slowP95) < 250 ? 'bg-emerald-500' : Number(slowP95) < 600 ? 'bg-amber-500' : 'bg-rose-500'}`} />
                       <span className="font-semibold text-slate-600">
-                        {Number(slowP95) < 250 ? 'Excellent response' : Number(slowP95) < 600 ? 'Nominal response' : 'Slow latency threshold'}
+                        {!Number.isFinite(Number(slowP95))
+                          ? 'No latency baseline yet'
+                          : Number(slowP95) < 250
+                            ? 'Optimal response'
+                            : Number(slowP95) < 600
+                              ? 'Nominal response'
+                              : 'Elevated latency'}
                       </span>
                     </p>
                     <div className="mt-2.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full ${Number(slowP95) < 250 ? 'bg-emerald-400' : Number(slowP95) < 600 ? 'bg-amber-400' : 'bg-rose-400'}`}
+                      <div
+                        className={`h-full rounded-full ${Number(slowP95) < 250 ? 'bg-emerald-500' : Number(slowP95) < 600 ? 'bg-amber-500' : 'bg-rose-500'}`}
                         style={{ width: `${Math.min(100, Number(slowP95) > 0 ? (Number(slowP95) / 1000) * 100 : 0)}%` }}
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* VITALS TILE 4: SECURITY GUARD */}
-                <div className="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold tracking-wider text-slate-400 uppercase">Security Auth</span>
-                    <div className="rounded-lg bg-rose-50 p-2 border border-rose-100">
-                      <Icons.Security />
-                    </div>
+                    <div className="rounded-lg bg-rose-50 p-2 border border-rose-100"><Icons.Security /></div>
                   </div>
                   <div className="mt-4">
-                    <h3 className={`text-3xl font-extrabold tracking-tight ${otpFailures > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{otpFailures}</h3>
+                    <h3 className={`text-3xl font-extrabold tracking-tight font-mono ${otpFailures > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{otpFailures}</h3>
                     <p className="mt-3 text-xs text-slate-500 flex items-center justify-between">
-                      <span>Auth Sentinel Failures</span>
-                      <span className={`font-bold uppercase tracking-wider text-[10px] ${otpFailures > 0 ? 'text-rose-500 animate-pulse' : 'text-emerald-600'}`}>
-                        {otpFailures === 0 ? 'Secure Shield' : 'Warning'}
+                      <span>Login / OTP Events</span>
+                      <span className={`font-bold uppercase tracking-wider text-[10px] ${otpFailures > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {otpFailures === 0 ? 'Normal' : 'Review'}
                       </span>
                     </p>
-                    <div className="mt-2.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full ${otpFailures > 0 ? 'bg-rose-500' : 'bg-emerald-400'}`}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
+                    <p className="mt-2 text-[11px] text-slate-500">
+                      {otpFailures === 0 ? 'No recent lockouts or OTP failures' : `${otpFailures} auth anomalies flagged`}
+                    </p>
                   </div>
                 </div>
-
               </div>
 
-              {/* IMMEDIATE ATTENTION TODAY SECTION */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              {/* Needs Attention Today */}
+              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                 <div className="flex items-center gap-2.5 mb-4">
-                  <div className="rounded-lg bg-amber-50 p-2 border border-amber-100 text-amber-600">
-                    <Icons.Attention />
-                  </div>
+                  <div className="rounded-lg bg-amber-50 p-2 border border-amber-100 text-amber-600"><Icons.Attention /></div>
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">Needs attention today</h2>
-                    <p className="text-xs text-slate-500">Telemetry logs that trigger validation errors or require founder follow-up.</p>
+                    <p className="text-xs text-slate-500">Signals requiring founder or operator follow-up.</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  
-                  {/* ATTENTION 1: STALE ONBOARDINGS */}
-                  <div 
-                    onClick={() => navigate('/app/superadmin/onboarding-insights')}
-                    className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] ${staleOnboarding > 0 ? 'bg-amber-50/40 border-amber-300 shadow-sm shadow-amber-500/5 hover:border-amber-400' : 'bg-slate-50/50 border-slate-200'}`}
-                  >
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Stale Onboarding</p>
-                      <h4 className="mt-1 text-2xl font-black text-slate-900">{staleOnboarding}</h4>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-xs font-semibold text-slate-600">
-                      <span className="flex items-center gap-1.5">
-                        <span className={`inline-block h-2 w-2 rounded-full ${staleOnboarding > 0 ? 'bg-amber-500 animate-ping' : 'bg-slate-400'}`} />
-                        {staleOnboarding > 0 ? 'Review users' : 'Clean funnel'}
-                      </span>
-                      <span className="text-indigo-600 flex items-center gap-0.5">Inspect <Icons.ArrowRight /></span>
-                    </div>
-                  </div>
-
-                  {/* ATTENTION 2: STORAGE FAILURES */}
-                  <div 
-                    onClick={() => navigate('/app/superadmin/diagnostics')}
-                    className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] ${storageIssues > 0 ? 'bg-rose-50/40 border-rose-300 shadow-sm shadow-rose-500/5 hover:border-rose-400' : 'bg-slate-50/50 border-slate-200'}`}
-                  >
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Storage Issues</p>
-                      <h4 className="mt-1 text-2xl font-black text-slate-900">{storageIssues}</h4>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-xs font-semibold text-slate-600">
-                      <span className="flex items-center gap-1.5">
-                        <span className={`inline-block h-2 w-2 rounded-full ${storageIssues > 0 ? 'bg-rose-500 animate-ping' : 'bg-slate-400'}`} />
-                        {storageIssues > 0 ? 'Drives unlinked' : 'All drives online'}
-                      </span>
-                      <span className="text-indigo-600 flex items-center gap-0.5">Inspect <Icons.ArrowRight /></span>
-                    </div>
-                  </div>
-
-                  {/* ATTENTION 3: UNVERIFIED ADMINS */}
-                  <div 
-                    onClick={() => navigate('/app/superadmin/firms')}
-                    className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] ${unverifiedAdmins > 0 ? 'bg-amber-50/40 border-amber-300 shadow-sm shadow-amber-500/5 hover:border-amber-400' : 'bg-slate-50/50 border-slate-200'}`}
-                  >
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Unverified Admins</p>
-                      <h4 className="mt-1 text-2xl font-black text-slate-900">{unverifiedAdmins}</h4>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-xs font-semibold text-slate-600">
-                      <span className="flex items-center gap-1.5">
-                        <span className={`inline-block h-2 w-2 rounded-full ${unverifiedAdmins > 0 ? 'bg-amber-500 animate-ping' : 'bg-slate-400'}`} />
-                        {unverifiedAdmins > 0 ? 'Invite pending' : 'All validated'}
-                      </span>
-                      <span className="text-indigo-600 flex items-center gap-0.5">Inspect <Icons.ArrowRight /></span>
-                    </div>
-                  </div>
-
-                  {/* ATTENTION 4: RECENT LOGIN LOGOUT LOCKS */}
-                  <div 
-                    onClick={() => navigate('/app/superadmin/diagnostics')}
-                    className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 hover:shadow-md flex flex-col justify-between min-h-[110px] ${authIssues > 0 ? 'bg-rose-50/40 border-rose-300 shadow-sm shadow-rose-500/5 hover:border-rose-400' : 'bg-slate-50/50 border-slate-200'}`}
-                  >
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Auth Locks</p>
-                      <h4 className="mt-1 text-2xl font-black text-slate-900">{authIssues}</h4>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-xs font-semibold text-slate-600">
-                      <span className="flex items-center gap-1.5">
-                        <span className={`inline-block h-2 w-2 rounded-full ${authIssues > 0 ? 'bg-rose-500' : 'bg-slate-400'}`} />
-                        {authIssues > 0 ? 'Auth failures' : 'Shield safe'}
-                      </span>
-                      <span className="text-indigo-600 flex items-center gap-0.5">Inspect <Icons.ArrowRight /></span>
-                    </div>
-                  </div>
-
+                  {attentionCards.map((card) => {
+                    const activeBorder = card.tone === 'rose'
+                      ? 'bg-rose-50/40 border-rose-300 hover:border-rose-400'
+                      : 'bg-amber-50/40 border-amber-300 hover:border-amber-400';
+                    const dotColor = card.tone === 'rose' ? 'bg-rose-500' : 'bg-amber-500';
+                    return (
+                      <button
+                        key={card.label}
+                        type="button"
+                        onClick={() => navigate(card.path)}
+                        className={`text-left rounded-xl border p-4 transition-colors flex flex-col justify-between min-h-[110px] ${
+                          card.hasIssue ? activeBorder : 'bg-slate-50/50 border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{card.label}</p>
+                          <h4 className="mt-1 text-2xl font-black font-mono text-slate-900">{card.count}</h4>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between text-xs font-semibold text-slate-600">
+                          <span className="flex items-center gap-1.5">
+                            <span className={`inline-block h-2 w-2 rounded-full ${card.hasIssue ? dotColor : 'bg-slate-400'}`} />
+                            {card.statusText}
+                          </span>
+                          <span className="text-indigo-600 flex items-center gap-0.5">Inspect <Icons.ArrowRight /></span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* DUAL SENTINELS: RISK SENTINEL & PLAN CAPACITY */}
+              {/* Risk Queue & Plan Capacity */}
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                
-                {/* RISK SENTINEL PANEL */}
-                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
+                <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h2 className="text-base font-bold text-slate-900">Ecosystem Risk Sentinel</h2>
-                        <p className="text-xs text-slate-500">Live operational health queues matching risk parameters.</p>
+                        <h2 className="text-base font-bold text-slate-900">Firm Risk Queue</h2>
+                        <p className="text-xs text-slate-500">Operational health queue across tenant accounts.</p>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => navigate('/app/superadmin/firm-health')}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => navigate('/app/superadmin/firm-health')}>
                         Risk Queue
                       </Button>
                     </div>
 
                     {criticalFirms.length === 0 ? (
                       <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/40 my-3">
-                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-500 mb-2">✓</span>
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 mb-2">✓</span>
                         <p className="text-xs font-bold text-slate-800">All tenants operational</p>
-                        <p className="text-[10px] text-slate-500">Zero active firms currently trigger high-risk sentinel metrics.</p>
+                        <p className="text-[10px] text-slate-500">No active firms are flagged as at-risk or critical.</p>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto my-2 border border-slate-100 rounded-lg shadow-xs">
+                      <div className="overflow-x-auto my-2 border border-slate-100 rounded-lg">
                         <table className="min-w-full text-xs">
                           <thead>
                             <tr className="bg-slate-50 text-left font-bold text-slate-500 border-b border-slate-100">
@@ -741,11 +682,13 @@ export const SuperadminDashboard = () => {
                                 </td>
                                 <td className="py-2.5 px-2 font-mono font-semibold text-slate-700">{firm.score}</td>
                                 <td className="py-2.5 px-2">
-                                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold border capitalize ${
-                                    firm.riskLevel === 'critical' 
-                                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
-                                      : 'bg-amber-50 text-amber-700 border-amber-200'
-                                  }`}>
+                                  <span
+                                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold border capitalize ${
+                                      firm.riskLevel === 'critical'
+                                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                                    }`}
+                                  >
                                     {firm.riskLevel === 'at_risk' ? 'At Risk' : firm.riskLevel}
                                   </span>
                                 </td>
@@ -760,11 +703,7 @@ export const SuperadminDashboard = () => {
                                   ) : null}
                                 </td>
                                 <td className="py-2.5 px-3 text-right">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => navigate(`/app/superadmin/firms/${firm.firmObjectId}`)}
-                                  >
+                                  <Button variant="outline" size="sm" onClick={() => navigate(`/app/superadmin/firms/${firm.firmObjectId}`)}>
                                     Manage Firm &rarr;
                                   </Button>
                                 </td>
@@ -777,886 +716,407 @@ export const SuperadminDashboard = () => {
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400 flex items-center justify-between">
                     <span>Platform: Critical ({firmHealth?.totals?.critical || 0}) · At risk ({firmHealth?.totals?.atRisk || 0})</span>
-                    <span>Safeguarded tenant isolation</span>
+                    <span>Strict tenant isolation</span>
                   </div>
                 </div>
 
-                {/* CAPACITY METERS PANEL */}
                 <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h2 className="text-base font-bold text-slate-900">Tenant Subscription Map</h2>
-                        <p className="text-xs text-slate-500">Plan distribution and capacity ratios.</p>
+                        <p className="text-xs text-slate-500">Plan distribution and seat capacity ratios.</p>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => navigate('/app/superadmin/plans')}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => navigate('/app/superadmin/plans')}>
                         Manage Caps
                       </Button>
                     </div>
 
                     <div className="space-y-4 my-3">
-                      <div>
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="font-semibold text-slate-700">Pilot firms allocation</span>
-                          <span className="font-mono text-slate-600 font-semibold">{plans?.totals?.pilot ?? 0}</span>
+                      {capacityMetrics.map((metric) => (
+                        <div key={metric.label}>
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="font-semibold text-slate-700">{metric.label}</span>
+                            <span className={`font-mono tabular-nums font-bold ${metric.valueClass}`}>{metric.count}</span>
+                          </div>
+                          <div className="h-2 w-full rounded-xs bg-slate-100 overflow-hidden">
+                            <div
+                              className={`h-full rounded-xs ${metric.barClass}`}
+                              style={{ width: `${Math.min(100, metric.count ? (metric.count / (totalFirms || 1)) * 100 : 0)}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="h-2 w-full rounded-xs bg-slate-100 overflow-hidden">
-                          <div className="h-full bg-indigo-500 rounded-xs" style={{ width: `${Math.min(100, plans?.totals?.pilot ? (plans.totals.pilot / (totalFirms || 1)) * 100 : 0)}%` }} />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="font-semibold text-slate-700">Near capacity limits</span>
-                          <span className="font-mono tabular-nums text-amber-600 font-bold">{plans?.totals?.nearCapacity ?? 0}</span>
-                        </div>
-                        <div className="h-2 w-full rounded-xs bg-slate-100 overflow-hidden">
-                          <div className="h-full bg-amber-400 rounded-xs" style={{ width: `${Math.min(100, plans?.totals?.nearCapacity ? (plans.totals.nearCapacity / (totalFirms || 1)) * 100 : 0)}%` }} />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="font-semibold text-slate-700">Over capacity boundaries</span>
-                          <span className="font-mono tabular-nums text-rose-500 font-bold">{plans?.totals?.overCapacity ?? 0}</span>
-                        </div>
-                        <div className="h-2 w-full rounded-xs bg-slate-100 overflow-hidden">
-                          <div className={`h-full rounded-xs ${plans?.totals?.overCapacity > 0 ? 'bg-rose-500 animate-pulse' : 'bg-slate-300'}`} style={{ width: `${Math.min(100, plans?.totals?.overCapacity ? (plans.totals.overCapacity / (totalFirms || 1)) * 100 : 0)}%` }} />
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                    <span className="text-slate-400">Secure Billing telemetry</span>
-                    <span onClick={() => navigate('/app/superadmin/plans')} className="text-indigo-600 hover:text-indigo-500 cursor-pointer font-bold hover:underline">
+                    <span className="text-slate-400">Plan & seat telemetry</span>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/app/superadmin/plans')}
+                      className="text-indigo-600 hover:text-indigo-500 font-bold hover:underline"
+                    >
                       Provision caps &rarr;
-                    </span>
+                    </button>
                   </div>
                 </div>
-
               </div>
-
             </div>
           )}
 
-          {/* ==================== TAB B: SECURITY & AUDIT STREAM ==================== */}
           {activeTab === 'security' && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Security Audit Stream</h2>
-                  <p className="text-xs text-slate-500">Real-time platform administrative mutations and authorization logs.</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => navigate('/app/superadmin/audit')}
-                >
-                  Full Audit Logs
-                </Button>
-              </div>
-
-              {!auditLogs.length ? (
-                <div className="text-center py-10 border border-dashed border-slate-200 rounded-xl bg-slate-50/20">
-                  <span className="text-slate-400 font-bold block">Zero system activities logged</span>
-                  <p className="text-xs text-slate-500 mt-1">Audit log traces are currently empty.</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                  {auditLogs.map((log) => {
-                    const isExpanded = expandedLogId === log._id;
-                    const date = log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A';
-                    return (
-                      <div 
-                        key={log._id} 
-                        className={`rounded-lg border text-xs transition-all ${
-                          isExpanded 
-                            ? 'bg-slate-50/80 border-indigo-200 shadow-sm' 
-                            : 'bg-white border-slate-100 hover:bg-slate-50/30'
-                        }`}
-                      >
-                        {/* Summary Line */}
-                        <div 
-                          onClick={() => setExpandedLogId(isExpanded ? null : log._id)}
-                          className="p-3 flex flex-wrap items-center justify-between gap-2 cursor-pointer select-none"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-flex rounded px-1.5 py-0.5 font-bold uppercase text-[9px] ${
-                              String(log.actionType).includes('CREATE') 
-                                ? 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/15' 
-                                : String(log.actionType).includes('DELETE') || String(log.actionType).includes('SUSPEND')
-                                ? 'bg-rose-500/10 text-rose-600 border border-rose-500/15'
-                                : 'bg-slate-500/10 text-slate-600 border border-slate-500/15'
-                            }`}>
-                              {log.actionType || 'UNKNOWN'}
-                            </span>
-                            <span className="font-semibold text-slate-800">{log.performedBy || 'System Admin'}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-3 text-slate-400">
-                            <span className="font-mono text-[10px]">{log.firmName || log.firmId || 'Platform'}</span>
-                            <span className="font-mono text-[10px]">{date}</span>
-                            <span className="text-slate-400 text-base">{isExpanded ? '▴' : '▾'}</span>
-                          </div>
-                        </div>
-
-                        {/* Collapsed Trace Detail */}
-                        {isExpanded && (
-                          <div className="border-t border-indigo-100/40 p-3 bg-slate-900 text-indigo-200 rounded-b-lg font-mono text-[11px] space-y-2 overflow-x-auto">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-indigo-300">
-                              <p><strong className="text-indigo-400">Action:</strong> {log.actionType}</p>
-                              <p><strong className="text-indigo-400">Target Entity:</strong> {log.targetEntityType || 'N/A'} ({log.targetEntityId || 'N/A'})</p>
-                              <p><strong className="text-indigo-400">Request Ref ID:</strong> {log.requestId || 'N/A'}</p>
-                              <p><strong className="text-indigo-400">Origin IP:</strong> {log.ipAddress || 'N/A'}</p>
-                            </div>
-                            {log.userAgent && (
-                              <p className="text-indigo-300/80"><strong className="text-indigo-400">User Agent:</strong> {log.userAgent}</p>
-                            )}
-                            {log.metadata && Object.keys(log.metadata).length > 0 && (
-                              <div className="pt-2 border-t border-slate-800">
-                                <p className="text-indigo-400 font-bold mb-1">Audit Metadata Context:</p>
-                                <pre className="text-[10px] bg-slate-950 p-2 rounded text-indigo-200/90 whitespace-pre-wrap max-h-32 overflow-y-auto">
-                                  {JSON.stringify(log.metadata, null, 2)}
-                                </pre>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <SuperadminAuditStreamTab
+              auditLogs={auditLogs}
+              loading={Boolean(tabLoading.security)}
+              onOpenFullLogs={() => navigate('/app/superadmin/audit')}
+            />
           )}
 
-          {/* ==================== TAB C: PERFORMANCE & SUPPORT TRACES ==================== */}
           {activeTab === 'performance' && (
-            <div className="space-y-6">
-              
-              {/* SLOW ENDPOINTS & LATENCY DETECT */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">Slow Endpoint Telemetries</h2>
-                    <p className="text-xs text-slate-500">Live API response distributions (latencies) flagged by diagnostics.</p>
-                  </div>
-                  <div className="rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600 border border-emerald-100">
-                    Engine p95: {Number.isFinite(Number(slowP95)) ? `${slowP95}ms` : 'N/A'}
-                  </div>
-                </div>
-
-                {!diagnostics?.slowEndpointSummary?.endpoints?.length ? (
-                  <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/40">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-500 mb-2">✓</span>
-                    <p className="text-xs font-bold text-slate-800">Perfect response profiles</p>
-                    <p className="text-[10px] text-slate-500">No endpoints are currently registering high latencies.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto border border-slate-100 rounded-lg">
-                    <table className="min-w-full text-xs">
-                      <thead>
-                        <tr className="bg-slate-50 text-left font-bold text-slate-500 border-b border-slate-100">
-                          <th className="py-2.5 px-3">HTTP Route</th>
-                          <th className="py-2.5 px-2">Requests</th>
-                          <th className="py-2.5 px-2">p50 latency</th>
-                          <th className="py-2.5 px-2 text-rose-500">p95 Latency</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(diagnostics.slowEndpointSummary.endpoints || []).slice(0, 5).map((ep, idx) => (
-                          <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50/30 font-mono">
-                            <td className="py-2.5 px-3 text-slate-700 font-semibold truncate max-w-[200px]" title={ep.endpoint}>
-                              <span className="text-[10px] font-bold bg-slate-100 px-1 rounded mr-1.5 uppercase text-slate-500">{ep.method || 'GET'}</span>
-                              {ep.endpoint}
-                            </td>
-                            <td className="py-2.5 px-2 text-slate-600 font-bold">{ep.count || 0}</td>
-                            <td className="py-2.5 px-2 text-slate-500">{ep.p50Ms || ep.avgMs || '0'}ms</td>
-                            <td className="py-2.5 px-2 text-rose-600 font-bold">{ep.p95Ms || ep.maxMs || '0'}ms</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              {/* AUTH & OTP EXCEPTION SENTINELS */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">Auth / OTP Traces</h2>
-                    <p className="text-xs text-slate-500">Locked accounts, authentication failures, and OTP delivery exceptions.</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => navigate('/app/superadmin/diagnostics')}
-                  >
-                    Support Panel
-                  </Button>
-                </div>
-
-                {!diagnostics?.loginAndOtpIssues?.length ? (
-                  <div className="border border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50/40">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-500 mb-2">✓</span>
-                    <p className="text-xs font-bold text-slate-800">Zero authentication failures</p>
-                    <p className="text-[10px] text-slate-500">All logins and OTP validations completed without exceptions.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto border border-slate-100 rounded-lg">
-                    <table className="min-w-full text-xs">
-                      <thead>
-                        <tr className="bg-slate-50 text-left font-bold text-slate-500 border-b border-slate-100">
-                          <th className="py-2.5 px-3">Affected Entity</th>
-                          <th className="py-2.5 px-2">Type</th>
-                          <th className="py-2.5 px-2">Error / Code</th>
-                          <th className="py-2.5 px-3">Trace Log</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(diagnostics.loginAndOtpIssues || []).slice(0, 5).map((issue, idx) => (
-                          <tr key={idx} className="border-t border-slate-100 hover:bg-slate-50/30">
-                            <td className="py-2.5 px-3 font-semibold text-slate-800 font-mono text-[11px]">{issue.emailMasked || issue.performedBy || issue.actor || 'Guest User'}</td>
-                            <td className="py-2.5 px-2">
-                              <span className="bg-rose-500/10 text-rose-600 border border-rose-500/20 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase">
-                                {issue.actionType || issue.issueType || 'AUTH_FAIL'}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-2 font-mono text-slate-600 text-[10px]">{issue.errorCode || issue.code || 'OTP_INVALID'}</td>
-                            <td className="py-2.5 px-3 text-slate-500 truncate max-w-[200px]" title={issue.details || issue.userAgent}>
-                              {issue.details || issue.userAgent || 'Telemetry lockout threshold triggered'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-            </div>
+            <SuperadminPerformanceTab
+              diagnostics={diagnostics}
+              slowP95={slowP95}
+              onOpenDiagnostics={() => navigate('/app/superadmin/diagnostics')}
+            />
           )}
 
-          {/* ==================== TAB D: LAUNCH CHECKLIST & BLOCKERS ==================== */}
           {activeTab === 'launch' && (
-            <div className="space-y-6">
-              
-              {/* RADAR SPEED DIAL RADAR BLOCK */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-base font-bold text-slate-900 mb-1">Launch Readiness Sentinel</h3>
-                <p className="text-xs text-slate-500 mb-4">Checklist audit scoring for firm onboarding and system configuration.</p>
-                
-                <div className="flex flex-col sm:flex-row items-center gap-6 bg-slate-50/50 p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
-                  
-                  {/* Neon SVG Gradient radial score dial */}
-                  <div className="relative flex items-center justify-center h-28 w-28 shrink-0">
-                    <Icons.Firms />
-                    <svg className="h-full w-full transform -rotate-90 absolute top-0 left-0" viewBox="0 0 100 100">
-                      <defs>
-                        <linearGradient id="indigoSkyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#0EA5E9" /> {/* Sky blue */}
-                          <stop offset="100%" stopColor="#4F46E5" /> {/* Deep indigo */}
-                        </linearGradient>
-                        <filter id="gaugeShadow">
-                          <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#4F46E5" floodOpacity="0.2" />
-                        </filter>
-                      </defs>
-                      {/* Background circle track */}
-                      <circle cx="50" cy="50" r="35" fill="transparent" stroke="#E2E8F0" strokeWidth="5.5" />
-                      {/* Active circular gauge track */}
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        fill="transparent"
-                        stroke="url(#indigoSkyGradient)"
-                        strokeWidth="5.5"
-                        strokeDasharray={radialGaugeCircumference}
-                        strokeDashoffset={radialGaugeDashoffset}
-                        strokeLinecap="round"
-                        filter="url(#gaugeShadow)"
-                        style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
-                      />
-                    </svg>
-                    {/* Inner score overlay */}
-                    <div className="absolute text-center select-none">
-                      <p className="text-2xl font-black font-mono text-slate-800 leading-none">{pilotReadySummary.score}</p>
-                      <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest leading-none mt-1">Readiness</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`inline-flex rounded-xs px-2 py-0.5 text-xs font-bold border uppercase tracking-wider ${
-                        pilotReadySummary.overall === 'READY' 
-                          ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/25 animate-pulse' 
-                          : 'bg-amber-500/10 text-amber-500 border-amber-500/25'
-                      }`}>
-                        {pilotReadySummary.overall}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium">Checked: {pilotReadiness?.generatedAt || 'Today'}</span>
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      Telemetry checklist determines pilot provisioning capabilities. Pass items must equal 100% to activate automated sandbox domains.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-3 text-xs font-bold">
-                      <span className="text-emerald-600">✓ {pilotReadySummary.pass} Pass</span>
-                      <span className="text-amber-600">⚠ {pilotReadySummary.watch} Warning</span>
-                      <span className="text-rose-500">✗ {pilotReadySummary.fail} Blocker</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* DETAILED CHECKLIST REVIEWS */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                  <div>
-                    <h2 className="text-base font-bold text-slate-900">Checklist review</h2>
-                    <p className="text-xs text-slate-500">Checklist items validating firm capabilities and systems integration.</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => navigate('/app/superadmin/pilot-readiness')}
-                  >
-                    Full Checklist
-                  </Button>
-                </div>
-
-                {!pilotReadiness?.checklist?.length ? (
-                  <p className="text-sm text-slate-500 text-center py-4">No checklist metrics loaded.</p>
-                ) : (
-                  <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
-                    {(pilotReadiness.checklist || []).map((item) => (
-                      <div key={item.key} className="rounded-lg border border-slate-100 p-3 bg-slate-50/30 hover:bg-slate-50/60 transition-all flex flex-col md:flex-row md:items-start justify-between gap-3 text-xs">
-                        <div className="space-y-1">
-                          <p className="font-bold text-slate-800 flex items-center gap-1.5">
-                            <span className={`inline-block h-2 w-2 rounded-full ${
-                              item.status === 'pass' ? 'bg-emerald-500' : item.status === 'watch' ? 'bg-amber-500' : 'bg-rose-500'
-                            }`} />
-                            {item.label}
-                          </p>
-                          <p className="text-slate-500 leading-relaxed">{item.summary}</p>
-                          {item.evidence && (
-                            <p className="text-[10px] text-slate-400 font-mono"><strong className="text-indigo-400 font-medium">Evidence:</strong> {item.evidence}</p>
-                          )}
-                          {item.nextAction && (
-                            <p className="text-[10px] text-indigo-600"><strong className="text-indigo-500 font-bold">Action:</strong> {item.nextAction}</p>
-                          )}
-                        </div>
-
-                        {item.href && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => navigate(item.href)}
-                          >
-                            Open Review
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-            </div>
+            <SuperadminLaunchChecklistTab
+              pilotReadiness={pilotReadiness}
+              summary={pilotReadySummary}
+              loading={Boolean(tabLoading.launch)}
+              onOpenChecklist={() => navigate('/app/superadmin/pilot-readiness')}
+              onNavigate={(href) => navigate(href)}
+            />
           )}
 
-          {/* ==================== TAB E: FEATURE FLAGS ==================== */}
           {activeTab === 'flags' && (
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Feature flags config</h2>
-                  <p className="text-xs text-slate-500">Selective product rollout gates and high-risk overrides.</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => navigate('/app/superadmin/feature-flags')}
-                >
-                  Manage Flags
-                </Button>
-              </div>
-
-              {!featureFlags?.flags?.length ? (
-                <div className="text-center py-10 border border-dashed border-slate-200 rounded-xl bg-slate-50/20">
-                  <span className="text-slate-400 font-bold block">No feature flags registered</span>
-                  <p className="text-xs text-slate-500 mt-1">Platform rollouts are currently hard-gated in compile code.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(featureFlags.flags || []).map((flag) => (
-                    <div key={flag.key} className="rounded-lg border border-slate-100 p-3 bg-slate-50/30 flex flex-col justify-between min-h-[110px] text-xs">
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="font-mono font-bold text-indigo-600">{flag.key}</span>
-                          <span className={`inline-flex rounded px-1 text-[9px] font-bold uppercase tracking-wider ${
-                            flag.riskLevel === 'high' 
-                              ? 'bg-rose-500/10 text-rose-500 border border-rose-500/15' 
-                              : flag.riskLevel === 'medium'
-                              ? 'bg-amber-500/10 text-amber-500 border border-amber-500/15'
-                              : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/15'
-                          }`}>
-                            {flag.riskLevel || 'low'} risk
-                          </span>
-                        </div>
-                        <p className="font-bold text-slate-800 text-xs">{flag.name || 'Core Module Gate'}</p>
-                        <p className="text-[10px] text-slate-400 font-mono truncate max-w-[250px]">{flag.description || 'Rollout toggle'}</p>
-                      </div>
-                      
-                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-slate-500 font-medium">Globally enabled:</span>
-                        <span className={`font-bold uppercase text-[10px] ${flag.enabledGlobally ? 'text-emerald-600 animate-pulse' : 'text-slate-400'}`}>
-                          {flag.enabledGlobally ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <SuperadminFeatureFlagsTab
+              featureFlags={featureFlags}
+              loading={Boolean(tabLoading.flags)}
+              onOpenFlags={() => navigate('/app/superadmin/feature-flags')}
+            />
           )}
 
-          {/* ==================== TAB F: LEGAL & CONSENT REGISTRY ==================== */}
           {activeTab === 'legal' && (
             <div className="space-y-6">
-              {/* LEGAL & CONSENT KPI METRICS */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Total Registered Firms
-                  </span>
-                  <p className="mt-2 text-2xl font-bold font-mono text-slate-900">
-                    {consentStats.total}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">Onboarded tenant practices</p>
-                </div>
+              {tabLoading.legal ? (
+                <Loading message="Loading legal consent ledger..." />
+              ) : (
+                <>
+                  {/* LEGAL & CONSENT KPI METRICS */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Total Registered Firms
+                      </span>
+                      <p className="mt-2 text-2xl font-bold font-mono text-slate-900">{consentStats.total}</p>
+                      <p className="mt-1 text-xs text-slate-500">Onboarded tenant practices</p>
+                    </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Signed Clickwrap Terms
-                  </span>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <p className="text-2xl font-bold font-mono text-emerald-600">
-                      {consentStats.acceptedCount}
-                    </p>
-                    <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
-                      {consentStats.percentage}% compliance
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">Verified electronic consent</p>
-                </div>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Signed Clickwrap Terms
+                      </span>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <p className="text-2xl font-bold font-mono text-emerald-600">{consentStats.acceptedCount}</p>
+                        <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-600/20">
+                          {consentStats.percentage}% compliance
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">Verified electronic consent</p>
+                    </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Pending / Legacy Accounts
-                  </span>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <p className={`text-2xl font-bold font-mono ${consentStats.pendingCount > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
-                      {consentStats.pendingCount}
-                    </p>
-                    <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
-                      consentStats.pendingCount > 0
-                        ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20'
-                        : 'bg-slate-100 text-slate-700'
-                    }`}>
-                      {consentStats.pendingCount > 0 ? 'Requires Consent' : '100% Up to Date'}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">Pre-clickwrap migration accounts</p>
-                </div>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Pending / Legacy Accounts
+                      </span>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <p className={`text-2xl font-bold font-mono ${consentStats.pendingCount > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+                          {consentStats.pendingCount}
+                        </p>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-xs font-semibold ${
+                            consentStats.pendingCount > 0
+                              ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-600/20'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {consentStats.pendingCount > 0 ? 'Requires Consent' : '100% Up to Date'}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">Pre-clickwrap migration accounts</p>
+                    </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                    Active System Terms Version
-                  </span>
-                  <p className="mt-2 text-xl font-bold font-mono text-indigo-600 truncate">
-                    {consentStats.activeVersion}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-500">Clickwrap pilot agreement</p>
-                </div>
-              </div>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Active System Terms Version
+                      </span>
+                      <p className="mt-2 text-xl font-bold font-mono text-indigo-600 truncate">{consentStats.activeVersion}</p>
+                      <p className="mt-1 text-xs text-slate-500">Clickwrap pilot agreement</p>
+                    </div>
+                  </div>
 
-              {/* MASTER TERMS SUMMARY & LEGAL ARCHITECTURE */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      Master Terms & Regulatory Architecture
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Enforced electronic agreement parameters for Indian CA, CS, and Legal practices.
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 border border-indigo-200/60">
-                    Active Version: {consentStats.activeVersion}
-                  </span>
-                </div>
+                  {/* MASTER TERMS SUMMARY & LEGAL ARCHITECTURE */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900">Master Terms &amp; Regulatory Architecture</h3>
+                        <p className="text-xs text-slate-500">
+                          Enforced electronic agreement parameters for Indian CA, CS, and Legal practices.
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 border border-indigo-200/60">
+                        Active Version: {consentStats.activeVersion}
+                      </span>
+                    </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
-                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
-                    <span className="font-bold text-slate-900 block mb-1">1. Pre-incorporation Operator</span>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Executed with Sarvesh Gupte in individual founder capacity prior to formal corporate incorporation.
-                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
+                      {MASTER_TERMS_CLAUSES.map((clause) => (
+                        <div key={clause.title} className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
+                          <span className="font-bold text-slate-900 block mb-1">{clause.title}</span>
+                          <p className="text-slate-600 text-[11px] leading-relaxed">{clause.body}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
-                    <span className="font-bold text-slate-900 block mb-1">2. Pilot Evaluation License</span>
-                    <p className="text-slate-600 text-xs leading-relaxed">
-                      1-year revocable evaluation license for the first 26 founding firms for internal operations, client tracking, and statutory compliance.
-                    </p>
-                  </div>
-                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
-                    <span className="font-bold text-slate-900 block mb-1">3. Zero Advisory Disclaimer</span>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Software workflow utility only. No legal, tax, chartered accounting, or company secretarial advice is rendered.
-                    </p>
-                  </div>
-                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
-                    <span className="font-bold text-slate-900 block mb-1">4. Explicit ₹0 Liability Cap</span>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Offered on an as-evaluated basis without monetary liability for pilot phase operational testing.
-                    </p>
-                  </div>
-                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
-                    <span className="font-bold text-slate-900 block mb-1">5. Sovereign Data Residency (BYOS)</span>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Working papers and client filings remain in practice-owned storage under Indian data jurisdiction.
-                    </p>
-                  </div>
-                  <div className="p-3.5 rounded-lg border border-slate-100 bg-slate-50/60">
-                    <span className="font-bold text-slate-900 block mb-1">6. Exclusive Jurisdiction</span>
-                    <p className="text-slate-600 text-[11px] leading-relaxed">
-                      Subject to Indian laws, with exclusive legal jurisdiction in the Courts of Mumbai / Thane, Maharashtra.
-                    </p>
-                  </div>
-                </div>
-              </div>
 
-              {/* FIRM LEGAL CONSENT AUDIT LEDGER */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900">
-                      Firm Legal Consent Audit Ledger
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                      Recorded clickwrap agreement timestamps, signatory emails, and audit certificates.
-                    </p>
-                  </div>
-                  <div className="w-full sm:w-72">
-                    <input
-                      type="text"
-                      placeholder="Search practice name, ID, or email…"
-                      value={legalSearchQuery}
-                      onChange={(e) => setLegalSearchQuery(e.target.value)}
-                      className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
-                    />
-                  </div>
-                </div>
+                  {/* FIRM LEGAL CONSENT AUDIT LEDGER */}
+                  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-3 mb-4">
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900">Firm Legal Consent Audit Ledger</h3>
+                        <p className="text-xs text-slate-500">
+                          Recorded clickwrap agreement timestamps, signatory emails, and audit certificates.
+                        </p>
+                      </div>
+                      <div className="w-full sm:w-72">
+                        <input
+                          type="text"
+                          placeholder="Search practice name, ID, or email…"
+                          value={legalSearchQuery}
+                          onChange={(e) => setLegalSearchQuery(e.target.value)}
+                          className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
+                        />
+                      </div>
+                    </div>
 
-                {filteredLegalFirms.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-500">
-                    No practice consent records match the search filter.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs text-slate-600">
-                      <thead className="border-b border-slate-200 bg-slate-50/75 text-[11px] font-semibold text-slate-700 uppercase tracking-wider">
-                        <tr>
-                          <th className="py-2.5 px-3">Practice / Firm</th>
-                          <th className="py-2.5 px-3">Signatory Email</th>
-                          <th className="py-2.5 px-3">Agreement Type</th>
-                          <th className="py-2.5 px-3">Terms Version</th>
-                          <th className="py-2.5 px-3">Acceptance Date</th>
-                          <th className="py-2.5 px-3">Sign-Up IP</th>
-                          <th className="py-2.5 px-3">Status</th>
-                          <th className="py-2.5 px-3 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredLegalFirms.map((firm) => {
-                          const isAccepted = firm.termsAccepted === true;
-                          const firmKey = firm.firmId || firm.slug || firm._id || 'N/A';
-                          return (
-                            <tr key={firmKey} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="py-2.5 px-3">
-                                <span className="font-semibold text-slate-900 block">{firm.name || 'Unnamed Practice'}</span>
-                                <span className="text-[10px] font-mono text-slate-400">{firmKey}</span>
-                              </td>
-                              <td className="py-2.5 px-3 font-mono text-slate-700">
-                                {firm.adminEmail || '—'}
-                              </td>
-                              <td className="py-2.5 px-3 text-[11px]">
-                                {firm.agreementType || (isAccepted ? 'PILOT_CLICKWRAP' : 'PENDING')}
-                              </td>
-                              <td className="py-2.5 px-3 font-mono text-slate-700">
-                                {firm.termsVersion || (isAccepted ? 'v1.0_pilot_2026' : 'Legacy User')}
-                              </td>
-                              <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
-                                {firm.termsAcceptedAt
-                                  ? new Date(firm.termsAcceptedAt).toLocaleDateString([], {
-                                      month: 'short',
-                                      day: 'numeric',
-                                      year: 'numeric',
-                                    })
-                                  : 'Not Recorded'}
-                              </td>
-                              <td className="py-2.5 px-3 font-mono text-slate-500">
-                                {firm.signupIP || '127.0.0.1'}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                {isAccepted ? (
-                                  <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-600/20">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                    Accepted
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-600/20">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                                    Pending
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-2.5 px-3 text-right">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setSelectedCertFirm(firm)}
-                                >
-                                  📄 View Certificate
-                                </Button>
-                              </td>
+                    {filteredLegalFirms.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-slate-500">
+                        No practice consent records match the search filter.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs text-slate-600">
+                          <thead className="border-b border-slate-200 bg-slate-50/75 text-[11px] font-semibold text-slate-700 uppercase tracking-wider">
+                            <tr>
+                              <th className="py-2.5 px-3">Practice / Firm</th>
+                              <th className="py-2.5 px-3">Signatory Email</th>
+                              <th className="py-2.5 px-3">Agreement Type</th>
+                              <th className="py-2.5 px-3">Terms Version</th>
+                              <th className="py-2.5 px-3">Acceptance Date</th>
+                              <th className="py-2.5 px-3">Sign-Up IP</th>
+                              <th className="py-2.5 px-3">Status</th>
+                              <th className="py-2.5 px-3 text-right">Action</th>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {filteredLegalFirms.map((firm) => {
+                              const isAccepted = firm.termsAccepted === true;
+                              const firmKey = firm.firmId || firm.slug || firm._id || 'N/A';
+                              return (
+                                <tr key={firmKey} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="py-2.5 px-3">
+                                    <span className="font-semibold text-slate-900 block">{firm.name || 'Unnamed Practice'}</span>
+                                    <span className="text-[10px] font-mono text-slate-400">{firmKey}</span>
+                                  </td>
+                                  <td className="py-2.5 px-3 font-mono text-slate-700">{firm.adminEmail || '—'}</td>
+                                  <td className="py-2.5 px-3 text-[11px]">
+                                    {firm.agreementType || (isAccepted ? 'PILOT_CLICKWRAP' : 'PENDING')}
+                                  </td>
+                                  <td className="py-2.5 px-3 font-mono text-slate-700">
+                                    {firm.termsVersion || (isAccepted ? 'v1.0_pilot_2026' : 'Legacy User')}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+                                    {firm.termsAcceptedAt
+                                      ? new Date(firm.termsAcceptedAt).toLocaleDateString([], {
+                                          month: 'short',
+                                          day: 'numeric',
+                                          year: 'numeric',
+                                        })
+                                      : 'Not Recorded'}
+                                  </td>
+                                  <td className="py-2.5 px-3 font-mono text-slate-500">{firm.signupIP || '127.0.0.1'}</td>
+                                  <td className="py-2.5 px-3">
+                                    {isAccepted ? (
+                                      <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-600/20">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                        Accepted
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-600/20">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                        Pending
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right">
+                                    <Button variant="outline" size="sm" onClick={() => setSelectedCertFirm(firm)}>
+                                      📄 View Certificate
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           )}
 
-          {/* ==================== TAB G: USER FEEDBACK & BUGS ==================== */}
           {activeTab === 'feedback' && (
             <div className="space-y-6">
               <SuperadminFeedbackView />
             </div>
           )}
-
         </div>
 
-        {/* 4. FOUNDER'S QUICK LAUNCH CONSOLE */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm z-10 relative">
+        {/* Platform Quick Links */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
           <div className="flex items-center gap-2.5 mb-4">
-            <div className="rounded-lg bg-indigo-50 p-2 border border-indigo-100 text-indigo-600">
-              <Icons.ConsoleLink />
-            </div>
+            <div className="rounded-lg bg-indigo-50 p-2 border border-indigo-100 text-indigo-600"><Icons.ConsoleLink /></div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Founder's Quick Launch Console</h2>
-              <p className="text-xs text-slate-500">Direct portal links to provision settings and inspect metadata.</p>
+              <h2 className="text-lg font-bold text-slate-900">Platform Quick Links</h2>
+              <p className="text-xs text-slate-500">Direct routes to tenant controls and operational diagnostics.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            
-            {/* LINK 1: FIRMS */}
-            <div 
-              onClick={() => navigate('/app/superadmin/firms')}
-              className="group cursor-pointer rounded-xl border border-slate-200 p-4 transition-all duration-200 hover:bg-slate-900/5 hover:border-indigo-400 hover:shadow-sm"
-            >
-              <h4 className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">Firms Management</h4>
-              <p className="text-[10px] text-slate-400 mt-1">Manage, suspend, or provision secure tenant bounds.</p>
-            </div>
-
-            {/* LINK 2: ONBOARDING */}
-            <div 
-              onClick={() => navigate('/app/superadmin/onboarding-insights')}
-              className="group cursor-pointer rounded-xl border border-slate-200 p-4 transition-all duration-200 hover:bg-slate-900/5 hover:border-indigo-400 hover:shadow-sm"
-            >
-              <h4 className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">Onboarding Insights</h4>
-              <p className="text-[10px] text-slate-400 mt-1">Analyze client registration velocity and onboarding flow.</p>
-            </div>
-
-            {/* LINK 3: FIRM HEALTH */}
-            <div 
-              onClick={() => navigate('/app/superadmin/firm-health')}
-              className="group cursor-pointer rounded-xl border border-slate-200 p-4 transition-all duration-200 hover:bg-slate-900/5 hover:border-indigo-400 hover:shadow-sm"
-            >
-              <h4 className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">Firm Health</h4>
-              <p className="text-[10px] text-slate-400 mt-1">Track tenant risk metrics and health score logs.</p>
-            </div>
-
-            {/* LINK 4: PLANS */}
-            <div 
-              onClick={() => navigate('/app/superadmin/plans')}
-              className="group cursor-pointer rounded-xl border border-slate-200 p-4 transition-all duration-200 hover:bg-slate-900/5 hover:border-indigo-400 hover:shadow-sm"
-            >
-              <h4 className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">Plans & Capacity</h4>
-              <p className="text-[10px] text-slate-400 mt-1">Adjust subscription plans, max user bounds, and billing.</p>
-            </div>
-
-            {/* LINK 5: FEATURE FLAGS */}
-            <div 
-              onClick={() => navigate('/app/superadmin/feature-flags')}
-              className="group cursor-pointer rounded-xl border border-slate-200 p-4 transition-all duration-200 hover:bg-slate-900/5 hover:border-indigo-400 hover:shadow-sm"
-            >
-              <h4 className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">Feature Flags</h4>
-              <p className="text-[10px] text-slate-400 mt-1">Safely toggle new modules and manage selective rollouts.</p>
-            </div>
-
-            {/* LINK 6: PILOT READINESS */}
-            <div 
-              onClick={() => navigate('/app/superadmin/pilot-readiness')}
-              className="group cursor-pointer rounded-xl border border-slate-200 p-4 transition-all duration-200 hover:bg-slate-900/5 hover:border-indigo-400 hover:shadow-sm"
-            >
-              <h4 className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">Pilot Readiness</h4>
-              <p className="text-[10px] text-slate-400 mt-1">Audit platform readiness score and resolve blockers.</p>
-            </div>
-
-            {/* LINK 7: SUPPORT DIAGNOSTICS */}
-            <div 
-              onClick={() => navigate('/app/superadmin/diagnostics')}
-              className="group cursor-pointer rounded-xl border border-slate-200 p-4 transition-all duration-200 hover:bg-slate-900/5 hover:border-indigo-400 hover:shadow-sm"
-            >
-              <h4 className="font-bold text-slate-800 text-sm group-hover:text-indigo-600 transition-colors">Support Diagnostics</h4>
-              <p className="text-[10px] text-slate-400 mt-1">Trace failed authentication attempts and slow request times.</p>
-            </div>
-
-            {/* LINK 8: AI ASSISTANT */}
-            <div 
-              onClick={() => navigate('/app/superadmin/ai-assistant')}
-              className="group cursor-pointer rounded-xl border border-indigo-200 p-4 transition-all duration-200 hover:bg-indigo-600/5 hover:border-indigo-500 hover:shadow-sm bg-indigo-50/10"
-            >
-              <h4 className="font-bold text-indigo-600 text-sm flex items-center gap-1">
-                AI Assistant
-                <span className="flex h-2 w-2 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                </span>
-              </h4>
-              <p className="text-[10px] text-slate-400 mt-1">Consult the Product, Developer, or Marketing Gemini intelligence.</p>
-            </div>
-
+            {QUICK_LINKS.map((item) => (
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className={`group text-left rounded-xl border p-4 transition-colors ${
+                  item.highlight
+                    ? 'border-indigo-200 bg-indigo-50/20 hover:bg-indigo-50/50 hover:border-indigo-400'
+                    : 'border-slate-200 hover:bg-slate-50 hover:border-indigo-300'
+                }`}
+              >
+                <h4 className={`font-bold text-sm transition-colors ${item.highlight ? 'text-indigo-700' : 'text-slate-800 group-hover:text-indigo-600'}`}>
+                  {item.label}
+                </h4>
+                <p className="text-[11px] text-slate-500 mt-1">{item.description}</p>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* 5. PRODUCT UPDATES SENTINEL */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm z-10 relative">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-2.5 w-2.5 rounded-full bg-indigo-500 animate-pulse" />
-              <h2 className="text-lg font-bold text-slate-900">Product Updates Publisher</h2>
+        {/* Collapsible Product Updates Publisher */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Product Updates Publisher</h2>
+              <p className="text-xs text-slate-500">
+                Publish platform release notes displayed to authenticated workspaces.
+              </p>
             </div>
-            <span className="inline-flex rounded-xs bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 border border-slate-200">
-              Release Sentinel
-            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowReleasePublisher((prev) => !prev)}
+            >
+              {showReleasePublisher ? 'Hide Publisher' : 'Compose Release Note'}
+            </Button>
           </div>
-          <p className="text-xs text-slate-500 mb-4">
-            Publish the latest platform release notes shown to users upon their next secure login context.
-          </p>
 
-          <form className="space-y-4" onSubmit={handleCreateUpdate}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Update Title</label>
-                <input
-                  value={updateForm.title}
-                  onChange={(event) => setUpdateForm((prev) => ({ ...prev, title: event.target.value }))}
-                  placeholder="e.g. Major speed optimizations & multi-workspace support"
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  maxLength={160}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Version tag</label>
-                <input
-                  value={updateForm.version}
-                  onChange={(event) => setUpdateForm((prev) => ({ ...prev, version: event.target.value }))}
-                  placeholder={`e.g. v${APP_VERSION}`}
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  maxLength={32}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2.5">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Release Bullet Points</label>
-              {updateForm.bullets.map((bullet, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-400 w-5 text-right">{index + 1}.</span>
+          {showReleasePublisher ? (
+            <form className="mt-4 pt-4 border-t border-slate-100 space-y-4" onSubmit={handleCreateUpdate}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Update Title</label>
                   <input
-                    value={bullet}
-                    onChange={(event) => handleBulletChange(index, event.target.value)}
-                    placeholder={`Highlight bullet point detail`}
-                    className="flex-1 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                    maxLength={180}
+                    value={updateForm.title}
+                    onChange={(event) => setUpdateForm((prev) => ({ ...prev, title: event.target.value }))}
+                    placeholder="e.g. Major speed optimizations & multi-workspace support"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                    maxLength={160}
                   />
-                  {updateForm.bullets.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveBullet(index)}
-                      className="rounded-lg hover:bg-slate-100 p-2 text-slate-400 hover:text-slate-600 transition-colors text-xs font-medium"
-                    >
-                      Delete
-                    </button>
-                  ) : null}
                 </div>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <div className="flex items-center gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddBullet}
-                >
-                  + Add Release Bullet
-                </Button>
-                <span className="text-[10px] text-slate-400">
-                  (Up to {MAX_UPDATE_BULLETS} bullets allowed)
-                </span>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-xs text-slate-600 font-medium cursor-pointer">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Version tag</label>
                   <input
-                    type="checkbox"
-                    checked={updateForm.isPublished}
-                    onChange={(event) => setUpdateForm((prev) => ({ ...prev, isPublished: event.target.checked }))}
-                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                    value={updateForm.version}
+                    onChange={(event) => setUpdateForm((prev) => ({ ...prev, version: event.target.value }))}
+                    placeholder={`e.g. v${APP_VERSION}`}
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                    maxLength={32}
                   />
-                  Publish immediately to clients
-                </label>
-                <Button 
-                  type="submit" 
-                  variant="primary" 
-                  size="sm"
-                  disabled={publishingUpdate}
-                >
-                  {publishingUpdate ? 'Publishing…' : 'Publish update'}
-                </Button>
+                </div>
               </div>
-            </div>
-          </form>
+
+              <div className="space-y-2.5">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Release Bullet Points</label>
+                {updateForm.bullets.map((bullet, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-400 w-5 text-right">{index + 1}.</span>
+                    <input
+                      value={bullet}
+                      onChange={(event) => handleBulletChange(index, event.target.value)}
+                      placeholder="Highlight bullet point detail"
+                      className="flex-1 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm focus:bg-white focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                      maxLength={180}
+                    />
+                    {updateForm.bullets.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveBullet(index)}
+                        className="rounded-lg hover:bg-slate-100 p-2 text-slate-400 hover:text-slate-600 transition-colors text-xs font-medium"
+                      >
+                        Delete
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddBullet}>
+                    + Add Release Bullet
+                  </Button>
+                  <span className="text-[10px] text-slate-400">(Up to {MAX_UPDATE_BULLETS} bullets allowed)</span>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-xs text-slate-600 font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={updateForm.isPublished}
+                      onChange={(event) => setUpdateForm((prev) => ({ ...prev, isPublished: event.target.checked }))}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                    />
+                    Publish immediately to clients
+                  </label>
+                  <Button type="submit" variant="primary" size="sm" disabled={publishingUpdate}>
+                    {publishingUpdate ? 'Publishing…' : 'Publish update'}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          ) : null}
         </div>
 
         <CreateFirmModal
           isOpen={showOnboardModal}
           onClose={() => setShowOnboardModal(false)}
           onSuccess={() => {
-            loadDashboard();
+            void loadDashboard();
           }}
         />
 
@@ -1665,7 +1125,6 @@ export const SuperadminDashboard = () => {
           onClose={() => setSelectedCertFirm(null)}
           firm={selectedCertFirm}
         />
-
       </div>
     </SuperAdminLayout>
   );
