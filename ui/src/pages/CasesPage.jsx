@@ -347,58 +347,47 @@ export const CasesPage = () => {
     };
   }, [queryClient, user?.name, user?.xID]);
 
+  const executePullToMe = useCallback(async (caseRecord) => {
+    setAssigningCaseId(caseRecord.caseId);
+    const rollback = optimisticallyAssignDocket(caseRecord);
+    try {
+      const response = await caseApi.pullCase(caseRecord.caseId);
+      if (response.success) {
+        showSuccess('Docket assigned to you');
+        await refreshCases();
+      }
+    } catch (err) {
+      rollback();
+      showError(err?.response?.data?.message || 'Failed to assign docket. Please try again.');
+    } finally {
+      setAssigningCaseId(null);
+    }
+  }, [optimisticallyAssignDocket, showSuccess, showError, refreshCases]);
+
   const handleAssignToMe = useCallback(async (caseRecord, event) => {
     event.stopPropagation();
-    // Task 3: Block reassignment if case is locked
     if (caseRecord.lockStatus?.isLocked) {
       setConfirmModal({
         title: 'Docket Locked',
         description: 'This docket is locked and cannot be reassigned right now.',
-        confirmText: 'OK',
+        confirmText: 'Close',
         onConfirm: () => setConfirmModal(null),
       });
       return;
     }
-    // Task 3: Confirm before reassigning if already assigned to someone else
     if ((caseRecord.assignedToXID || caseRecord.assignedTo) && caseRecord.status !== CASE_STATUS.UNASSIGNED) {
       setConfirmModal({
         title: 'Reassign Docket',
         description: `This docket is currently assigned to ${caseRecord.assignedToName || caseRecord.assignedToXID || caseRecord.assignedTo}. Reassign to yourself?`,
         onConfirm: async () => {
           setConfirmModal(null);
-          setAssigningCaseId(caseRecord.caseId);
-          const rollback = optimisticallyAssignDocket(caseRecord);
-          try {
-            const response = await caseApi.pullCase(caseRecord.caseId);
-            if (response.success) {
-              showSuccess(`Docket assigned to you`);
-              await refreshCases();
-            }
-          } catch (err) {
-            console.error('Failed to assign docket:', err);
-            rollback();
-          } finally {
-            setAssigningCaseId(null);
-          }
+          await executePullToMe(caseRecord);
         },
       });
       return;
     }
-    setAssigningCaseId(caseRecord.caseId);
-    const rollback = optimisticallyAssignDocket(caseRecord);
-    try {
-      const response = await caseApi.pullCase(caseRecord.caseId);
-      if (response.success) {
-        showSuccess(`Docket assigned to you`);
-        await refreshCases();
-      }
-    } catch (err) {
-      console.error('Failed to assign docket:', err);
-      rollback();
-    } finally {
-      setAssigningCaseId(null);
-    }
-  }, [optimisticallyAssignDocket, showSuccess, refreshCases]);
+    await executePullToMe(caseRecord);
+  }, [executePullToMe]);
 
   // Task 6: Bulk action handlers
   const handleToggleSelectCase = useCallback((caseId, isLocked) => {
@@ -433,7 +422,7 @@ export const CasesPage = () => {
         showSuccess(`${selectedList.length} docket${selectedList.length !== 1 ? 's' : ''} assigned to you`);
         await refreshCases();
       } catch (err) {
-        console.error('Bulk assign failed:', err);
+        showError(err?.response?.data?.message || 'Failed to assign selected dockets. Please retry.');
       } finally {
         setBulkActionInProgress(false);
       }
@@ -701,7 +690,7 @@ export const CasesPage = () => {
       <div className="cases-page">
         <PageHeader
           title="All Dockets"
-          subtitle="Master oversight view across all visible dockets, workflow states, and queue ownership."
+          subtitle="All Dockets is your full oversight registry across statuses, owners, and queues."
           meta="Dockets / All Dockets"
           actions={(
             <CasesHeaderActions
@@ -712,8 +701,6 @@ export const CasesPage = () => {
               showPerformance={showPerformance}
               onTogglePerformance={() => setShowPerformance((v) => !v)}
               isAdmin={isAdmin}
-              isPrimaryAdmin={user?.role === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin)}
-              onOpenBulkUpload={() => setShowDocketBulkUpload(true)}
               onCreateDocket={handleCreateCase}
               exportLabel="Export Dockets"
             />
@@ -729,14 +716,46 @@ export const CasesPage = () => {
         <StatusMessageStack messages={statusMessages} />
 
         <div className="cases-page__toolbar-grid">
-          <div className="cases-page__search-bar">
-            <input
-              type="search"
-              className="cases-page__search-input"
-              placeholder="Search by docket ID, title, or client…"
-              value={searchInput}
-              onChange={handleSearchChange}
-              aria-label="Search dockets"
+          <div className="cases-page__toolbar-top">
+            <div className="cases-page__search-bar">
+              <input
+                type="search"
+                className="cases-page__search-input"
+                placeholder="Search by docket ID, title, or client…"
+                value={searchInput}
+                onChange={handleSearchChange}
+                aria-label="Search dockets"
+              />
+            </div>
+            <CasesFiltersCard
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              workTypeFilter={workTypeFilter}
+              setWorkTypeFilter={setWorkTypeFilter}
+              qcWorkbaskets={qcWorkbaskets}
+              activeWorkbasketId={activeWorkbasketId}
+              setActiveWorkbasketId={setActiveWorkbasketId}
+              onClearFilters={handleResetFilters}
+            />
+          </div>
+          <div className="cases-page__toolbar-meta">
+            <div className="cases-page__views" role="group" aria-label="Docket views">
+              {availableViews.map((view) => (
+                <button
+                  key={view.id}
+                  aria-pressed={activeView === view.id}
+                  className={`cases-page__view-tab${activeView === view.id ? ' cases-page__view-tab--active' : ''}`}
+                  onClick={() => setActiveView(view.id)}
+                  type="button"
+                >
+                  {view.label}
+                </button>
+              ))}
+            </div>
+            <SmartViewIndicator
+              hasStoredView={hasStoredView}
+              activeView={activeView}
+              caseCount={viewFilteredCases.length}
             />
           </div>
           <CasesSavedViews
@@ -749,37 +768,9 @@ export const CasesPage = () => {
             setSaveViewName={setSaveViewName}
             handleSaveCurrentView={handleSaveCurrentView}
           />
-          <div className="cases-page__views" role="group" aria-label="Docket views">
-            {availableViews.map((view) => (
-              <button
-                key={view.id}
-                aria-pressed={activeView === view.id}
-                className={`cases-page__view-tab${activeView === view.id ? ' cases-page__view-tab--active' : ''}`}
-                onClick={() => setActiveView(view.id)}
-                type="button"
-              >
-                {view.label}
-              </button>
-            ))}
-          </div>
-          <CasesFiltersCard
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            workTypeFilter={workTypeFilter}
-            setWorkTypeFilter={setWorkTypeFilter}
-            qcWorkbaskets={qcWorkbaskets}
-            activeWorkbasketId={activeWorkbasketId}
-            setActiveWorkbasketId={setActiveWorkbasketId}
-            onClearFilters={handleResetFilters}
-          />
-          <SmartViewIndicator
-            hasStoredView={hasStoredView}
-            activeView={activeView}
-            caseCount={viewFilteredCases.length}
-          />
           {enableBulkActions && selectedCaseIds.size > 0 && (
             <div className="cases-page__bulk-bar" role="toolbar" aria-label="Bulk actions">
-              <span className="cases-page__bulk-count">{selectedCaseIds.size} selected</span>
+              <span className="cases-page__bulk-count tabular-nums">{selectedCaseIds.size} selected</span>
               <Button
                 variant="outline"
                 onClick={handleBulkAssignToMe}
@@ -817,15 +808,6 @@ export const CasesPage = () => {
             </div>
           </SectionCard>
         )}
-
-        <SectionCard
-          title="How to use All Dockets"
-          subtitle="All Dockets is your full oversight registry across statuses, owners, and queues."
-        >
-          <p className="text-sm text-slate-600">
-            Use this view to monitor throughput and locate any docket by client, category, or status. New dockets appear here immediately after creation, even before assignment.
-          </p>
-        </SectionCard>
 
         <SectionCard title="Docket Registry" subtitle={`${searchedCases.length} records`}>
           <DataTable

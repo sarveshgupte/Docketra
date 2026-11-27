@@ -1,6 +1,12 @@
-import { Button } from '../../components/common/Button';
 import { formatDateTime } from '../../utils/formatDateTime';
 import { SupportContext } from '../../components/feedback/SupportContext';
+
+const formatLockOwner = (lockStatus) => {
+  const name = lockStatus?.activeUserDisplayName;
+  const xid = lockStatus?.activeUserXID;
+  if (name && xid) return `${name} (${xid})`;
+  return name || xid || lockStatus?.activeUserEmail || 'another user';
+};
 
 export const CaseDetailAlerts = ({
   actionError,
@@ -8,62 +14,46 @@ export const CaseDetailAlerts = ({
   caseId,
   user,
   isViewOnlyMode,
-  canAdminMoveAssignedDocket,
-  isMoveLockedByAnotherUser,
-  lockOwnerLabel,
-  assigningCase,
-  onOpenAssignModal,
-  onMoveToWorkbasket,
-  onViewUserWorklist,
-  docketSlaStatus,
-}) => (
-  <>
-    {actionError ? (
-      <div className="neo-alert neo-alert--danger case-detail__alert">
-        {actionError.message}{' '}
-        {actionError.retry ? (
-          <button type="button" className="case-detail__retry" onClick={actionError.retry}>
-            Retry
-          </button>
-        ) : null}
-        <SupportContext context={actionError.supportContext} className="mt-2" />
-      </div>
-    ) : null}
-    {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode && (
-      <div className="neo-alert neo-alert--info case-detail__alert">
-        <strong>Role Restricted Action</strong> — Action restricted: approval for this lifecycle stage requires Manager, Admin, or Primary Admin access.
-      </div>
-    )}
-    {canAdminMoveAssignedDocket && (
-      <div className="neo-alert neo-alert--info case-detail__alert">
-        <strong>Admin Worklist Movement</strong> — Move this docket between user worklists or back to workbasket.
-        {isMoveLockedByAnotherUser ? ` Movement is locked while ${lockOwnerLabel} is active in this docket.` : ''}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button variant="outline" onClick={onOpenAssignModal} disabled={isMoveLockedByAnotherUser || assigningCase}>
-            Move to another WL
-          </Button>
-          <Button variant="outline" onClick={onMoveToWorkbasket} disabled={isMoveLockedByAnotherUser || assigningCase}>
-            Move WL → WB
-          </Button>
-          <Button variant="ghost" onClick={() => onViewUserWorklist(caseInfo?.assignedToXID)}>
-            View {caseInfo?.assignedToXID || 'owner'} WL
-          </Button>
+  retryQueueCount = 0,
+}) => {
+  const lockedByOther = Boolean(caseInfo?.lockStatus?.isLocked)
+    && caseInfo?.lockStatus?.activeUserEmail !== user?.email?.toLowerCase();
+
+  return (
+    <>
+      {actionError ? (
+        <div className="neo-alert neo-alert--danger case-detail__alert" role="alert">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>{actionError.message}</span>
+            {actionError.retry ? (
+              <button type="button" className="case-detail__retry" onClick={actionError.retry}>
+                Retry
+              </button>
+            ) : null}
+          </div>
+          <SupportContext context={actionError.supportContext} className="mt-2" />
         </div>
-      </div>
-    )}
-    {caseInfo?.lockStatus?.isLocked &&
-      caseInfo?.lockStatus?.activeUserEmail !== user?.email?.toLowerCase() && (
-      <div className="neo-alert neo-alert--warning case-detail__alert">
-        <strong>Docket {caseInfo?.caseId || caseId} is locked</strong>{' '}
-        {(() => {
-          const name = caseInfo.lockStatus.activeUserDisplayName;
-          const xid = caseInfo.lockStatus.activeUserXID;
-          const who = name && xid ? `${name} (${xid})` : name || xid || caseInfo.lockStatus.activeUserEmail;
-          return `by ${who}`;
-        })()}
-        {' '}since{' '}
-        {formatDateTime(caseInfo.lockStatus.lastActivityAt || caseInfo.lockStatus.lockedAt)}.
-      </div>
-    )}
-  </>
-);
+      ) : null}
+
+      {retryQueueCount > 0 ? (
+        <div className="neo-alert neo-alert--info case-detail__alert" role="status">
+          <strong>Offline Sync Pending</strong> — {retryQueueCount} action{retryQueueCount === 1 ? '' : 's'} queued and will sync automatically when reconnected.
+        </div>
+      ) : null}
+
+      {caseInfo?.stage?.requiresApproval === true && isViewOnlyMode ? (
+        <div className="neo-alert neo-alert--info case-detail__alert" role="note">
+          <strong>Role Restricted Action</strong> — Approval for this lifecycle stage requires Manager, Admin, or Primary Admin access.
+        </div>
+      ) : null}
+
+      {lockedByOther ? (
+        <div className="neo-alert neo-alert--warning case-detail__alert" role="status">
+          <strong>Docket {caseInfo?.caseId || caseId} is locked</strong>{' '}
+          by {formatLockOwner(caseInfo.lockStatus)} since{' '}
+          {formatDateTime(caseInfo.lockStatus.lastActivityAt || caseInfo.lockStatus.lockedAt)}.
+        </div>
+      ) : null}
+    </>
+  );
+};

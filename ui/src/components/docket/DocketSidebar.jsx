@@ -235,9 +235,8 @@ export const DocketSidebar = ({
           pin: generatedPin || null,
           firmName: firmConfig?.name || user?.firmName || 'Our Firm',
         });
-        const textToSend = requestCustomNote.trim()
-          ? `${requestCustomNote.trim()}\n\n${fullMessage}`
-          : fullMessage;
+        const note = String(requestClientMessage || '').trim();
+        const textToSend = note ? `${note}\n\n${fullMessage}` : fullMessage;
 
         if (navigator?.clipboard?.writeText) {
           try {
@@ -858,7 +857,7 @@ export const DocketSidebar = ({
           <h3 className="text-base font-semibold text-gray-900">{TITLES[type] || 'Details'}</h3>
           <button type="button" onClick={onClose} className="docket-sidebar__close" aria-label="Close panel" title="Close panel">✕</button>
         </div>
-        <div className="docket-sidebar__content">{renderContent()}</div>
+        <div className="docket-sidebar__content overscroll-contain">{renderContent()}</div>
       </aside>
     </div>
   );

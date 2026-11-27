@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { caseApi } from '../../api/case.api';
 import { extractErrorMessage } from '../../services/apiResponse';
 import { formatDateTime } from '../../utils/formatDateTime';
@@ -16,6 +16,15 @@ export const useDocketLifecycleActions = (deps) => {
     firmSlug, navigate, returnTo,
   } = deps;
 
+  const pendRedirectTimerRef = useRef(null);
+
+  useEffect(() => () => {
+    if (pendRedirectTimerRef.current) {
+      window.clearTimeout(pendRedirectTimerRef.current);
+      pendRedirectTimerRef.current = null;
+    }
+  }, []);
+
   const buildRefreshReturnTarget = useCallback(() => {
     const fallback = ROUTES.WORKLIST(firmSlug || 'gupta');
     const baseTarget = returnTo || fallback;
@@ -30,7 +39,7 @@ export const useDocketLifecycleActions = (deps) => {
     }
   }, [firmSlug, returnTo]);
 
-  const handlePendCase = useCallback(async () => { /* same behavior */
+  const handlePendCase = useCallback(async () => {
     if (!pendComment.trim()) return void showWarning('Comment is mandatory for pending a docket');
     if (!pendingUntil) return void showWarning('Reopen date is mandatory for pending a docket');
     const selectedDate = new Date(pendingUntil); const today = new Date(); selectedDate.setHours(0,0,0,0); today.setHours(0,0,0,0);
@@ -47,7 +56,19 @@ export const useDocketLifecycleActions = (deps) => {
         setShowPendModal(false);
         setPendComment('');
         setPendingUntil('');
-        window.setTimeout(() => {
+        setCaseData((prev) => (prev ? {
+          ...prev,
+          lifecycle: 'WAITING',
+          status: 'PENDING',
+          pendingUntil: reopenAt,
+          case: prev.case ? { ...prev.case, lifecycle: 'WAITING', status: 'PENDING', pendingUntil: reopenAt } : prev.case,
+        } : prev));
+        loadCase?.({ background: true });
+        if (pendRedirectTimerRef.current) {
+          window.clearTimeout(pendRedirectTimerRef.current);
+        }
+        pendRedirectTimerRef.current = window.setTimeout(() => {
+          pendRedirectTimerRef.current = null;
           if (navigate) {
             navigate(buildRefreshReturnTarget(), { replace: true });
           } else {
@@ -57,7 +78,7 @@ export const useDocketLifecycleActions = (deps) => {
       }
     } catch (error) { const m=extractErrorMessage(error,'Failed to pend docket. Please try again.'); showError(m); setActionError({ message:m, retry:handlePendCase }); }
     finally { setPendingCase(false); }
-  }, [pendComment,pendingUntil,showWarning,setPendingCase,caseId,showSuccess,setActionConfirmation,setActionError,setShowPendModal,setPendComment,setPendingUntil,navigate,buildRefreshReturnTarget,loadCase,showError]);
+  }, [pendComment,pendingUntil,showWarning,setPendingCase,caseId,showSuccess,setActionConfirmation,setActionError,setShowPendModal,setPendComment,setPendingUntil,setCaseData,navigate,buildRefreshReturnTarget,loadCase,showError]);
 
   const handleResolveCase = useCallback(async () => {
     if (!resolveComment.trim()) return void showWarning('Comment is mandatory for resolving a docket');

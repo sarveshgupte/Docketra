@@ -16,7 +16,7 @@ const history = read('src/pages/caseDetail/CaseDetailHistoryPanel.jsx');
 
 assert.ok(page.includes('isTerminalDocketLifecycle'), 'Terminal lifecycle policy should be explicit.');
 assert.ok(page.includes("badges.push('Assigned Worklist')"), 'Location badges should differentiate assigned worklist vs my worklist.');
-assert.ok(page.includes('showFileAction={!routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus)}'), 'File action should be hidden in routed/QC/unassigned/terminal contexts.');
+assert.ok(page.includes('const showFileAction = !routedTeamCannotResolve && !isQcContext && !isUnassignedWorkbasket && !isTerminalDocketLifecycle(caseInfo?.lifecycle || lifecycleStatus);'), 'File action should be hidden in routed/QC/unassigned/terminal contexts.');
 assert.ok(overview.includes('unassigned in a workbasket'), 'Unassigned WB guidance should be visible.');
 assert.ok(overview.includes('QC context active'), 'QC-specific guidance should be visible.');
 assert.ok(overview.includes('Record view only; active queue actions are hidden.'), 'Terminal state record-view guidance should be visible outside action panel gating.');
@@ -31,6 +31,6 @@ assert.ok(sidebar.includes('You can continue working this docket while CFS data 
 assert.ok(access.includes('isTerminalDocketLifecycle'), 'Terminal lifecycle helper should be reusable for action visibility hardening.');
 assert.ok(summary.includes('locationBadges'), 'Header should show explicit location/context badges.');
 assert.ok(activity.includes('<h2 id="comments-heading">Activity</h2>'), 'Activity tab should remain distinct and available.');
-assert.ok(history.includes('<h2>Change History</h2>'), 'History tab should remain distinct and available.');
+assert.ok(/<h2[^>]*>\s*Change History\s*<\/h2>/.test(history), 'History tab should remain distinct and available.');
 
 console.log('caseDetailUiUxHardening.test.mjs passed');

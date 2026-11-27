@@ -2,17 +2,18 @@ import React from 'react';
 import { Badge } from '../../components/common/Badge';
 import { formatDateTime } from '../../utils/formatDateTime';
 
+const resolveRelatedEmployeeLabel = (caseInfo) => {
+  const related = caseInfo?.relatedEmployeeUser;
+  if (!related || typeof related !== 'object') return null;
+  if (related.status === 'not_applicable' || related.status === 'none') return null;
+  const name = related.name || (related.email ? related.email.split('@')[0] : null) || related.xID;
+  if (!name || String(name).trim().toLowerCase() === 'user') return null;
+  return related.xID ? `${name} (${related.xID})` : name;
+};
+
 export const CaseDetailSummaryHeader = ({
   caseInfo,
-  caseId,
   docketStatusLabel,
-  categoryLabel,
-  subcategoryLabel,
-  linkedClientRoute,
-  clientName,
-  isInternalWork,
-  assigneeLabel,
-  queueLabel,
   locationBadges = [],
   slaDaysLabel,
 }) => {
@@ -20,65 +21,67 @@ export const CaseDetailSummaryHeader = ({
     ? `${caseInfo.employeeSnapshot.xID} - ${caseInfo.employeeSnapshot.name || 'Employee'}`
     : (caseInfo?.employeeXID || null);
 
-  const relatedEmployeeUser = caseInfo?.relatedEmployeeUser || null;
-  const relatedEmployeeUserLabel = (() => {
-    if (!relatedEmployeeUser || typeof relatedEmployeeUser !== 'object') return null;
-    if (relatedEmployeeUser.status === 'not_applicable' || relatedEmployeeUser.status === 'none') return null;
-    const name = relatedEmployeeUser.name || (relatedEmployeeUser.email ? relatedEmployeeUser.email.split('@')[0] : null) || relatedEmployeeUser.xID;
-    if (!name || String(name).trim().toLowerCase() === 'user') return null;
-    const details = [relatedEmployeeUser.xID].filter(Boolean).join(' · ');
-    return details ? `${name} (${details})` : name;
-  })();
+  const relatedEmployeeUserLabel = resolveRelatedEmployeeLabel(caseInfo);
+  const qcStatus = caseInfo?.qc?.status || caseInfo?.qcStatus;
 
   return (
-    <section className="case-card rounded-md border border-slate-200/90 bg-white p-4 shadow-xs" aria-label="Docket summary header">
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Docket Properties</h3>
-        <div className="flex flex-wrap items-center gap-1.5">
+    <section
+      className="case-card rounded-[var(--dt-radius-card,6px)] border border-slate-200 bg-white p-4"
+      aria-label="Docket summary header"
+    >
+      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+        <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          Properties
+        </h3>
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
           <Badge variant="info">{docketStatusLabel}</Badge>
-          {locationBadges.map((badge) => <Badge key={badge} variant="secondary">{badge}</Badge>)}
-          {caseInfo?.qc?.status || caseInfo?.qcStatus ? (
-            <Badge variant={String(caseInfo?.qc?.status || caseInfo?.qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'warning'}>
-              QC {caseInfo?.qc?.status || caseInfo?.qcStatus}
+          {locationBadges.map((badge) => (
+            <Badge key={badge} variant="neutral">{badge}</Badge>
+          ))}
+          {qcStatus ? (
+            <Badge variant={String(qcStatus).toUpperCase() === 'FAILED' ? 'danger' : 'warning'}>
+              QC {qcStatus}
             </Badge>
           ) : null}
         </div>
       </div>
 
-      <dl className="flex flex-col divide-y divide-slate-100 text-xs mt-1">
-        <div className="flex items-start justify-between py-2 gap-3">
-          <dt className="text-slate-500 font-medium text-[11px] shrink-0">SLA / TAT</dt>
-          <dd className="text-slate-900 font-semibold text-right text-xs">
+      <dl className="mt-1 flex flex-col divide-y divide-slate-100 text-xs">
+        <div className="flex items-start justify-between gap-3 py-2">
+          <dt className="shrink-0 text-[11px] font-medium text-slate-500">Target TAT</dt>
+          <dd className="text-right font-semibold text-slate-900 tabular-nums">
             {slaDaysLabel && slaDaysLabel !== '-' ? `${slaDaysLabel} day(s)` : 'Not configured'}
           </dd>
         </div>
 
-        {relatedEmployeeUserLabel && (
-          <div className="flex items-start justify-between py-2 gap-3 bg-blue-50/40 -mx-4 px-4">
-            <dt className="text-blue-700 font-medium text-[11px] shrink-0" title="Related employee/user">Related Employee</dt>
-            <dd className="text-blue-900 font-semibold text-right text-xs break-words">
-              👤 {relatedEmployeeUserLabel}
+        {relatedEmployeeUserLabel ? (
+          <div className="flex items-start justify-between gap-3 py-2">
+            <dt className="shrink-0 text-[11px] font-medium text-slate-600" title="Related employee/user">
+              Related Employee
+            </dt>
+            <dd className="break-words text-right font-semibold text-slate-900">
+              {relatedEmployeeUserLabel}
             </dd>
           </div>
-        )}
+        ) : null}
 
-        {employeeLabel && (
-          <div className="flex items-start justify-between py-2 gap-3">
-            <dt className="text-slate-500 font-medium text-[11px] shrink-0">Employee</dt>
-            <dd className="text-slate-900 font-semibold text-right text-xs break-words">{employeeLabel}</dd>
+        {employeeLabel ? (
+          <div className="flex items-start justify-between gap-3 py-2">
+            <dt className="shrink-0 text-[11px] font-medium text-slate-500">Employee</dt>
+            <dd className="break-words text-right font-semibold text-slate-900">{employeeLabel}</dd>
           </div>
-        )}
+        ) : null}
 
-        <div className="flex items-start justify-between py-2 gap-3">
-          <dt className="text-slate-500 font-medium text-[11px] shrink-0">Created</dt>
-          <dd className="text-slate-600 font-normal text-right text-xs whitespace-nowrap">
+        <div className="flex items-start justify-between gap-3 py-2">
+          <dt className="shrink-0 text-[11px] font-medium text-slate-500">Created</dt>
+          <dd className="whitespace-nowrap text-right font-normal text-slate-600 tabular-nums">
             {formatDateTime(caseInfo?.createdAt)}
           </dd>
         </div>
 
-        <div className="flex items-start justify-between py-2 gap-3">
-          <dt className="text-slate-500 font-medium text-[11px] shrink-0">Updated</dt>
-          <dd className="text-slate-600 font-normal text-right text-xs whitespace-nowrap">
+        <div className="flex items-start justify-between gap-3 py-2">
+          <dt className="shrink-0 text-[11px] font-medium text-slate-500">Updated</dt>
+          <dd className="whitespace-nowrap text-right font-normal text-slate-600 tabular-nums">
             {formatDateTime(caseInfo?.updatedAt)}
           </dd>
         </div>

@@ -20,6 +20,7 @@ export const CaseDetailAttachmentsPanel = ({
   onUploadFile,
   onFileSelect,
   onFileDescriptionChange,
+  onOpenRequestTab,
 }) => {
   const { showError, showWarning } = useToast();
   const { user } = useAuth();
@@ -31,6 +32,17 @@ export const CaseDetailAttachmentsPanel = ({
   const firmConfig = getFirmConfig();
   const isManagerOrAbove = isFirmManagerOrAbove(user);
   const isTraineeShieldActive = Boolean(firmConfig.restrictTraineeDownloads) && !isManagerOrAbove;
+
+  const applySelectedFile = (file, fileEvent) => {
+    if (!onFileSelect) return;
+    onFileSelect(fileEvent || { target: { files: file ? [file] : [] } });
+    if (file && /whatsapp|img-wa|vid-wa|aud-wa|wa-/i.test(file.name)) {
+      setIntakeSource('WHATSAPP_FORWARD');
+      if (!fileDescription && onFileDescriptionChange) {
+        onFileDescriptionChange('Client document forwarded via WhatsApp');
+      }
+    }
+  };
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -49,34 +61,20 @@ export const CaseDetailAttachmentsPanel = ({
     e.stopPropagation();
     setIsDragging(false);
     const file = e.dataTransfer?.files?.[0];
-    if (file && onFileSelect) {
-      onFileSelect({ target: { files: [file] } });
-      if (/whatsapp|img-wa|vid-wa|aud-wa|wa-/i.test(file.name)) {
-        setIntakeSource('WHATSAPP_FORWARD');
-        if (!fileDescription && onFileDescriptionChange) {
-          onFileDescriptionChange('Client document forwarded via WhatsApp');
-        }
-      }
+    if (file) {
+      applySelectedFile(file);
     }
   };
 
   const handleFileChange = (e) => {
-    if (onFileSelect) {
-      onFileSelect(e);
-      const file = e.target.files?.[0];
-      if (file && /whatsapp|img-wa|vid-wa|aud-wa|wa-/i.test(file.name)) {
-        setIntakeSource('WHATSAPP_FORWARD');
-        if (!fileDescription && onFileDescriptionChange) {
-          onFileDescriptionChange('Client document forwarded via WhatsApp');
-        }
-      }
-    }
+    const file = e.target.files?.[0];
+    applySelectedFile(file, e);
   };
 
   const handleSubmit = (e) => {
     if (e?.preventDefault) e.preventDefault();
     if (!selectedFile) {
-      showWarning('Please select or drop a file to upload');
+      showWarning('Select or drop a file to upload.');
       return;
     }
     const source = intakeSource === 'WHATSAPP_FORWARD' ? 'WHATSAPP_FORWARD' : 'upload';
@@ -120,37 +118,43 @@ export const CaseDetailAttachmentsPanel = ({
   };
 
   return (
-    <section className="case-card case-detail-section case-detail-section--attachments" id="panel-attachments" role="tabpanel" aria-labelledby="tab-attachments">
+    <section
+      className="case-card case-detail-section case-detail-section--attachments"
+      id="panel-attachments"
+      role="tabpanel"
+      aria-labelledby="tab-attachments"
+    >
       <div className="case-card__heading case-detail-section__heading">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 id="attachments-heading">Attachments</h2>
-            <p className="case-detail-section__subheading">Canonical document collection for this docket.</p>
-          </div>
-          {isTraineeShieldActive && (
-            <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800">
-              <svg className="h-3 w-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m0 0v2m0-2h2m-2 0H10m2-13a9 9 0 00-9 9c0 5 9 13 9 13s9-8 9-13a9 9 0 00-9-9z" />
-              </svg>
+        <div>
+          <p className="docket-section-kicker">Document Custody</p>
+          <h2 id="attachments-heading">Attachments</h2>
+          <p className="case-detail-section__subheading">Upload files, tag WhatsApp forwards, or inspect working papers in-app.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {isTraineeShieldActive ? (
+            <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-900">
               Trainee Shield Active (Preview Only)
             </span>
-          )}
+          ) : null}
+          {onOpenRequestTab ? (
+            <Button variant="outline" size="sm" onClick={onOpenRequestTab}>
+              Request from Client
+            </Button>
+          ) : null}
         </div>
       </div>
-      <p className="mb-3 text-xs text-gray-500">All docket document collection lives here. Upload files and retain metadata with the docket execution record.</p>
 
-      {/* Desktop Intake Tray & Drag-and-Drop Dropzone */}
-      <form className="rounded-xl border border-gray-200 bg-gray-50 p-3.5" onSubmit={handleSubmit}>
+      <form className="rounded-md border border-slate-200 bg-slate-50/70 p-3.5" onSubmit={handleSubmit}>
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 text-center transition-all ${
+          className={`relative flex flex-col items-center justify-center rounded-md border-2 border-dashed p-4 text-center transition-colors ${
             isDragging
-              ? 'border-indigo-500 bg-indigo-50/80 ring-2 ring-indigo-200'
+              ? 'border-blue-600 bg-blue-50/70'
               : selectedFile
-              ? 'border-emerald-300 bg-emerald-50/30'
-              : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50/50'
+                ? 'border-emerald-400 bg-emerald-50/40'
+                : 'border-slate-300 bg-white hover:border-slate-400'
           }`}
         >
           <input
@@ -163,35 +167,35 @@ export const CaseDetailAttachmentsPanel = ({
 
           {!selectedFile ? (
             <div className="space-y-1">
-              <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+              <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
               </div>
-              <p className="text-xs font-semibold text-gray-800">
-                Drag &amp; drop files here, or{' '}
+              <p className="text-xs font-semibold text-slate-800">
+                Drag and drop files here, or{' '}
                 <button
                   type="button"
                   onClick={() => document.getElementById('docket-attachment-input')?.click()}
-                  className="text-indigo-600 hover:text-indigo-700 underline font-semibold"
+                  className="rounded font-semibold text-blue-700 underline hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
                 >
                   browse files
                 </button>
               </p>
-              <p className="text-[11px] text-gray-500">
-                Drop downloads directly from WhatsApp Web, Outlook, or your local drive
+              <p className="text-[11px] text-slate-500">
+                Supports files from WhatsApp Web, Outlook, or your local drive
               </p>
             </div>
           ) : (
-            <div className="flex w-full items-center justify-between gap-3 px-2">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-emerald-100 text-emerald-800 text-xs font-bold">
+            <div className="flex w-full items-center justify-between gap-3 px-1">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-emerald-100 text-xs font-bold text-emerald-800" aria-hidden="true">
                   ✓
                 </span>
-                <div className="text-left min-w-0">
-                  <p className="text-xs font-semibold text-gray-900 truncate">{selectedFile.name}</p>
-                  <p className="text-[10px] text-gray-500">
-                    {(selectedFile.size / 1024).toFixed(1)} KB • Ready to link to docket
+                <div className="min-w-0 text-left">
+                  <p className="truncate text-xs font-semibold text-slate-900">{selectedFile.name}</p>
+                  <p className="text-[11px] tabular-nums text-slate-500">
+                    {(selectedFile.size / 1024).toFixed(1)} KB · Ready to upload
                   </p>
                 </div>
               </div>
@@ -199,9 +203,7 @@ export const CaseDetailAttachmentsPanel = ({
                 variant="outline"
                 type="button"
                 size="sm"
-                onClick={() => {
-                  onFileSelect?.({ target: { files: [] } });
-                }}
+                onClick={() => applySelectedFile(null, { target: { files: [] } })}
                 disabled={uploadingFile}
               >
                 Change
@@ -210,45 +212,46 @@ export const CaseDetailAttachmentsPanel = ({
           )}
         </div>
 
-        {/* Intake Channel Selector */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200/80 pt-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 pt-3">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-gray-600">Intake Source:</span>
-            <div className="inline-flex rounded-md bg-gray-200/80 p-0.5 text-[11px]">
+            <span className="text-[11px] font-semibold text-slate-600">Intake Source:</span>
+            <div className="inline-flex rounded-md bg-slate-200/80 p-0.5 text-[11px]" role="group" aria-label="Attachment intake source">
               <button
                 type="button"
+                aria-pressed={intakeSource === 'DIRECT_DESKTOP'}
                 onClick={() => setIntakeSource('DIRECT_DESKTOP')}
                 className={`rounded px-2.5 py-1 font-medium transition-colors ${
                   intakeSource === 'DIRECT_DESKTOP'
-                    ? 'bg-white text-gray-900 shadow-xs'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 Direct / Desktop
               </button>
               <button
                 type="button"
+                aria-pressed={intakeSource === 'WHATSAPP_FORWARD'}
                 onClick={() => {
                   setIntakeSource('WHATSAPP_FORWARD');
                   if (!fileDescription && onFileDescriptionChange) {
                     onFileDescriptionChange('Client document forwarded via WhatsApp');
                   }
                 }}
-                className={`flex items-center gap-1 rounded px-2.5 py-1 font-medium transition-colors ${
+                className={`rounded px-2.5 py-1 font-medium transition-colors ${
                   intakeSource === 'WHATSAPP_FORWARD'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-emerald-700 text-white'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <span>WhatsApp Forward</span>
+                WhatsApp Forward
               </button>
             </div>
           </div>
-          {intakeSource === 'WHATSAPP_FORWARD' && (
-            <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+          {intakeSource === 'WHATSAPP_FORWARD' ? (
+            <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-900">
               Tagged as WhatsApp Client Intake
             </span>
-          )}
+          ) : null}
         </div>
 
         <Textarea
@@ -260,56 +263,61 @@ export const CaseDetailAttachmentsPanel = ({
           placeholder="e.g. Bank statement for FY 25-26, MCA filing receipt, client ledger..."
         />
 
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <Button variant="primary" type="submit" disabled={uploadingFile || !selectedFile}>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <Button variant="primary" type="submit" disabled={uploadingFile || !selectedFile || !fileDescription?.trim()}>
             {uploadingFile ? `Uploading${uploadProgress ? ` ${uploadProgress}%` : '…'}` : 'Upload attachment'}
           </Button>
-          <span className="text-[11px] text-gray-500 font-mono">
-            Encrypted in sovereign firm cloud storage
+          <span className="text-[11px] text-slate-500">
+            Stored in firm cloud storage
           </span>
         </div>
       </form>
 
       {sectionLoading ? <p className="case-detail__empty-note mt-3">Loading attachments…</p> : null}
       {!sectionLoading && attachments.length === 0 ? (
-        <p className="case-detail__empty-note mt-3">No attachments yet. Document collection belongs in this docket’s Attachments tab.</p>
+        <p className="case-detail__empty-note mt-3">No attachments yet. Upload files or request documents from the client to store them here.</p>
       ) : null}
 
       {attachments.length > 0 ? (
-        <ul className="mt-4 space-y-3">
+        <ul className="mt-4 space-y-2.5">
           {attachments.map((attachment, index) => {
             const attachmentId = attachment.id || attachment._id || index;
             const isDownloading = downloadingId === (attachment.id || attachment._id);
             const fname = attachment.fileName || attachment.filename || '';
             const isTabular = /\.(csv|tsv|xlsx?|json)$/i.test(fname);
+            const sourceUpper = String(attachment.source || '').toUpperCase();
 
             return (
-              <li key={attachmentId} className="rounded-xl border border-gray-200 bg-white p-3">
+              <li key={attachmentId} className="rounded-md border border-slate-200 bg-white p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-gray-900">{attachment.fileName || attachment.filename || 'Attachment'}</p>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {(String(attachment.source || '').toUpperCase() === 'WHATSAPP_FORWARD' || String(attachment.source || '').toLowerCase() === 'whatsapp_intake') ? (
-                      <span className="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                  <p className="break-words text-sm font-medium text-slate-900">{fname || 'Attachment'}</p>
+                  <div className="flex flex-shrink-0 items-center gap-1.5">
+                    {(sourceUpper === 'WHATSAPP_FORWARD' || sourceUpper === 'WHATSAPP_INTAKE') ? (
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900">
                         WhatsApp
                       </span>
-                    ) : String(attachment.source || '').toUpperCase() === 'CLIENT_UPLOAD' ? (
-                      <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                    ) : sourceUpper === 'CLIENT_UPLOAD' ? (
+                      <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-800">
                         Client Portal
                       </span>
                     ) : null}
                   </div>
                 </div>
-                <p className="mt-1 text-xs text-gray-500">Uploaded {formatDateTime(attachment.createdAt || attachment.uploadedAt)}</p>
-                <p className="mt-1 text-xs text-gray-500">By {attachment.createdByName || attachment.createdByXID || attachment.uploadedBy || attachment.createdBy || 'System'}</p>
-                {attachment.description ? <p className="mt-1 text-xs text-gray-500">Comment: {attachment.description}</p> : null}
-                
-                <div className="mt-3 flex items-center gap-2 pt-2 border-t border-gray-100">
+                <p className="mt-1 text-xs tabular-nums text-slate-500">
+                  Uploaded {formatDateTime(attachment.createdAt || attachment.uploadedAt)} · By{' '}
+                  {attachment.createdByName || attachment.createdByXID || attachment.uploadedBy || attachment.createdBy || 'System'}
+                </p>
+                {attachment.description ? (
+                  <p className="mt-1 text-xs text-slate-600">{attachment.description}</p>
+                ) : null}
+
+                <div className="mt-2.5 flex items-center gap-2 border-t border-slate-100 pt-2">
                   <button
                     type="button"
                     onClick={() => handleView(attachment)}
-                    className="inline-flex items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                    className="inline-flex items-center gap-1 rounded border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
                   >
-                    <svg className="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <svg className="h-3.5 w-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
@@ -319,14 +327,15 @@ export const CaseDetailAttachmentsPanel = ({
                     type="button"
                     onClick={() => handleDownload(attachment)}
                     disabled={isDownloading}
-                    className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition-colors ${
+                    aria-disabled={isTraineeShieldActive || undefined}
+                    className={`inline-flex items-center gap-1 rounded border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 ${
                       isTraineeShieldActive
-                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                     }`}
-                    title={isTraineeShieldActive ? 'Download restricted by Trainee Laptop Shield. Please use in-app preview.' : 'Download raw file'}
+                    title={isTraineeShieldActive ? 'Download restricted by Trainee Laptop Shield. Use in-app preview.' : 'Download raw file'}
                   >
-                    <svg className="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <svg className="h-3.5 w-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                     {isDownloading ? 'Downloading…' : isTraineeShieldActive ? 'Download restricted' : 'Download'}
@@ -338,8 +347,7 @@ export const CaseDetailAttachmentsPanel = ({
         </ul>
       ) : null}
 
-      {/* Safe Working-Paper / Spreadsheet Reconciliation Modal */}
-      {reconcileAttachment && (
+      {reconcileAttachment ? (
         <WorkingPaperReconciliationModal
           isOpen={Boolean(reconcileAttachment)}
           onClose={() => setReconcileAttachment(null)}
@@ -348,7 +356,7 @@ export const CaseDetailAttachmentsPanel = ({
           isTraineeShieldActive={isTraineeShieldActive}
           user={user}
         />
-      )}
+      ) : null}
     </section>
   );
 };
