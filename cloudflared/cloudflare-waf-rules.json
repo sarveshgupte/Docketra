@@ -1,0 +1,97 @@
+{
+  "description": "Cloudflare WAF Rate Limiting & Bot Defense Blueprint for docketsHQ.com",
+  "zone": "docketshq.com",
+  "version": "1.0.0",
+  "rulesets": [
+    {
+      "name": "docketsHQ Edge Rate Limiting Ruleset",
+      "kind": "zone",
+      "phase": "http_ratelimit",
+      "rules": [
+        {
+          "description": "Rate limit authentication endpoints to 10 requests per minute per IP",
+          "expression": "(http.request.uri.path wildcard \"/api/auth/*\" and not http.request.uri.path wildcard \"/api/auth/profile\")",
+          "action": "block",
+          "action_parameters": {
+            "response": {
+              "status_code": 429,
+              "content_type": "application/json",
+              "content": "{\"success\":false,\"error\":\"RATE_LIMIT_EXCEEDED\",\"message\":\"Too many authentication requests from this IP. Please wait before retrying.\"}"
+            }
+          },
+          "ratelimit": {
+            "characteristics": [
+              "cf.colo.id",
+              "ip.src"
+            ],
+            "period": 60,
+            "requests_per_period": 10,
+            "mitigation_timeout": 300
+          },
+          "enabled": true
+        },
+        {
+          "description": "Rate limit public tenant/firm signup requests to 5 per 10 minutes per IP",
+          "expression": "(http.request.uri.path eq \"/api/public/signup\" or http.request.uri.path eq \"/api/public/verify-signup\")",
+          "action": "managed_challenge",
+          "ratelimit": {
+            "characteristics": [
+              "ip.src"
+            ],
+            "period": 600,
+            "requests_per_period": 5,
+            "mitigation_timeout": 600
+          },
+          "enabled": true
+        },
+        {
+          "description": "Rate limit password reset and recovery attempts to 5 per 15 minutes per IP",
+          "expression": "(http.request.uri.path eq \"/api/auth/forgot-password\" or http.request.uri.path eq \"/api/auth/reset-password\")",
+          "action": "block",
+          "action_parameters": {
+            "response": {
+              "status_code": 429,
+              "content_type": "application/json",
+              "content": "{\"success\":false,\"error\":\"RATE_LIMIT_EXCEEDED\",\"message\":\"Too many password recovery attempts. Please try again later.\"}"
+            }
+          },
+          "ratelimit": {
+            "characteristics": [
+              "ip.src"
+            ],
+            "period": 900,
+            "requests_per_period": 5,
+            "mitigation_timeout": 900
+          },
+          "enabled": true
+        }
+      ]
+    },
+    {
+      "name": "docketsHQ Zero Trust Access & Origin Shield Ruleset",
+      "kind": "zone",
+      "phase": "http_request_firewall_custom",
+      "rules": [
+        {
+          "description": "Block direct public access to Superadmin API unless routed through Cloudflare Access",
+          "expression": "(http.request.uri.path wildcard \"/api/superadmin/*\" or http.request.uri.path wildcard \"/api/sa/*\") and not (http.request.headers[\"cf-access-jwt-assertion\"][0] ne \"\")",
+          "action": "block",
+          "action_parameters": {
+            "response": {
+              "status_code": 403,
+              "content_type": "application/json",
+              "content": "{\"success\":false,\"code\":\"CLOUDFLARE_ACCESS_REQUIRED\",\"message\":\"Access denied. Zero Trust authentication required.\"}"
+            }
+          },
+          "enabled": true
+        },
+        {
+          "description": "Block malicious bots and automated scrapers with Threat Score > 30 on sensitive APIs",
+          "expression": "(http.request.uri.path wildcard \"/api/*\") and (cf.threat_score gt 30 or cf.client.bot)",
+          "action": "managed_challenge",
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}

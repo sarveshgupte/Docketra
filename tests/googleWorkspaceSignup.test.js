@@ -2,7 +2,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { signGoogleState, parseGoogleState } = require('../src/services/authGoogle.service');
+const { signGoogleState, parseGoogleState, peekGoogleStateRouting } = require('../src/services/authGoogle.service');
 const authRoutesSchema = require('../src/schemas/auth.routes.schema');
 
 process.env.JWT_SECRET = 'ci-placeholder-test-secret-key-that-is-at-least-32-chars';
@@ -44,9 +44,32 @@ const validStartQuery = startSchema.query.parse({
   intent: 'signup',
   firmName: 'Apex Legal',
   phone: '9876543210',
+  returnTo: 'https://docketshq.com',
+  frontendUrl: 'https://docketra-cug.web.app',
 });
 assert.strictEqual(validStartQuery.intent, 'signup');
 assert.strictEqual(validStartQuery.firmName, 'Apex Legal');
+assert.strictEqual(validStartQuery.returnTo, 'https://docketshq.com', 'returnTo must not be stripped by GET /google/start schema');
+assert.strictEqual(validStartQuery.frontendUrl, 'https://docketra-cug.web.app', 'frontendUrl must not be stripped by GET /google/start schema');
+
+// Verify peekGoogleStateRouting enforces allowlist for unverified routing hints
+const routingState = signGoogleState({
+  returnOrigin: 'https://docketra-cug.web.app',
+  targetBackendUrl: 'https://docketra-api-cug-1078507569854.us-central1.run.app',
+  issuedAt: Date.now(),
+});
+assert.deepStrictEqual(peekGoogleStateRouting(routingState), {
+  returnOrigin: 'https://docketra-cug.web.app',
+  targetBackendUrl: 'https://docketra-api-cug-1078507569854.us-central1.run.app',
+});
+const evilRoutingState = signGoogleState({
+  returnOrigin: 'https://evil.example.com',
+  targetBackendUrl: 'https://evil-api.example.com',
+});
+assert.deepStrictEqual(peekGoogleStateRouting(evilRoutingState), {
+  returnOrigin: null,
+  targetBackendUrl: null,
+});
 
 const completeSignupSchema = authRoutesSchema['POST /google/complete-signup'];
 assert.ok(completeSignupSchema, 'POST /google/complete-signup schema must exist');

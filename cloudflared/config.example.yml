@@ -1,0 +1,44 @@
+# Cloudflare Tunnel (cloudflared) Production Configuration for docketsHQ.com
+# Documentation: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+
+tunnel: <TUNNEL_UUID_OR_NAME>
+credentials-file: /etc/cloudflared/<TUNNEL_UUID>.json
+
+# Warp routing disabled unless internal private CIDR access is configured
+warp-routing:
+  enabled: false
+
+# Origin request settings for backend connection resilience
+originRequest:
+  connectTimeout: 30s
+  tlsTimeout: 10s
+  tcpKeepAlive: 30s
+  noChunkedEncoding: false
+  keepAliveConnections: 100
+  keepAliveTimeout: 90s
+  httpHostHeader: api.docketshq.com
+  originServerName: api.docketshq.com
+
+ingress:
+  # 1. Platform Superadmin API behind Cloudflare Zero Trust Access
+  - hostname: api.docketshq.com
+    path: ^/api/(superadmin|sa)/
+    service: http://127.0.0.1:5000
+    originRequest:
+      httpHostHeader: api.docketshq.com
+      connectTimeout: 15s
+
+  # 2. Main Backend API Service (REST, Webhooks, Auth)
+  - hostname: api.docketshq.com
+    service: http://127.0.0.1:5000
+    originRequest:
+      httpHostHeader: api.docketshq.com
+
+  # 3. Main Web Application Frontend (SPA / Static UI)
+  - hostname: docketshq.com
+    service: http://127.0.0.1:3000
+    originRequest:
+      httpHostHeader: docketshq.com
+
+  # 4. Catch-all fallback rule (Required by cloudflared - rejects unmatched traffic)
+  - service: http_status:404

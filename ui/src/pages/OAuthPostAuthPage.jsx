@@ -7,15 +7,28 @@ import { Card } from '../components/common/Card';
 import { Input } from '../components/common/Input';
 import { Loading } from '../components/common/Loading';
 import { Button } from '../components/common/Button';
+import { getWorkspaceSlugPreview } from '../utils/workspaceSlug';
 
-const getWorkspaceSlugPreview = (firmName) => {
-  const slug = String(firmName || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 32);
-  return slug || 'your-firm';
+const DEFAULT_OAUTH_ERROR_MESSAGE = 'Google sign-in completed, but we could not load your workspace profile. Please retry login or use your xID/password.';
+
+const GOOGLE_ERROR_MESSAGES = {
+  SETUP_TOKEN_INVALID: 'Your setup token is invalid or expired. Please use the latest invite email from your administrator.',
+  ACCOUNT_NOT_FOUND: 'No active account was found for this Google email in the selected workspace.',
+  GOOGLE_ACCOUNT_MISMATCH: 'This workspace account is linked to a different Google account.',
+  FIRM_INACTIVE: 'This workspace is currently inactive. Please contact your admin.',
+  STATE_EXPIRED: 'Your Google sign-in session expired. Please try again.',
+  INVALID_REQUEST: 'Your Google sign-in request could not be verified. Please try again.',
+  GOOGLE_IDENTITY_INVALID: 'Google did not return a verified email address for this account.',
+  SIGNUP_FAILED: 'Unable to create your workspace with Google right now. Please try again.',
+  GOOGLE_AUTH_FAILED: 'Unable to complete Google sign-in right now. Please try again.',
+  access_denied: 'Google sign-in was cancelled before completion.',
+};
+
+const resolveGoogleErrorMessage = (errorCode, primaryAdminEmail) => {
+  if (errorCode === 'ACCOUNT_LOCKED_BY_ADMIN') {
+    return `This user has been locked by primary admin. Please contact your primary admin at ${primaryAdminEmail || 'their email'}.`;
+  }
+  return GOOGLE_ERROR_MESSAGES[errorCode] || DEFAULT_OAUTH_ERROR_MESSAGE;
 };
 
 const exchangeAndResolveRoute = async ({
@@ -164,22 +177,10 @@ export const OAuthPostAuthPage = () => {
     }
   };
 
-  const loginPath = firmSlug ? `/${firmSlug}/login` : '/';
+  const loginPath = firmSlug ? `/${firmSlug}/login` : '/find-workspace';
   const primaryAdminEmail = searchParams.get('primaryAdminEmail') || '';
 
-  const resolvedError = error || (
-    errorCode === 'SETUP_TOKEN_INVALID'
-      ? 'Your setup token is invalid or expired. Please use the latest invite email from your administrator.'
-      : errorCode === 'ACCOUNT_NOT_FOUND'
-        ? 'No active account was found for this Google email in the selected workspace.'
-        : errorCode === 'GOOGLE_ACCOUNT_MISMATCH'
-          ? 'This workspace account is linked to a different Google account.'
-          : errorCode === 'FIRM_INACTIVE'
-            ? 'This workspace is currently inactive. Please contact your admin.'
-            : errorCode === 'ACCOUNT_LOCKED_BY_ADMIN'
-              ? `This user has been locked by primary admin. Please contact your primary admin at ${primaryAdminEmail || 'their email'}.`
-              : 'Google sign-in completed, but we could not load your workspace profile. Please retry login or use your xID/password.'
-  );
+  const resolvedError = error || resolveGoogleErrorMessage(errorCode, primaryAdminEmail);
 
   // If workspace was just created, render success confirmation card
   if (createdWorkspace) {
@@ -224,7 +225,7 @@ export const OAuthPostAuthPage = () => {
                 )}
                 <div className="flex justify-between items-center py-0.5 border-b border-slate-200/60 pb-1.5">
                   <span className="text-slate-500 font-medium">Workspace URL:</span>
-                  <span className="font-mono text-slate-800 text-[11px]">docketra.in/{createdWorkspace.firmSlug}/login</span>
+                  <span className="font-mono text-slate-800 text-[11px]">docketshq.com/{createdWorkspace.firmSlug}/login</span>
                 </div>
                 <div className="flex justify-between items-center py-0.5">
                   <span className="text-slate-500 font-medium">Authentication:</span>
@@ -319,7 +320,7 @@ export const OAuthPostAuthPage = () => {
               <div className="rounded-sm border border-slate-200 bg-slate-50 p-3 text-xs text-slate-800">
                 <span className="font-bold uppercase tracking-wider text-slate-600 text-[10px] block">Workspace URL Preview</span>
                 <span className="font-mono font-bold text-slate-950 mt-1 block">
-                  docketra.in/{getWorkspaceSlugPreview(firmName)}
+                  docketshq.com/{getWorkspaceSlugPreview(firmName)}
                 </span>
               </div>
 

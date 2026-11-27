@@ -48,6 +48,7 @@ const {
   getGoogleOAuthClient,
   signGoogleState,
   parseGoogleState,
+  peekGoogleStateRouting,
   resolveAllowedFrontendOrigin,
   resolveAllowedBackendOrigin,
   getTargetBackendForOrigin,
@@ -4096,9 +4097,15 @@ const findWorkspaceByXid = async (req, res) => {
 const GOOGLE_AUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const GOOGLE_EXCHANGE_TOKEN_TTL_MINUTES = 5;
 
+const DEFAULT_PUBLIC_FRONTEND_ORIGIN = 'https://docketshq.com';
+
 const redirectGoogleResult = (res, params = {}, returnOrigin = null) => {
   const allowedOrigin = resolveAllowedFrontendOrigin(returnOrigin);
-  const base = allowedOrigin || process.env.FRONTEND_URL || 'http://localhost:5173';
+  const configuredFallback = resolveAllowedFrontendOrigin(process.env.FRONTEND_URL);
+  const defaultOrigin = process.env.NODE_ENV === 'production'
+    ? DEFAULT_PUBLIC_FRONTEND_ORIGIN
+    : 'http://localhost:5173';
+  const base = allowedOrigin || configuredFallback || defaultOrigin;
   const target = new URL('/oauth/post-auth', base);
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
@@ -4222,7 +4229,7 @@ const startGoogleAuth = async (req, res) => {
     const candidateOrigin = req.query?.returnTo || req.query?.frontendUrl || req.headers?.origin || req.headers?.referer;
     const returnOrigin = resolveAllowedFrontendOrigin(candidateOrigin)
       || resolveAllowedFrontendOrigin(process.env.FRONTEND_URL)
-      || 'https://docketra.in';
+      || DEFAULT_PUBLIC_FRONTEND_ORIGIN;
 
     const targetBackendUrl = getBackendOriginFromReq(req)
       || getTargetBackendForOrigin(returnOrigin)
@@ -4261,6 +4268,219 @@ const startGoogleAuth = async (req, res) => {
   }
 };
 
+const handleGoogleWorkspaceSignupCallback = async ({
+  req,
+  respond,
+  state,
+  googleSub,
+  googleEmail,
+  googleName,
+  resolvedFirmSlug,
+}) => {
+  const existingUser = await User.findOne({
+    email: googleEmail,
+    status: { $ne: 'deleted' },
+  });
+
+  if (existingUser) {
+    if (existingUser.lockedByAdmin) {
+      const primaryAdmin = await User.findOne({ firmId: existingUser.firmId, isPrimaryAdmin: true, status: { $ne: 'deleted' } }).select('email');
+      return respond({
+        error: 'ACCOUNT_LOCKED_BY_ADMIN',
+        primaryAdminEmail: primaryAdmin?.email || '',
+        firmSlug: resolvedFirmSlug,
+      });
+    }
+
+    const tenantContext = await resolveCanonicalTenantForUser(existingUser);
+    if (!tenantContext || !isActiveStatus(tenantContext.status)) {
+      return respond({
+        error: 'FIRM_INACTIVE',
+        firmSlug: tenantContext?.firmSlug || resolvedFirmSlug || null,
+      });
+    }
+
+    if (!existingUser.authProviders?.google?.googleId) {
+      existingUser.authProviders = buildGoogleLinkedAuthProviders(existingUser, googleSub);
+      await existingUser.save();
+    }
+
+    await ensureCanonicalXid(existingUser);
+    const exchangeToken = await issueGoogleExchangeToken({
+      userId: existingUser._id,
+      firmId: existingUser.firmId,
+      xID: existingUser.xID || existingUser.xid,
+    });
+
+    return respond({
+      exchangeToken,
+      firmSlug: tenantContext.firmSlug,
+      mode: 'login',
+    });
+  }
+
+  const firmName = String(state.firmName || '').trim();
+  if (firmName) {
+    const provisioned = await provisionGoogleWorkspaceAccount({
+      req,
+      name: googleName,
+      email: googleEmail,
+      firmName,
+      phone: state.phone || null,
+      googleSubject: googleSub,
+    });
+    if (!provisioned) {
+      return respond({ error: 'SIGNUP_FAILED' });
+    }
+
+    return respond({
+      exchangeToken: provisioned.exchangeToken,
+      firmSlug: provisioned.created.firmSlug,
+      mode: 'signup',
+    });
+  }
+
+  const googlePendingToken = signGoogleState({
+    googleSub,
+    googleEmail,
+    googleName: googleName || '',
+    phone: state.phone || '',
+    purpose: 'google_workspace_signup',
+    issuedAt: Date.now(),
+  });
+
+  return respond({
+    mode: 'signup_pending',
+    googlePendingToken,
+    name: googleName || '',
+    email: googleEmail,
+  });
+};
+
+const handleGoogleTenantAuthCallback = async ({
+  respond,
+  intent,
+  state,
+  resolvedFirmSlug,
+  googleSub,
+  googleEmail,
+}) => {
+  const tenant = await resolveTenantBySlug(resolvedFirmSlug);
+  if (!tenant || !isActiveStatus(tenant.status)) {
+    return respond({ error: 'FIRM_INACTIVE', firmSlug: resolvedFirmSlug });
+  }
+
+  const tenantCandidateIds = [
+    tenant.tenantId,
+    tenant.defaultClientId,
+    tenant.legacyFirmId,
+    tenant.ownershipFirmId,
+  ].filter(Boolean);
+
+  const tenantScopedUserQuery = {
+    email: googleEmail,
+    status: { $ne: 'deleted' },
+    $or: [
+      { firmId: { $in: tenantCandidateIds } },
+      { defaultClientId: { $in: tenantCandidateIds } },
+    ],
+  };
+
+  let user = null;
+
+  if (intent === 'signup') {
+    const setupTokenHash = emailService.hashToken(String(state.setupToken || ''));
+    const now = new Date();
+    user = await User.findOne({
+      ...tenantScopedUserQuery,
+      setupTokenUsedAt: null,
+      $or: [
+        { setupTokenHash },
+        { passwordSetupTokenHash: setupTokenHash },
+      ],
+    });
+
+    const tokenExpiresAt = user?.setupTokenExpiresAt || user?.passwordSetupExpires || null;
+    if (!user || !tokenExpiresAt || tokenExpiresAt < now) {
+      return respond({ error: 'SETUP_TOKEN_INVALID', firmSlug: resolvedFirmSlug });
+    }
+
+    user.status = 'active';
+    user.isActive = true;
+    user.setupTokenUsedAt = now;
+    user.setupTokenHash = null;
+    user.setupTokenExpiresAt = null;
+    user.passwordSetupTokenHash = null;
+    user.passwordSetupExpires = null;
+    user.mustSetPassword = false;
+    user.mustChangePassword = false;
+    user.passwordSetAt = now;
+    user.emailVerified = true;
+    user.emailVerifiedAt = now;
+    user.verificationMethod = 'GOOGLE';
+    user.authProviders = buildGoogleLinkedAuthProviders(user, googleSub, now);
+    await user.save();
+
+    if (tenant.legacyFirmId) {
+      await Firm.updateOne(
+        { _id: tenant.legacyFirmId, status: 'pending_setup' },
+        { $set: { status: 'active' } }
+      );
+    }
+    if (tenant.tenantId) {
+      await Client.updateOne(
+        { _id: tenant.tenantId, status: { $in: ['pending_setup', 'PENDING'] } },
+        { $set: { status: 'ACTIVE' } }
+      );
+    }
+  } else {
+    user = await User.findOne(tenantScopedUserQuery);
+
+    if (!user || !isActiveStatus(user.status) || !user.isActive) {
+      return respond({ error: 'ACCOUNT_NOT_FOUND', firmSlug: resolvedFirmSlug });
+    }
+
+    if (user.lockedByAdmin) {
+      const primaryAdmin = await User.findOne({
+        $or: [
+          { firmId: { $in: tenantCandidateIds } },
+          { defaultClientId: { $in: tenantCandidateIds } },
+        ],
+        isPrimaryAdmin: true,
+        status: { $ne: 'deleted' },
+      }).select('email');
+      return respond({
+        error: 'ACCOUNT_LOCKED_BY_ADMIN',
+        primaryAdminEmail: primaryAdmin?.email || '',
+        firmSlug: resolvedFirmSlug,
+      });
+    }
+
+    const existingGoogleId = String(user?.authProviders?.google?.googleId || '').trim();
+    if (existingGoogleId && existingGoogleId !== googleSub) {
+      return respond({ error: 'GOOGLE_ACCOUNT_MISMATCH', firmSlug: resolvedFirmSlug });
+    }
+
+    if (!existingGoogleId) {
+      user.authProviders = buildGoogleLinkedAuthProviders(user, googleSub);
+      await user.save();
+    }
+  }
+
+  await ensureCanonicalXid(user);
+  const exchangeToken = await issueGoogleExchangeToken({
+    userId: user._id,
+    firmId: user.firmId,
+    xID: user.xID || user.xid,
+  });
+
+  return respond({
+    exchangeToken,
+    firmSlug: resolvedFirmSlug,
+    mode: intent,
+  });
+};
+
 const googleAuthCallback = async (req, res) => {
   let resolvedFirmSlug = null;
   let returnOrigin = null;
@@ -4268,30 +4488,42 @@ const googleAuthCallback = async (req, res) => {
 
   try {
     ensureGoogleAuthEnabled();
+    const rawState = String(req.query?.state || '');
     const code = String(req.query?.code || '').trim();
-    const state = parseGoogleState(req.query?.state);
+    const oauthError = String(req.query?.error || '').trim();
+    const state = parseGoogleState(rawState);
+    const routingHints = state
+      ? {
+          returnOrigin: resolveAllowedFrontendOrigin(state.returnOrigin),
+          targetBackendUrl: resolveAllowedBackendOrigin(state.targetBackendUrl),
+        }
+      : peekGoogleStateRouting(rawState);
+
+    returnOrigin = routingHints.returnOrigin || null;
+
+    // Cross-backend callback delegation:
+    // Forward to the allowlisted target backend (which verifies state HMAC with its own JWT_SECRET).
+    const targetBackendUrl = routingHints.targetBackendUrl || getTargetBackendForOrigin(returnOrigin);
+    const currentBackendOrigin = getBackendOriginFromReq(req);
+
+    if (targetBackendUrl && currentBackendOrigin && targetBackendUrl !== currentBackendOrigin) {
+      const redirectTarget = new URL('/api/auth/google/callback', targetBackendUrl);
+      if (code) redirectTarget.searchParams.set('code', code);
+      if (oauthError) redirectTarget.searchParams.set('error', oauthError);
+      if (rawState) redirectTarget.searchParams.set('state', rawState);
+      return res.redirect(redirectTarget.toString());
+    }
+
+    if (oauthError) {
+      return respond({ error: oauthError, firmSlug: state?.firmSlug || null });
+    }
 
     if (!code || !state) {
       return respond({ error: 'INVALID_REQUEST' });
     }
 
-    returnOrigin = resolveAllowedFrontendOrigin(state.returnOrigin) || null;
-
     if (!state.issuedAt || (Date.now() - Number(state.issuedAt)) > GOOGLE_AUTH_STATE_TTL_MS) {
       return respond({ error: 'STATE_EXPIRED', firmSlug: state?.firmSlug || null });
-    }
-
-    // Cross-backend callback delegation:
-    // If state specifies a different target backend (e.g. CUG backend vs production callback URL),
-    // redirect the callback to that backend to query the appropriate environment database.
-    const targetBackendUrl = resolveAllowedBackendOrigin(state.targetBackendUrl) || getTargetBackendForOrigin(returnOrigin);
-    const currentBackendOrigin = getBackendOriginFromReq(req);
-
-    if (targetBackendUrl && currentBackendOrigin && targetBackendUrl !== currentBackendOrigin) {
-      const redirectTarget = new URL('/api/auth/google/callback', targetBackendUrl);
-      redirectTarget.searchParams.set('code', code);
-      redirectTarget.searchParams.set('state', String(req.query?.state || ''));
-      return res.redirect(redirectTarget.toString());
     }
 
     const intent = String(state.intent || '').toLowerCase();
@@ -4321,199 +4553,27 @@ const googleAuthCallback = async (req, res) => {
     }
 
     if (isWorkspaceSignup) {
-      // 1. Check if an account already exists for this email
-      const existingUser = await User.findOne({
-        email: googleEmail,
-        status: { $ne: 'deleted' },
-      });
-
-      if (existingUser) {
-        if (existingUser.lockedByAdmin) {
-          const primaryAdmin = await User.findOne({ firmId: existingUser.firmId, isPrimaryAdmin: true, status: { $ne: 'deleted' } }).select('email');
-          return respond({
-            error: 'ACCOUNT_LOCKED_BY_ADMIN',
-            primaryAdminEmail: primaryAdmin?.email || '',
-            firmSlug: resolvedFirmSlug,
-          });
-        }
-
-        const tenantContext = await resolveCanonicalTenantForUser(existingUser);
-        if (tenantContext && isActiveStatus(tenantContext.status)) {
-          if (!existingUser.authProviders?.google?.googleId) {
-            existingUser.authProviders = buildGoogleLinkedAuthProviders(existingUser, googleSub);
-            await existingUser.save();
-          }
-
-          await ensureCanonicalXid(existingUser);
-          const exchangeToken = await issueGoogleExchangeToken({
-            userId: existingUser._id,
-            firmId: existingUser.firmId,
-            xID: existingUser.xID || existingUser.xid,
-          });
-
-          return respond({
-            exchangeToken,
-            firmSlug: tenantContext.firmSlug,
-            mode: 'login',
-          });
-        }
-      }
-
-      // 2. New user: if firmName provided, create immediately!
-      const firmName = String(state.firmName || '').trim();
-      if (firmName) {
-        const provisioned = await provisionGoogleWorkspaceAccount({
-          req,
-          name: googleName,
-          email: googleEmail,
-          firmName,
-          phone: state.phone || null,
-          googleSubject: googleSub,
-        });
-        if (!provisioned) {
-          return respond({ error: 'SIGNUP_FAILED' });
-        }
-
-        return respond({
-          exchangeToken: provisioned.exchangeToken,
-          firmSlug: provisioned.created.firmSlug,
-          mode: 'signup',
-        });
-      }
-
-      // 3. New user without pre-filled firmName: return pending token for firm name prompt
-      const googlePendingToken = signGoogleState({
+      return await handleGoogleWorkspaceSignupCallback({
+        req,
+        respond,
+        state,
         googleSub,
         googleEmail,
-        googleName: googleName || '',
-        phone: state.phone || '',
-        purpose: 'google_workspace_signup',
-        issuedAt: Date.now(),
-      });
-
-      return respond({
-        mode: 'signup_pending',
-        googlePendingToken,
-        name: googleName || '',
-        email: googleEmail,
+        googleName,
+        resolvedFirmSlug,
       });
     }
 
-    const tenant = await resolveTenantBySlug(resolvedFirmSlug);
-    if (!tenant || !isActiveStatus(tenant.status)) {
-      return respond({ error: 'FIRM_INACTIVE', firmSlug: resolvedFirmSlug });
-    }
-
-    const tenantCandidateIds = [
-      tenant.tenantId,
-      tenant.defaultClientId,
-      tenant.legacyFirmId,
-      tenant.ownershipFirmId,
-    ].filter(Boolean);
-
-    const tenantScopedUserQuery = {
-      email: googleEmail,
-      status: { $ne: 'deleted' },
-      $or: [
-        { firmId: { $in: tenantCandidateIds } },
-        { defaultClientId: { $in: tenantCandidateIds } },
-      ],
-    };
-
-    let user = null;
-
-    if (intent === 'signup') {
-      const setupTokenHash = emailService.hashToken(String(state.setupToken || ''));
-      const now = new Date();
-      user = await User.findOne({
-        ...tenantScopedUserQuery,
-        setupTokenUsedAt: null,
-        $or: [
-          { setupTokenHash },
-          { passwordSetupTokenHash: setupTokenHash },
-        ],
-      });
-
-      const tokenExpiresAt = user?.setupTokenExpiresAt || user?.passwordSetupExpires || null;
-      if (!user || !tokenExpiresAt || tokenExpiresAt < now) {
-        return respond({ error: 'SETUP_TOKEN_INVALID', firmSlug: resolvedFirmSlug });
-      }
-
-      user.status = 'active';
-      user.isActive = true;
-      user.setupTokenUsedAt = now;
-      user.setupTokenHash = null;
-      user.setupTokenExpiresAt = null;
-      user.passwordSetupTokenHash = null;
-      user.passwordSetupExpires = null;
-      user.mustSetPassword = false;
-      user.mustChangePassword = false;
-      user.passwordSetAt = now;
-      user.emailVerified = true;
-      user.emailVerifiedAt = now;
-      user.verificationMethod = 'GOOGLE';
-      user.authProviders = buildGoogleLinkedAuthProviders(user, googleSub, now);
-      await user.save();
-
-      if (tenant.legacyFirmId) {
-        await Firm.updateOne(
-          { _id: tenant.legacyFirmId, status: 'pending_setup' },
-          { $set: { status: 'active' } }
-        );
-      }
-      if (tenant.tenantId) {
-        await Client.updateOne(
-          { _id: tenant.tenantId, status: { $in: ['pending_setup', 'PENDING'] } },
-          { $set: { status: 'ACTIVE' } }
-        );
-      }
-    } else {
-      user = await User.findOne(tenantScopedUserQuery);
-
-      if (!user || !isActiveStatus(user.status) || !user.isActive) {
-        return respond({ error: 'ACCOUNT_NOT_FOUND', firmSlug: resolvedFirmSlug });
-      }
-
-      if (user.lockedByAdmin) {
-        const primaryAdmin = await User.findOne({
-          $or: [
-            { firmId: { $in: tenantCandidateIds } },
-            { defaultClientId: { $in: tenantCandidateIds } },
-          ],
-          isPrimaryAdmin: true,
-          status: { $ne: 'deleted' },
-        }).select('email');
-        return respond({
-          error: 'ACCOUNT_LOCKED_BY_ADMIN',
-          primaryAdminEmail: primaryAdmin?.email || '',
-          firmSlug: resolvedFirmSlug
-        });
-      }
-
-      const existingGoogleId = String(user?.authProviders?.google?.googleId || '').trim();
-      if (existingGoogleId && existingGoogleId !== googleSub) {
-        return respond({ error: 'GOOGLE_ACCOUNT_MISMATCH', firmSlug: resolvedFirmSlug });
-      }
-
-      if (!existingGoogleId) {
-        user.authProviders = buildGoogleLinkedAuthProviders(user, googleSub);
-        await user.save();
-      }
-    }
-
-    await ensureCanonicalXid(user);
-    const exchangeToken = await issueGoogleExchangeToken({
-      userId: user._id,
-      firmId: user.firmId,
-      xID: user.xID || user.xid,
-    });
-
-    return respond({
-      exchangeToken,
-      firmSlug: resolvedFirmSlug,
-      mode: intent,
+    return await handleGoogleTenantAuthCallback({
+      respond,
+      intent,
+      state,
+      resolvedFirmSlug,
+      googleSub,
+      googleEmail,
     });
   } catch (error) {
+    log.error('[AUTH][googleAuthCallback] Google auth callback failed', error);
     return respond({ error: 'GOOGLE_AUTH_FAILED', firmSlug: resolvedFirmSlug });
   }
 };
@@ -4692,5 +4752,5 @@ module.exports = {
   startGoogleAuth,
   googleAuthCallback,
   exchangeGoogleAuth: wrapWriteHandler(exchangeGoogleAuth),
-  completeGoogleSignup: wrapWriteHandler(completeGoogleSignup),
+  completeGoogleSignup,
 };

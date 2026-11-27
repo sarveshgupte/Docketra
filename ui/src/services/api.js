@@ -67,7 +67,7 @@ const MAX_BACKOFF_MS = 4000;
 const SAME_ORIGIN_API_BASE_URL = '/api';
 const isPublicAuthFlowRequest = (requestConfig) => {
   const requestUrl = String(requestConfig?.url || '');
-  return /\/auth\/(resend-otp|verify-totp|complete-mfa-login|forgot-password|forgot-password\/init|forgot-password\/verify|forgot-password\/reset|reset-password-with-token|resend-credentials|login\/init|login\/verify|login\/resend)$/.test(requestUrl)
+  return /\/auth\/(resend-otp|verify-totp|complete-mfa-login|forgot-password|forgot-password\/init|forgot-password\/verify|forgot-password\/reset|reset-password-with-token|resend-credentials|login\/init|login\/verify|login\/resend|google\/exchange|google\/complete-signup)$/.test(requestUrl)
     || /\/verify-otp$/.test(requestUrl)
     || /\/login$/.test(requestUrl);
 };

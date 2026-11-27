@@ -10,6 +10,7 @@ import { PilotAgreementModal, PILOT_TERMS_VERSION } from '../../components/marke
 import { SeoHead } from '../../components/common/SeoHead';
 import { DocketraLogo } from '../../components/common/DocketraLogo';
 import { API_BASE_URL } from '../../utils/constants';
+import { getWorkspaceSlugPreview } from '../../utils/workspaceSlug';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^\d{10}$/;
@@ -29,16 +30,6 @@ const SETUP_STEPS = [
   { step: '02', title: 'Email OTP', copy: 'Confirm the admin inbox before activation.' },
   { step: '03', title: 'First login', copy: 'Use the firm URL and xID we generate.' },
 ];
-
-const getWorkspaceSlugPreview = (firmName) => {
-  const slug = String(firmName || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 32);
-  return slug || 'your-firm';
-};
 
 const SignupStepDots = ({ step }) => (
   <div className="mt-5 flex items-center justify-center gap-2" role="group" aria-label={`Signup progress: step ${step} of 2`}>

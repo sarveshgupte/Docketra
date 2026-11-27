@@ -28,7 +28,7 @@ const createTurnstileMiddleware = ({
     return res.status(400).json({ success: false, message: GENERIC_TURNSTILE_FAILURE_MESSAGE });
   }
 
-  const remoteIp = req.ip || req.headers['x-forwarded-for'];
+  const remoteIp = req.headers?.['cf-connecting-ip'] || req.ip || req.headers?.['x-forwarded-for'];
   const verification = await turnstileService.verifyTurnstileToken({ token, remoteIp });
   if (!verification.success) {
     await logSecurityAuditEvent({

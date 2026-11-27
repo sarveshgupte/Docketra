@@ -3,6 +3,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/superadmin.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { requireSuperadmin } = require('../middleware/permission.middleware');
+const { cloudflareAccessGuard } = require('../middleware/cloudflareAccess.middleware');
 const { getSuperadminAiAssistantChat } = require('../controllers/superadminAiAssistant.controller');
 const {
   getRepoAgentStatus,
@@ -52,6 +53,7 @@ const {
 } = require('../controllers/superadmin.controller');
 
 // Hard fail-closed boundary: every route in this router is superadmin-only.
+router.use(cloudflareAccessGuard);
 router.use(requireSuperadmin);
 
 /**

@@ -142,7 +142,8 @@ const normalizeIp = (value) => String(value || '')
 const hashKeyPart = (value) => createHash('sha256').update(String(value)).digest('hex');
 
 const resolveClientIp = (req) => normalizeIp(
-  req.headers?.['x-forwarded-for']
+  req.headers?.['cf-connecting-ip']
+  || req.headers?.['x-forwarded-for']
   || req.headers?.['x-real-ip']
   || req.ip
   || req.ips?.[0]

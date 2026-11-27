@@ -97,6 +97,9 @@ const envSchema = z
     SMTP_PASS: z.string().trim().optional(),
     TURNSTILE_ENABLED: boolFromEnv,
     TURNSTILE_SECRET_KEY: z.string().trim().optional(),
+    CLOUDFLARE_ACCESS_ENABLED: boolFromEnv,
+    CLOUDFLARE_ACCESS_REQUIRED: boolFromEnv,
+    CLOUDFLARE_ACCESS_ALLOWED_EMAILS: z.string().trim().optional(),
 
     ENABLE_AI_ANALYSIS: boolFromEnv,
     AI_PROVIDER: z.string().trim().optional(),

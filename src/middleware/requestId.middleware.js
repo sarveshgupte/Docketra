@@ -13,6 +13,13 @@ const requestId = (req, res, next) => {
   req.correlationId = normalizeHeaderRequestId(req.headers?.['x-correlation-id']) || req.requestId;
   res.setHeader('X-Request-ID', req.requestId);
   res.setHeader('X-Correlation-ID', req.correlationId);
+
+  const cfRay = normalizeHeaderRequestId(req.headers?.['cf-ray']);
+  if (cfRay) {
+    req.cfRay = cfRay;
+    res.setHeader('CF-Ray', cfRay);
+  }
+
   next();
 };
 

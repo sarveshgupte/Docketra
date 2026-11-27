@@ -69,6 +69,30 @@ const parseGoogleState = (rawState) => {
   }
 };
 
+/**
+ * Decode unverified state strictly to inspect allowlisted routing hints
+ * (e.g. forwarding a CUG callback from the shared callback host before the
+ * target backend performs full HMAC verification with its own JWT_SECRET).
+ */
+const peekGoogleStateRouting = (rawState) => {
+  if (!rawState || typeof rawState !== 'string' || !rawState.includes('.')) {
+    return { returnOrigin: null, targetBackendUrl: null };
+  }
+  const [encodedPayload] = rawState.split('.');
+  if (!encodedPayload) {
+    return { returnOrigin: null, targetBackendUrl: null };
+  }
+  try {
+    const parsed = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8'));
+    return {
+      returnOrigin: resolveAllowedFrontendOrigin(parsed?.returnOrigin),
+      targetBackendUrl: resolveAllowedBackendOrigin(parsed?.targetBackendUrl),
+    };
+  } catch (_error) {
+    return { returnOrigin: null, targetBackendUrl: null };
+  }
+};
+
 const KNOWN_FRONTEND_HOSTS = [
   'docketshq.com',
   'www.docketshq.com',
@@ -114,15 +138,14 @@ const getConfiguredOrigins = () => {
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
 };
 
-const resolveAllowedFrontendOrigin = (candidate) => {
+const resolveAllowedOrigin = (candidate, knownHosts) => {
   if (!candidate || typeof candidate !== 'string') return null;
   try {
     const parsed = new URL(candidate);
     if (!['http:', 'https:'].includes(parsed.protocol)) return null;
     const hostname = parsed.hostname.toLowerCase();
 
-    const configured = getConfiguredOrigins();
-    for (const conf of configured) {
+    for (const conf of getConfiguredOrigins()) {
       try {
         if (new URL(conf).origin.toLowerCase() === parsed.origin.toLowerCase()) {
           return parsed.origin;
@@ -130,7 +153,7 @@ const resolveAllowedFrontendOrigin = (candidate) => {
       } catch (_) {}
     }
 
-    if (parsed.protocol === 'https:' && KNOWN_FRONTEND_HOSTS.includes(hostname)) {
+    if (parsed.protocol === 'https:' && knownHosts.includes(hostname)) {
       return parsed.origin;
     }
 
@@ -144,35 +167,9 @@ const resolveAllowedFrontendOrigin = (candidate) => {
   }
 };
 
-const resolveAllowedBackendOrigin = (candidate) => {
-  if (!candidate || typeof candidate !== 'string') return null;
-  try {
-    const parsed = new URL(candidate);
-    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
-    const hostname = parsed.hostname.toLowerCase();
+const resolveAllowedFrontendOrigin = (candidate) => resolveAllowedOrigin(candidate, KNOWN_FRONTEND_HOSTS);
 
-    const configured = getConfiguredOrigins();
-    for (const conf of configured) {
-      try {
-        if (new URL(conf).origin.toLowerCase() === parsed.origin.toLowerCase()) {
-          return parsed.origin;
-        }
-      } catch (_) {}
-    }
-
-    if (parsed.protocol === 'https:' && KNOWN_BACKEND_HOSTS.includes(hostname)) {
-      return parsed.origin;
-    }
-
-    if (process.env.NODE_ENV !== 'production' && isLocalhost(hostname)) {
-      return parsed.origin;
-    }
-
-    return null;
-  } catch (_e) {
-    return null;
-  }
-};
+const resolveAllowedBackendOrigin = (candidate) => resolveAllowedOrigin(candidate, KNOWN_BACKEND_HOSTS);
 
 const getTargetBackendForOrigin = (frontendOrigin) => {
   if (!frontendOrigin || typeof frontendOrigin !== 'string') return null;
@@ -205,6 +202,7 @@ module.exports = {
   getGoogleOAuthClient,
   signGoogleState,
   parseGoogleState,
+  peekGoogleStateRouting,
   resolveAllowedFrontendOrigin,
   resolveAllowedBackendOrigin,
   getTargetBackendForOrigin,

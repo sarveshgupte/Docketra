@@ -42,6 +42,7 @@ const makeNoopMiddleware = () => (_req, _res, next) => next();
   swap(superadminPolicyModulePath, {
     canViewPlatformStats: () => true,
     canManageFirms: () => true,
+    canAccessPlatform: () => true,
   });
 
   swap(firmPolicyModulePath, {

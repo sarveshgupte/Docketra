@@ -4,6 +4,11 @@ const log = require('../utils/log');
 const PLATFORM_TENANT = 'PLATFORM';
 
 const getRequestIp = (req) => {
+  const cfConnectingIp = req?.headers?.['cf-connecting-ip'];
+  if (typeof cfConnectingIp === 'string' && cfConnectingIp.trim()) {
+    return cfConnectingIp.split(',')[0].trim();
+  }
+
   const forwardedFor = req?.headers?.['x-forwarded-for'];
   if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
     return forwardedFor.split(',')[0].trim();

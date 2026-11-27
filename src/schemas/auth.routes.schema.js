@@ -73,6 +73,8 @@ module.exports = {
       firmName: z.string().trim().optional(),
       phone: z.string().trim().optional(),
       agreedToPilotTerms: z.string().trim().optional(),
+      returnTo: z.string().trim().optional(),
+      frontendUrl: z.string().trim().optional(),
     }).strip(),
   },
   'GET /google/callback': {
