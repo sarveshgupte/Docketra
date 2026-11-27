@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { productUpdatesService } from '../../services/productUpdatesService';
-import { getRoleOnboardingContent, normalizeOnboardingRole } from './roleOnboardingContent';
-import { resolveTutorialPersistenceIntent } from './firstLoginFlowPersistence';
+import { normalizeOnboardingRole } from './roleOnboardingContent';
+import { canShowFirstLoginTour, resolveTutorialPersistenceIntent } from './firstLoginFlowPersistence';
 import { trackOnboardingEvent } from '../../utils/onboardingAnalytics';
 import { DocketraProductTour } from './DocketraProductTour';
 import { SetupFirstClientModal } from './SetupFirstClientModal';
@@ -18,12 +18,20 @@ export const FirstLoginExperience = () => {
   const [showFirstClientModal, setShowFirstClientModal] = useState(false);
 
   const serverShowTutorial = Boolean(user?.welcomeTutorial?.show);
-  const isTourQuery = Boolean(
-    location?.search && new URLSearchParams(location.search).get('tour') === 'start'
-  ) || (typeof window !== 'undefined' && window.location.search.includes('tour=start'));
-  const showTutorial = Boolean(serverShowTutorial || manualOpen || isTourQuery);
+  const isTourQuery = new URLSearchParams(location?.search || '').get('tour') === 'start';
+  const isSetupRoute = String(location?.pathname || '').replace(/\/+$/, '').endsWith('/setup');
+  const showTutorial = Boolean(
+    isAuthResolved
+    && isAuthenticated
+    && canShowFirstLoginTour({
+      pathname: location?.pathname,
+      user,
+      isTourQuery,
+      manualOpen,
+    })
+  );
   const isFirstLoginTutorial = Boolean(serverShowTutorial);
-  const showWhatsNew = !showTutorial && Boolean(user?.whatsNew?.show && user?.whatsNew?.update?._id);
+  const showWhatsNew = !showTutorial && !isSetupRoute && Boolean(user?.whatsNew?.show && user?.whatsNew?.update?._id);
   const roleKey = normalizeOnboardingRole(user?.welcomeTutorial?.role || user?.role);
 
   useEffect(() => {
@@ -107,7 +115,6 @@ export const FirstLoginExperience = () => {
 
   return (
     <>
-      {/* Step 5: Interactive Step-by-Step Product Tour */}
       <DocketraProductTour
         isOpen={showTutorial}
         onClose={(idx) => completeTutorial('skipped', idx ?? 0)}
@@ -118,14 +125,12 @@ export const FirstLoginExperience = () => {
         }}
       />
 
-      {/* Step 6: Add First Corporate Client Modal */}
       <SetupFirstClientModal
         isOpen={showFirstClientModal}
         onClose={() => setShowFirstClientModal(false)}
         firmSlug={firmSlug}
       />
 
-      {/* What's New Release Updates Modal */}
       <Modal
         isOpen={showWhatsNew}
         onClose={handleDismissWhatsNew}

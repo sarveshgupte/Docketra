@@ -34,6 +34,8 @@ import {
 } from '../../services/storageService';
 import { ROUTES } from '../../constants/routes';
 import { isAlternativeStorageEnabled } from '../../utils/storageOptions';
+import { productUpdatesService } from '../../services/productUpdatesService';
+import { normalizeOnboardingRole } from '../../components/onboarding/roleOnboardingContent';
 
 const PRACTICE_TYPES = [
   { id: 'PCS', label: 'Company Secretary (PCS)', desc: 'MCA, ROC filings, secretarial audits, board resolutions' },
@@ -345,7 +347,8 @@ export function WorkspaceSetupPage() {
   };
 
   // Exit directly to workspace (marking setup completed safely in database)
-  const finalizeWorkspaceSetup = async ({ showCompletionToast = false, includeTourParam = false } = {}) => {
+  const finalizeWorkspaceSetup = async ({ showCompletionToast = false, includeTourParam, skipTour = false } = {}) => {
+    const shouldSkipTour = skipTour || includeTourParam === false;
     setLoading(true);
     try {
       if (typeof window !== 'undefined' && firmSlug) {
@@ -355,11 +358,19 @@ export function WorkspaceSetupPage() {
         name: firmName.trim() || user?.firm?.name || 'Firm',
         practiceType,
       });
+      if (shouldSkipTour && user?.welcomeTutorial?.show) {
+        await productUpdatesService.completeTutorial({
+          status: 'skipped',
+          role: normalizeOnboardingRole(user?.welcomeTutorial?.role || user?.role),
+          stepIndex: 0,
+        }).catch(() => {});
+      }
       const refreshed = await fetchProfile({ force: true });
       if (refreshed?.data) {
         updateUser({
           ...refreshed.data,
           isSetupComplete: true,
+          ...(shouldSkipTour ? { welcomeTutorial: { ...(refreshed.data.welcomeTutorial || {}), show: false, status: 'skipped' } } : {}),
           firm: {
             ...(refreshed.data.firm || {}),
             isSetupComplete: true,
@@ -382,6 +393,8 @@ export function WorkspaceSetupPage() {
 
   // Step 4 Finish: Complete Setup and Enter WebApp
   const handleEnterWorkspace = () => finalizeWorkspaceSetup({ includeTourParam: startTour });
+
+  const handleSkipTourAndEnter = () => finalizeWorkspaceSetup({ skipTour: true });
 
   const selectedPractice = PRACTICE_TYPES.find((p) => p.id === practiceType) || PRACTICE_TYPES[0];
 
@@ -1355,7 +1368,7 @@ export function WorkspaceSetupPage() {
 
               <button
                 type="button"
-                onClick={handleEnterWorkspace}
+                onClick={handleSkipTourAndEnter}
                 disabled={loading}
                 className="text-xs text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
               >
