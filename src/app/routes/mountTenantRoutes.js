@@ -71,7 +71,21 @@ const mountTenantRoutes = (app, deps) => {
   app.use('/api/reports', ...tenantScopedApiAccess, writeGuardChain, reportsRoutes);
   app.use('/api/insights', ...tenantScopedApiAccess, writeGuardChain, insightsRoutes);
   app.use('/api/firm/:firmId', ...tenantScopedApiAccess, writeGuardChain, firmMetricsRoutes);
-  app.use('/api/storage', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), storageRoutes);
+  const skipStorageOAuthCallback = (middleware) => (req, res, next) => {
+    if (req.method === 'GET' && req.path === '/google/callback') {
+      return next();
+    }
+    return middleware(req, res, next);
+  };
+  const storageTenantAccess = [
+    authenticate,
+    firmContext,
+    requireTenant,
+    tenantThrottle,
+    invariantGuard({ requireFirm: true, forbidSuperAdmin: true }),
+  ].map(skipStorageOAuthCallback);
+
+  app.use('/api/storage', ...storageTenantAccess, storageRoutes);
   app.use('/api/ai', authenticate, firmContext, requireTenant, tenantThrottle, invariantGuard({ requireFirm: true, forbidSuperAdmin: true }), aiRoutes);
   app.use('/api/firm', ...tenantScopedApiAccess, writeGuardChain, firmStorageRoutes);
   app.use('/api/files', authLimiter, ...tenantScopedApiAccess, writeGuardChain, filesRoutes);

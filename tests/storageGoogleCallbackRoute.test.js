@@ -93,6 +93,28 @@ function stub(modulePath, exportsValue) {
     assert.strictEqual(connectCalls, 0, 'connect should remain blocked by requirePrimaryAdmin');
     assert.strictEqual(callbackCalls >= 2, true, 'callback should be reached both unauthenticated and authenticated');
 
+    // Verify mountTenantRoutes allows GET /api/storage/google/callback without accessToken while keeping other /api/storage routes protected
+    const { mountTenantRoutes } = require('../src/app/routes/mountTenantRoutes');
+    const tenantApp = express();
+    const pass = (_req, _res, next) => next();
+    const noopRouter = express.Router();
+    mountTenantRoutes(tenantApp, {
+      writeGuardChain: pass,
+      authenticate: (req, res, next) => (req.headers['x-auth'] ? next() : res.status(401).json({ success: false, code: 'UNAUTHORIZED' })),
+      firmContext: pass,
+      requireTenant: pass,
+      tenantThrottle: pass,
+      invariantGuard: () => pass,
+      authLimiter: pass,
+      tenantScopedApiAccess: [pass],
+      adminTenantScopedApiAccess: [pass],
+      adminAuditTrail: () => pass,
+      userRoutes: noopRouter, selfUserRoutes: noopRouter, taskRoutes: noopRouter, complianceCalendarRoutes: noopRouter, caseRoutes: noopRouter, docketRoutes: noopRouter, docketSessionRoutes: noopRouter, attachmentRoutes: noopRouter, searchRoutes: noopRouter, worklistRoutes: noopRouter, clientApprovalRoutes: noopRouter, clientRoutes: noopRouter, crmClientRoutes: noopRouter, leadRoutes: noopRouter, formRoutes: noopRouter, landingPageRoutes: noopRouter, dealRoutes: noopRouter, invoiceRoutes: noopRouter, reportsRoutes: noopRouter, insightsRoutes: noopRouter, firmMetricsRoutes: noopRouter, storageRoutes: router, aiRoutes: noopRouter, firmStorageRoutes: noopRouter, filesRoutes: noopRouter, tenantRoutes: noopRouter, docketFileStorageRoutes: noopRouter, notificationsRoutes: noopRouter, teamRoutes: noopRouter, bulkUploadRoutes: noopRouter, productUpdateRoutes: noopRouter, feedbackRoutes: noopRouter, settingsRoutes: noopRouter, knowledgeItemRoutes: noopRouter, emailCaptureRoutes: noopRouter, documentItemRoutes: noopRouter, clientPortalRoutes: noopRouter, docketExceptionRoutes: noopRouter, docketEffortRoutes: noopRouter, subscriptionRoutes: noopRouter, mcaComplianceRoutes: noopRouter,
+    });
+    await request(tenantApp).get('/api/storage/configuration').expect(401);
+    const tenantMountedCallback = await request(tenantApp).get('/api/storage/google/callback?code=abc&state=s1').expect(302);
+    assert.ok(tenantMountedCallback.headers.location.includes('reason=session_missing'));
+
     console.log('storageGoogleCallbackRoute.test.js passed');
   } finally {
     const restore = (modulePath, original) => {

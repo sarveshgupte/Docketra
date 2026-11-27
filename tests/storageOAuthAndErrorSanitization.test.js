@@ -75,7 +75,32 @@ async function run() {
   const reqCbSessionMissing = { firmId: null, ownershipFirmId: null, user: null, query: { code: 'abc', state: callbackState }, headers: {}, cookies: {} };
   const resCbSessionMissing = { code: 200, headers: {}, redirected: null, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;}, setHeader(k,v){this.headers[k]=v;}, redirect(u){this.redirected=u; return this;} };
   await ctl.googleCallback(reqCbSessionMissing, resCbSessionMissing);
-  assert.ok(String(resCbSessionMissing.redirected || '').includes('reason=session_missing'), 'missing auth/session should redirect with safe session_missing reason');
+  assert.ok(String(resCbSessionMissing.redirected || '').includes('reason=session_missing'), 'missing auth/session and cookie should redirect with safe session_missing reason');
+
+  savedFirmId = null;
+  const payloadWithReturn = Buffer.from(JSON.stringify({
+    tenantId: 'tenant-canonical',
+    ownershipFirmId: 'firm-owner-77',
+    provider: 'google_drive',
+    returnTo: '/app/firm/acme/setup?step=2',
+    nonce: 'nonce-2',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 300,
+  })).toString('base64url');
+  const sigWithReturn = crypto.createHmac('sha256', process.env.JWT_SECRET).update(payloadWithReturn).digest('hex');
+  const cookieBoundState = `${payloadWithReturn}.${sigWithReturn}`;
+  const reqCbCookieOnly = {
+    firmId: null,
+    ownershipFirmId: null,
+    user: null,
+    query: { code: 'abc', state: cookieBoundState },
+    headers: { cookie: `storage_oauth_state=${cookieBoundState}` },
+    cookies: { storage_oauth_state: cookieBoundState },
+  };
+  const resCbCookieOnly = { code: 200, headers: {}, redirected: null, payload: null, status(c){this.code=c; return this;}, json(p){this.payload=p; return this;}, setHeader(k,v){this.headers[k]=v;}, redirect(u){this.redirected=u; return this;} };
+  await ctl.googleCallback(reqCbCookieOnly, resCbCookieOnly);
+  assert.strictEqual(savedFirmId, 'firm-owner-77', 'valid HMAC state + cookie should save Drive connection even without accessToken cookie');
+  assert.ok(String(resCbCookieOnly.redirected || '').includes('/app/firm/acme/setup?step=2&provider=google-drive&connected=1'), `expected setup step=2 redirect, got: ${resCbCookieOnly.redirected}`);
 
   const prevClientId = process.env.GOOGLE_CLIENT_ID;
   delete process.env.GOOGLE_CLIENT_ID;
