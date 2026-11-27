@@ -46,8 +46,15 @@ export const categoryService = {
   /**
    * Create a new category (Admin only)
    */
-  createCategory: async (name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0, qcPercent = 0) => {
-    const response = await api.post('/admin/categories', { name, requiresRelatedEmployeeUser, defaultSlaDays, qcPercent });
+  createCategory: async (name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0, qcPercent = 0, options = {}) => {
+    const response = await api.post('/admin/categories', {
+      name,
+      requiresRelatedEmployeeUser,
+      defaultSlaDays,
+      qcPercent,
+      ...(options?.workbasketId ? { workbasketId: options.workbasketId } : {}),
+      ...(options?.qcWorkbasketId ? { qcWorkbasketId: options.qcWorkbasketId } : {}),
+    });
     return response.data;
   },
 
@@ -55,8 +62,15 @@ export const categoryService = {
    * Update category name (Admin only)
    * Contract hook: updateCategory: async (id, name, requiresRelatedEmployeeUser = false)
    */
-  updateCategory: async (id, name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0, qcPercent = 0) => {
-    const response = await api.put(`/admin/categories/${id}`, { name, requiresRelatedEmployeeUser, defaultSlaDays, qcPercent });
+  updateCategory: async (id, name, requiresRelatedEmployeeUser = false, defaultSlaDays = 0, qcPercent = 0, options = {}) => {
+    const response = await api.put(`/admin/categories/${id}`, {
+      name,
+      requiresRelatedEmployeeUser,
+      defaultSlaDays,
+      qcPercent,
+      ...(options?.workbasketId ? { workbasketId: options.workbasketId } : {}),
+      ...(options?.qcWorkbasketId ? { qcWorkbasketId: options.qcWorkbasketId } : {}),
+    });
     return response.data;
   },
 
@@ -82,6 +96,7 @@ export const categoryService = {
     const response = await api.post(`/admin/categories/${categoryId}/subcategories`, {
       name,
       workbasketId,
+      ...(options?.qcWorkbasketId ? { qcWorkbasketId: options.qcWorkbasketId } : {}),
       requiresRelatedEmployeeUser,
       defaultSlaDays,
       qcPercent: Number(options?.qcPercent) || 0,
@@ -106,6 +121,7 @@ export const categoryService = {
     const response = await api.put(`/admin/categories/${categoryId}/subcategories/${subcategoryId}`, {
       name,
       workbasketId,
+      ...(options?.qcWorkbasketId ? { qcWorkbasketId: options.qcWorkbasketId } : {}),
       requiresRelatedEmployeeUser,
       defaultSlaDays,
       qcPercent: Number(options?.qcPercent) || 0,

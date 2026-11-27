@@ -232,6 +232,7 @@ export const AdminPage = () => {
   // Category form state
   const [categoryForm, setCategoryForm] = useState({
     name: '',
+    workbasketId: '',
     defaultSlaDays: '',
     qcPercent: '',
     requiresRelatedEmployeeUser: false,
@@ -239,7 +240,7 @@ export const AdminPage = () => {
   
   // Subcategory form state
   const [subcategoryForm, setSubcategoryForm] = useState(createEmptySubcategoryForm);
-  const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
+  const [editCategoryForm, setEditCategoryForm] = useState({ id: '', name: '', workbasketId: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
   const [editSubcategoryForm, setEditSubcategoryForm] = useState({
     categoryId: '',
     subcategoryId: '',
@@ -284,13 +285,34 @@ export const AdminPage = () => {
     )
   ), [workbaskets]);
   const primaryWorkbaskets = useMemo(
-    () => (workbaskets || []).filter((wb) => String(wb?.type || 'PRIMARY').toUpperCase() !== 'QC'),
+    () => (workbaskets || []).filter((wb) => wb && wb.isActive !== false && String(wb?.type || 'PRIMARY').toUpperCase() !== 'QC'),
     [workbaskets],
   );
   const qcOnlyWorkbaskets = useMemo(
-    () => (workbaskets || []).filter((wb) => String(wb?.type || '').toUpperCase() === 'QC'),
+    () => (workbaskets || []).filter((wb) => wb && wb.isActive !== false && String(wb?.type || '').toUpperCase() === 'QC'),
     [workbaskets],
   );
+  const qcWorkbasketByPrimaryId = useMemo(() => new Map(
+    qcOnlyWorkbaskets
+      .filter((wb) => wb?.parentWorkbasketId)
+      .map((wb) => [String(wb.parentWorkbasketId), wb]),
+  ), [qcOnlyWorkbaskets]);
+  const resolvePrimaryAndQcLink = (workbasketId) => {
+    const primary = primaryWorkbaskets.find((wb) => String(wb._id) === String(workbasketId || ''));
+    if (!primary) {
+      showToast('Please select an active primary workbasket', 'error');
+      return null;
+    }
+    const linkedQc = qcWorkbasketByPrimaryId.get(String(primary._id));
+    if (!linkedQc) {
+      showToast('Selected workbasket must have an active linked QC workbasket', 'error');
+      return null;
+    }
+    return {
+      workbasketId: String(primary._id),
+      qcWorkbasketId: String(linkedQc._id),
+    };
+  };
   const setUserActionLoading = (xID, isLoading) => {
     if (!xID) return;
     setActionLoadingByUser((prev) => ({
@@ -815,6 +837,12 @@ export const AdminPage = () => {
       showToast('Please enter a category name', 'error');
       return;
     }
+    if (!categoryForm.workbasketId) {
+      showToast('Please select a workbasket', 'error');
+      return;
+    }
+    const workbasketLink = resolvePrimaryAndQcLink(categoryForm.workbasketId);
+    if (!workbasketLink) return;
     
     setSubmitting(true);
     
@@ -824,12 +852,13 @@ export const AdminPage = () => {
         categoryForm.requiresRelatedEmployeeUser === true,
         Number(categoryForm.defaultSlaDays) || 0,
         Number(categoryForm.qcPercent) || 0,
+        workbasketLink,
       );
       
       if (response.success) {
         showToast('Category created successfully', 'success');
         setShowCategoryModal(false);
-        setCategoryForm({ name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
+        setCategoryForm({ name: '', workbasketId: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
         loadAdminData();
       } else {
         showToast(response.message || 'Failed to create category', 'error');
@@ -875,6 +904,8 @@ export const AdminPage = () => {
       showToast('Please select a workbasket', 'error');
       return;
     }
+    const workbasketLink = resolvePrimaryAndQcLink(subcategoryForm.workbasketId);
+    if (!workbasketLink) return;
     
     setSubmitting(true);
     
@@ -882,11 +913,12 @@ export const AdminPage = () => {
       const response = await categoryService.addSubcategory(
         selectedCategory._id,
         subcategoryForm.name.trim(),
-        subcategoryForm.workbasketId,
+        workbasketLink.workbasketId,
         subcategoryForm.requiresRelatedEmployeeUser === true,
         Number(subcategoryForm.defaultSlaDays) || 0,
         {
           qcPercent: Number(subcategoryForm.qcPercent) || 0,
+          qcWorkbasketId: workbasketLink.qcWorkbasketId,
           sop: buildSubcategoryKnowledgePayload(subcategoryForm),
         },
       );
@@ -933,6 +965,7 @@ export const AdminPage = () => {
     setEditCategoryForm({
       id: category._id,
       name: category.name || '',
+      workbasketId: String(category.workbasketId || ''),
       defaultSlaDays: String(category.defaultSlaDays || ''),
       qcPercent: String(category.qcPercent || ''),
       requiresRelatedEmployeeUser: category.requiresRelatedEmployeeUser === true,
@@ -1019,6 +1052,12 @@ export const AdminPage = () => {
 
   const handleUpdateCategory = async (e) => {
     e.preventDefault();
+    if (!editCategoryForm.workbasketId) {
+      showToast('Please select a workbasket', 'error');
+      return;
+    }
+    const workbasketLink = resolvePrimaryAndQcLink(editCategoryForm.workbasketId);
+    if (!workbasketLink) return;
     setSubmitting(true);
     try {
       const response = await categoryService.updateCategory(
@@ -1027,10 +1066,11 @@ export const AdminPage = () => {
         editCategoryForm.requiresRelatedEmployeeUser === true,
         Number(editCategoryForm.defaultSlaDays) || 0,
         Number(editCategoryForm.qcPercent) || 0,
+        workbasketLink,
       );
       if (response.success) {
         setShowEditCategoryModal(false);
-        setEditCategoryForm({ id: '', name: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
+        setEditCategoryForm({ id: '', name: '', workbasketId: '', defaultSlaDays: '', qcPercent: '', requiresRelatedEmployeeUser: false });
         showToast('Category updated successfully', 'success');
         loadAdminData();
       } else showToast(response.message || 'Failed to update category', 'error');
@@ -1041,17 +1081,24 @@ export const AdminPage = () => {
 
   const handleUpdateSubcategory = async (e) => {
     e.preventDefault();
+    if (!editSubcategoryForm.workbasketId) {
+      showToast('Please select a workbasket', 'error');
+      return;
+    }
+    const workbasketLink = resolvePrimaryAndQcLink(editSubcategoryForm.workbasketId);
+    if (!workbasketLink) return;
     setSubmitting(true);
     try {
       const response = await categoryService.updateSubcategory(
         editSubcategoryForm.categoryId,
         editSubcategoryForm.subcategoryId,
         editSubcategoryForm.name.trim(),
-        editSubcategoryForm.workbasketId,
+        workbasketLink.workbasketId,
         editSubcategoryForm.requiresRelatedEmployeeUser === true,
         Number(editSubcategoryForm.defaultSlaDays) || 0,
         {
           qcPercent: Number(editSubcategoryForm.qcPercent) || 0,
+          qcWorkbasketId: workbasketLink.qcWorkbasketId,
           sop: buildSubcategoryKnowledgePayload(editSubcategoryForm),
         },
       );
@@ -1098,15 +1145,35 @@ export const AdminPage = () => {
     let skippedCount = 0;
     let failedCount = 0;
 
+    const findEligiblePrimaryAndQc = (rawWorkbasket) => {
+      const workbasketValue = String(rawWorkbasket || '').trim();
+      if (!workbasketValue) return null;
+      const normalizedWorkbasket = workbasketValue.toLowerCase();
+      const matchedPrimary = primaryWorkbaskets.find((workbasket) => {
+        const byId = String(workbasket._id) === workbasketValue;
+        const byName = String(workbasket.name || '').trim().toLowerCase() === normalizedWorkbasket;
+        return byId || byName;
+      });
+      if (!matchedPrimary) return null;
+      const linkedQc = qcWorkbasketByPrimaryId.get(String(matchedPrimary._id));
+      if (!linkedQc) return null;
+      return {
+        workbasketId: String(matchedPrimary._id),
+        qcWorkbasketId: String(linkedQc._id),
+      };
+    };
+
     try {
       if (bulkPasteMode === 'categories') {
         const existingCategoryNames = new Set(categories.map((entry) => entry.name.trim().toLowerCase()));
 
         for (const row of rows) {
-          const [rawName] = parseDelimitedLine(row);
+          const [rawName, rawWorkbasket] = parseDelimitedLine(row);
           const name = rawName?.trim();
-          if (!name) {
-            skippedCount += 1;
+          const workbasketLink = findEligiblePrimaryAndQc(rawWorkbasket);
+          if (!name || !workbasketLink) {
+            skippedCount += !name ? 1 : 0;
+            failedCount += name && !workbasketLink ? 1 : 0;
             continue;
           }
           const key = name.toLowerCase();
@@ -1116,7 +1183,7 @@ export const AdminPage = () => {
           }
 
           try {
-            await categoryService.createCategory(name);
+            await categoryService.createCategory(name, false, 0, 0, workbasketLink);
             existingCategoryNames.add(key);
             createdCount += 1;
           } catch {
@@ -1146,13 +1213,8 @@ export const AdminPage = () => {
             skippedCount += 1;
             continue;
           }
-          const normalizedWorkbasket = workbasketValue.toLowerCase();
-          const matchedWorkbasket = workbaskets.find((workbasket) => {
-            const byId = String(workbasket._id) === workbasketValue;
-            const byName = String(workbasket.name || '').trim().toLowerCase() === normalizedWorkbasket;
-            return byId || byName;
-          });
-          if (!matchedWorkbasket) {
+          const workbasketLink = findEligiblePrimaryAndQc(workbasketValue);
+          if (!workbasketLink) {
             failedCount += 1;
             continue;
           }
@@ -1162,7 +1224,7 @@ export const AdminPage = () => {
 
           if (!category) {
             try {
-              await categoryService.createCategory(categoryName);
+              await categoryService.createCategory(categoryName, false, 0, 0, workbasketLink);
               const refreshed = await categoryService.getAdminCategories(false);
               const refreshedCategories = Array.isArray(refreshed?.data) ? refreshed.data.map(normalizeCategory).filter(Boolean) : [];
               refreshedCategories.forEach((entry) => {
@@ -1187,7 +1249,9 @@ export const AdminPage = () => {
           }
 
           try {
-            await categoryService.addSubcategory(category._id, subcategoryName, String(matchedWorkbasket._id));
+            await categoryService.addSubcategory(category._id, subcategoryName, workbasketLink.workbasketId, false, 0, {
+              qcWorkbasketId: workbasketLink.qcWorkbasketId,
+            });
             knownSubcategories.add(subcategoryKey);
             subcategoryIndex.set(categoryKey, knownSubcategories);
             createdCount += 1;
@@ -1784,17 +1848,19 @@ export const AdminPage = () => {
           <AdminCategoriesSection
             categories={categories}
             workbasketNameById={workbasketNameById}
+            qcWorkbasketByPrimaryId={qcWorkbasketByPrimaryId}
             onBulkUpload={() => handleOpenBulkUpload('categories')}
             onDownloadTemplate={() => downloadBulkTemplate('categories')}
             onCreateCategory={() => setShowCategoryModal(true)}
             onAddSubcategory={(category) => {
               setSelectedCategory(category);
               const emptyForm = createEmptySubcategoryForm();
-              const primaryWbs = (Array.isArray(workbaskets) ? workbaskets : []).filter(
-                (w) => w && w.isActive !== false && (w.type === 'PRIMARY' || !w.type)
-              );
-              if (primaryWbs.length === 1) {
-                emptyForm.workbasketId = String(primaryWbs[0]._id);
+              const categoryWbActive = category?.workbasketId
+                && primaryWorkbaskets.some((w) => String(w._id) === String(category.workbasketId));
+              if (categoryWbActive) {
+                emptyForm.workbasketId = String(category.workbasketId);
+              } else if (primaryWorkbaskets.length === 1) {
+                emptyForm.workbasketId = String(primaryWorkbaskets[0]._id);
               }
               setSubcategoryForm(emptyForm);
               setShowSubcategoryModal(true);
@@ -1928,6 +1994,7 @@ export const AdminPage = () => {
         onUploadKnowledgeFile={handleUploadKnowledgeFile}
         onDeleteKnowledgeFile={handleDeleteKnowledgeFile}
         workbaskets={workbaskets}
+        qcWorkbasketByPrimaryId={qcWorkbasketByPrimaryId}
       />
 
       <AdminClientModals

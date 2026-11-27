@@ -25,7 +25,7 @@ export const AdminBulkPasteModal = ({
           ? 'Paste rows from Excel/Sheets. Columns: BusinessName, BusinessEmail, PrimaryContactNumber, BusinessAddress (optional), PAN (optional), CIN (optional), TAN (optional), GST (optional).'
           : mode === 'subcategories'
             ? 'Paste 3 columns: CategoryName, SubcategoryName, Workbasket (name or id).'
-            : 'Paste one category name per line (or first column). Duplicate names are skipped.'}
+            : 'Paste 2 columns: CategoryName, Workbasket (name or id). Duplicate names are skipped.'}
       </div>
       <Textarea
         label="Paste Data"
@@ -35,8 +35,8 @@ export const AdminBulkPasteModal = ({
         placeholder={mode === 'clients'
           ? 'Acme Pvt Ltd\tops@acme.com\t9876543210\tMumbai'
           : mode === 'subcategories'
-            ? 'Tax\tGST Filing'
-            : 'Tax'}
+            ? 'Tax\tGST Filing\tTax Team'
+            : 'Tax\tTax Team'}
         required
       />
       <div className="admin__modal-actions">

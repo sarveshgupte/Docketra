@@ -33,8 +33,8 @@ export const useAdminDataLoader = ({
     return response;
   }, [setClients]);
 
-  const fetchWorkbaskets = useCallback(async () => {
-    const response = await adminApi.listWorkbaskets({ includeInactive: false });
+  const fetchWorkbaskets = useCallback(async ({ includeInactive = false } = {}) => {
+    const response = await adminApi.listWorkbaskets({ includeInactive });
     setWorkbaskets(response?.success ? (response.data || []) : []);
     return response;
   }, [setWorkbaskets]);
@@ -100,7 +100,7 @@ export const useAdminDataLoader = ({
       } else if (activeTab === 'categories') {
         const [response] = await Promise.all([
           categoryService.getAdminCategories(false),
-          fetchWorkbaskets(),
+          fetchWorkbaskets({ includeInactive: true }),
         ]);
         const normalizedCategories = (response?.success ? (response.data || []) : [])
           .map(normalizeCategory)

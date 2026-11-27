@@ -10,6 +10,7 @@ const { generateNextClientId } = require('../services/clientIdGenerator');
 const xIDGenerator = require('../services/xIDGenerator');
 const { enqueueBulkUploadJob } = require('../queues/bulkUpload.queue');
 const { eventBus } = require('../events/eventBus');
+const { ensureLinkedQcWorkbasket } = require('../services/workbasketGuardrails.service');
 const { logAuthEvent } = require('../services/audit.service');
 const { BULK_UPLOAD_SCHEMA, validateRow: validateSchemaRow } = require('../constants/bulkUploadSchema');
 const log = require('../utils/log');
@@ -295,17 +296,30 @@ const fetchExistingLookup = async ({ type, firmId }) => {
     return new Set(existing.map((entry) => String(entry.businessEmail || '').trim().toLowerCase()).filter(Boolean));
   }
   if (type === 'categories') {
-    const [existing, teams] = await Promise.all([
+    const [existing, teams, qcTeams] = await Promise.all([
       Category.find({ firmId, isDeleted: { $ne: true } })
-        .select('name isActive subcategories.name subcategories.workbasketId')
+        .select('name isActive workbasketId qcWorkbasketId subcategories.name subcategories.workbasketId subcategories.qcWorkbasketId')
         .lean(),
       Team.find({ firmId, isActive: true, type: 'PRIMARY' }).select('_id name').lean(),
+      Team.find({ firmId, type: 'QC', parentWorkbasketId: { $ne: null } }).select('_id isActive parentWorkbasketId').lean(),
     ]);
     const categorySet = new Set();
     const categoryStateMap = new Map();
     const categorySubcategorySet = new Set();
     const workbasketByName = new Map();
     const workbasketById = new Map();
+    const qcWorkbasketByPrimaryId = new Map();
+    const inactiveQcPrimaryIds = new Set();
+
+    qcTeams.forEach((qc) => {
+      const parentId = String(qc.parentWorkbasketId || '');
+      if (!parentId) return;
+      if (qc.isActive === false) {
+        inactiveQcPrimaryIds.add(parentId);
+      } else {
+        qcWorkbasketByPrimaryId.set(parentId, String(qc._id));
+      }
+    });
 
     existing.forEach((entry) => {
       const categoryKey = String(entry.name || '').trim().toLowerCase();
@@ -327,7 +341,13 @@ const fetchExistingLookup = async ({ type, firmId }) => {
     });
 
     return {
-      categorySet, categoryStateMap, categorySubcategorySet, workbasketByName, workbasketById,
+      categorySet,
+      categoryStateMap,
+      categorySubcategorySet,
+      workbasketByName,
+      workbasketById,
+      qcWorkbasketByPrimaryId,
+      inactiveQcPrimaryIds,
     };
   }
   if (type === 'team') {
@@ -410,6 +430,11 @@ const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicate
         invalid.push({ row: rowNumber, error: `Workbasket "${workbasketRaw}" does not exist or is inactive` });
         return;
       }
+      if (existingLookup.inactiveQcPrimaryIds?.has(mappedWorkbasketId)) {
+        invalid.push({ row: rowNumber, error: `Linked QC workbasket for "${workbasketRaw}" is inactive` });
+        return;
+      }
+      const mappedQcWorkbasketId = existingLookup.qcWorkbasketByPrimaryId?.get(mappedWorkbasketId) || null;
 
       if (seen.has(pairKey)) {
         invalid.push({ row: rowNumber, error: 'Duplicate category/subcategory row in file' });
@@ -442,6 +467,7 @@ const validateRows = async ({ type, parsedRows, fieldIndexMap, firmId, duplicate
           category: String(row.category || '').trim(),
           subcategory: String(row.subcategory || '').trim(),
           workbasketId: mappedWorkbasketId,
+          qcWorkbasketId: mappedQcWorkbasketId,
           workbasket: workbasketRaw,
         },
         dedupeKey: categoryKey,
@@ -570,16 +596,35 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
         const categoryName = String(row.data.category || '').trim();
         const subcategoryName = String(row.data.subcategory || '').trim();
         const categoryKey = categoryName.toLowerCase();
+        let resolvedQcWorkbasketId = row.data.qcWorkbasketId || null;
+
+        if (row.data.workbasketId && !resolvedQcWorkbasketId) {
+          const ensuredQc = await ensureLinkedQcWorkbasket({
+            firmId: user.firmId,
+            primaryWorkbasket: {
+              _id: row.data.workbasketId,
+              name: row.data.workbasket || 'Workbasket',
+              isActive: true,
+            },
+          });
+          resolvedQcWorkbasketId = ensuredQc?._id ? String(ensuredQc._id) : null;
+        }
 
         let categoryDoc = categoryCache.get(categoryKey);
         if (!categoryDoc) {
           categoryDoc = await Category.create({
             firmId: user.firmId,
             name: categoryName,
+            workbasketId: row.data.workbasketId || null,
+            qcWorkbasketId: resolvedQcWorkbasketId || null,
             isActive: true,
             subcategories: [],
           });
           categoryCache.set(categoryKey, categoryDoc);
+        } else if (!categoryDoc.workbasketId && row.data.workbasketId) {
+          categoryDoc.workbasketId = row.data.workbasketId;
+          categoryDoc.qcWorkbasketId = resolvedQcWorkbasketId || null;
+          if (!subcategoryName) await categoryDoc.save();
         }
 
         if (subcategoryName) {
@@ -591,6 +636,7 @@ const processBulkRows = async ({ type, rows, user, duplicateMode, jobId = null }
               id: new mongoose.Types.ObjectId().toString(),
               name: subcategoryName,
               workbasketId: row.data.workbasketId || null,
+              qcWorkbasketId: resolvedQcWorkbasketId || null,
               isActive: true,
             });
             await categoryDoc.save();

@@ -80,6 +80,7 @@ const getEffectiveQcDisplay = (category, subcategory) => {
 export const AdminCategoriesSection = ({
   categories,
   workbasketNameById,
+  qcWorkbasketByPrimaryId,
   onBulkUpload,
   onDownloadTemplate,
   onCreateCategory,
@@ -181,6 +182,37 @@ export const AdminCategoriesSection = ({
                       {Number(category.defaultSlaDays) > 0 ? ` · Default SLA: ${category.defaultSlaDays}d` : ''}
                       {Number(category.qcPercent) > 0 ? ` · Category QC: ${category.qcPercent}%` : ''}
                     </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      {(() => {
+                        const categoryWbName = workbasketNameById.get(String(category.workbasketId || ''));
+                        const linkedQc = (category.qcWorkbasketId && workbasketNameById.get(String(category.qcWorkbasketId)))
+                          || qcWorkbasketByPrimaryId?.get(String(category.workbasketId || ''))?.name
+                          || '';
+                        if (!categoryWbName) {
+                          return (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-amber-700 bg-amber-50 border border-amber-200">
+                              Workbasket not linked — edit category to assign
+                            </span>
+                          );
+                        }
+                        return (
+                          <>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-slate-600 bg-slate-100 border border-slate-200">
+                              WB: {categoryWbName}
+                            </span>
+                            {linkedQc ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200">
+                                QC WB: {linkedQc}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-amber-700 bg-amber-50 border border-amber-200">
+                                QC Workbasket missing or inactive
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
 
@@ -252,6 +284,7 @@ export const AdminCategoriesSection = ({
                           <tr>
                             <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">Subcategory</th>
                             <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">Linked Workbasket</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">Linked QC Workbasket</th>
                             <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">Default SLA Target</th>
                             <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">QC Sampling</th>
                             <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400">Status</th>
@@ -261,6 +294,9 @@ export const AdminCategoriesSection = ({
                         <tbody className="bg-white divide-y divide-slate-50">
                           {category.subcategories.map((sub) => {
                             const linkedWorkbasketName = workbasketNameById.get(String(sub?.workbasketId || ''));
+                            const linkedQcWorkbasketName = (sub?.qcWorkbasketId && workbasketNameById.get(String(sub.qcWorkbasketId)))
+                              || qcWorkbasketByPrimaryId?.get(String(sub?.workbasketId || ''))?.name
+                              || '';
                             const sla = getEffectiveSlaDisplay(category, sub);
                             const qc = getEffectiveQcDisplay(category, sub);
                             return (
@@ -286,6 +322,15 @@ export const AdminCategoriesSection = ({
                                     </span>
                                   ) : (
                                     <span className="text-slate-400 text-xs font-medium">—</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                  {linkedQcWorkbasketName ? (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200">
+                                      {linkedQcWorkbasketName}
+                                    </span>
+                                  ) : (
+                                    <span className="text-amber-600 text-xs font-medium">Unlinked / Inactive</span>
                                   )}
                                 </td>
                                 <td className="px-4 py-3.5 whitespace-nowrap">

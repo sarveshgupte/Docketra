@@ -201,6 +201,19 @@ const createDefaultCategories = async (firmId, { session, workbasketMap, templat
 
   const normalizedTemplate = normalizeTemplate(template);
   const categories = [];
+  const primaryWorkbasketIds = [...workbasketMap.values()]
+    .filter((wb) => wb?._id && String(wb.type || 'PRIMARY').toUpperCase() !== 'QC')
+    .map((wb) => wb._id);
+  const existingQcTeams = primaryWorkbasketIds.length > 0
+    ? await Team.find({
+        firmId,
+        type: 'QC',
+        parentWorkbasketId: { $in: primaryWorkbasketIds },
+      }).session(session || null).select('_id parentWorkbasketId').lean()
+    : [];
+  const qcIdByPrimaryId = new Map(
+    existingQcTeams.map((qc) => [String(qc.parentWorkbasketId), qc._id]),
+  );
 
   for (const categoryTemplate of normalizedTemplate.categories) {
     let category = await Category.findOne({ firmId, name: categoryTemplate.name }).session(session || null);
@@ -221,12 +234,27 @@ const createDefaultCategories = async (firmId, { session, workbasketMap, templat
     for (const subcategoryTemplate of categoryTemplate.subcategories) {
       const lookupKey = String(subcategoryTemplate.name || '').trim().toLowerCase();
       const mappedWorkbasket = workbasketMap.get(subcategoryTemplate.workbasket);
+      let mappedQcId = mappedWorkbasket?._id ? (qcIdByPrimaryId.get(String(mappedWorkbasket._id)) || null) : null;
+      if (mappedWorkbasket?._id && !mappedQcId) {
+        const ensuredQc = await ensureLinkedQcWorkbasket({ firmId, primaryWorkbasket: mappedWorkbasket, session });
+        mappedQcId = ensuredQc?._id || null;
+        if (mappedQcId) qcIdByPrimaryId.set(String(mappedWorkbasket._id), mappedQcId);
+      }
+
+      if (mappedWorkbasket?._id && !category.workbasketId) {
+        category.workbasketId = mappedWorkbasket._id;
+        category.qcWorkbasketId = mappedQcId || null;
+      } else if (category.workbasketId && !category.qcWorkbasketId) {
+        category.qcWorkbasketId = qcIdByPrimaryId.get(String(category.workbasketId)) || null;
+      }
+
       if (!mappedWorkbasket?._id || existingNameSet.has(lookupKey)) {
         if (existingNameSet.has(lookupKey)) {
           const existing = category.subcategories.find((entry) => String(entry.name || '').trim().toLowerCase() === lookupKey);
           if (existing) {
             existing.isActive = true;
             existing.workbasketId = existing.workbasketId || mappedWorkbasket?._id || null;
+            existing.qcWorkbasketId = existing.qcWorkbasketId || mappedQcId || null;
             if (typeof existing.employeeContextEnabled === 'undefined') existing.employeeContextEnabled = subcategoryTemplate.employeeContextEnabled === true;
           }
         }
@@ -237,6 +265,7 @@ const createDefaultCategories = async (firmId, { session, workbasketMap, templat
         id: new mongoose.Types.ObjectId().toString(),
         name: subcategoryTemplate.name,
         workbasketId: mappedWorkbasket._id,
+        qcWorkbasketId: mappedQcId || null,
         employeeContextEnabled: subcategoryTemplate.employeeContextEnabled === true,
         isActive: true,
       });
@@ -358,7 +387,17 @@ const setupDefaultFirm = async (firmId, primaryAdminUser, {
     }
   };
 
-  if (session) {
+  const isStandaloneTransactionError = (error) => {
+    const message = String(error?.message || '').toLowerCase();
+    return (
+      error?.code === 20
+      || message.includes('replica set')
+      || message.includes('transaction numbers are only allowed')
+      || message.includes('mongos')
+    );
+  };
+
+  if (session !== undefined) {
     return execute(session);
   }
 
@@ -369,6 +408,11 @@ const setupDefaultFirm = async (firmId, primaryAdminUser, {
       output = await execute(localSession);
     });
     return output;
+  } catch (error) {
+    if (isStandaloneTransactionError(error)) {
+      return execute(null);
+    }
+    throw error;
   } finally {
     await localSession.endSession();
   }

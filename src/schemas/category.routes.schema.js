@@ -75,6 +75,8 @@ module.exports = {
   'POST /': {
     body: z.object({
       name: nonEmptyString,
+      workbasketId: objectIdString.optional(),
+      qcWorkbasketId: objectIdString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
       defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(),
@@ -86,6 +88,8 @@ module.exports = {
     params: z.object({ id: z.union([objectIdString, nonEmptyString]) }),
     body: z.object({
       name: nonEmptyString.optional(),
+      workbasketId: objectIdString.optional(),
+      qcWorkbasketId: objectIdString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
       defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(),
@@ -105,6 +109,7 @@ module.exports = {
     body: z.object({
       name: nonEmptyString,
       workbasketId: objectIdString,
+      qcWorkbasketId: objectIdString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
       defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(),
@@ -123,6 +128,7 @@ module.exports = {
     body: z.object({
       name: nonEmptyString.optional(),
       workbasketId: objectIdString.optional(),
+      qcWorkbasketId: objectIdString.optional(),
       description: z.string().trim().optional(),
       isActive: z.boolean().optional(),
       defaultSlaDays: z.coerce.number().int().min(0).max(365).optional(),

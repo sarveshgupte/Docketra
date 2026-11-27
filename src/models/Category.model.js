@@ -85,6 +85,11 @@ const subcategorySchema = new mongoose.Schema({
     ref: 'Team',
     required: [true, 'Workbasket required'],
   },
+  qcWorkbasketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+  },
   
   /**
    * Soft delete mechanism for subcategories
@@ -187,6 +192,16 @@ const categorySchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true,
+  },
+  workbasketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
+  },
+  qcWorkbasketId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Team',
+    default: null,
   },
   defaultSlaDays: {
     type: Number,

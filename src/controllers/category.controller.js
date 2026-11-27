@@ -125,6 +125,47 @@ const normalizeChecklistTemplate = (items = []) => {
 
 const normalizeSlaDays = (value) => Math.max(0, Number(value) || 0);
 const normalizeQcPercent = (value) => Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
+const normalizeEntityName = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+const buildNameCollisionPattern = (normalizedName) => (
+  new RegExp(`^${normalizedName.split(' ').map(escapeRegExp).join('\\s+')}$`, 'i')
+);
+const isDuplicateKeyError = (error) => (
+  error?.code === 11000
+  || error?.cause?.code === 11000
+  || /E11000 duplicate key/i.test(String(error?.message || ''))
+);
+
+const resolveCategoryWorkbasketLink = async ({ workbasketId, qcWorkbasketId = null, firmId, req, res, missingMessage = 'Valid active primary workbasket is required' }) => {
+  if (!workbasketId) {
+    res.status(400).json({ success: false, message: missingMessage });
+    return null;
+  }
+
+  const validation = await validateCategoryMappedWorkbasket({
+    workbasketId,
+    qcWorkbasketId,
+    firmId,
+    req,
+  });
+  if (!validation.valid) {
+    res.status(400).json({ success: false, message: validation.message });
+    return null;
+  }
+  return {
+    workbasket: validation.workbasket,
+    qcWorkbasket: validation.qcWorkbasket || null,
+  };
+};
+
+const findScopedCategory = async ({ id, firmScope, res, select = null }) => {
+  const query = Category.findOne({ _id: id, ...firmScope });
+  const category = select && typeof query?.select === 'function' ? await query.select(select) : await query;
+  if (!category) {
+    res.status(404).json({ success: false, message: 'Category not found' });
+    return null;
+  }
+  return category;
+};
 
 /**
  * Category Controller for Admin-Managed Categories
@@ -242,41 +283,61 @@ const getCategoryById = async (req, res) => {
  */
 const createCategory = async (req, res) => {
   try {
-    const { name, defaultSlaDays = 0, qcPercent = 0, requiresRelatedEmployeeUser = false } = req.body;
+    const {
+      name,
+      defaultSlaDays = 0,
+      qcPercent = 0,
+      requiresRelatedEmployeeUser = false,
+      workbasketId,
+      qcWorkbasketId,
+    } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
-    
-    if (!name) {
+
+    const normalizedName = normalizeEntityName(name);
+    if (!normalizedName) {
       return res.status(400).json({
         success: false,
         message: 'Category name is required',
       });
     }
-    
-    // Check for duplicate name (case-insensitive)
-    const escapedName = escapeRegExp(name.trim());
-    const existing = await Category.findOne({ 
-      ...firmScope,
-      name: { $regex: new RegExp(`^${escapedName}$`, 'i') }
+
+    const resolvedFirmId = firmScope.firmId || req.user?.firmId;
+    const wbLink = await resolveCategoryWorkbasketLink({
+      workbasketId,
+      qcWorkbasketId,
+      firmId: resolvedFirmId,
+      req,
+      res,
+      missingMessage: 'Valid active primary workbasket is required',
     });
-    
+    if (!wbLink) return;
+
+    // Check for duplicate name (case-insensitive & whitespace-normalized)
+    const existing = await Category.findOne({
+      ...firmScope,
+      name: buildNameCollisionPattern(normalizedName),
+    });
+
     if (existing) {
       return res.status(409).json({
         success: false,
         message: 'Category with this name already exists',
       });
     }
-    
+
     const category = new Category({
       ...firmScope,
-      name: name.trim(),
+      name: normalizedName,
+      workbasketId: wbLink.workbasket._id,
+      qcWorkbasketId: wbLink.qcWorkbasket?._id || null,
       subcategories: [],
       isActive: true,
       defaultSlaDays: normalizeSlaDays(defaultSlaDays),
       qcPercent: normalizeQcPercent(qcPercent),
       requiresRelatedEmployeeUser: requiresRelatedEmployeeUser === true,
     });
-    
+
     await category.save();
     await safeLogCategoryMutation(req, {
       description: `Category created: ${category.name}`,
@@ -284,17 +345,25 @@ const createCategory = async (req, res) => {
         action: 'CATEGORY_CREATED',
         categoryId: category._id?.toString(),
         categoryName: category.name,
+        workbasketId: String(wbLink.workbasket._id),
+        qcWorkbasketId: wbLink.qcWorkbasket?._id ? String(wbLink.qcWorkbasket._id) : null,
         defaultSlaDays: category.defaultSlaDays,
         qcPercent: category.qcPercent,
       },
     });
-    
+
     res.status(201).json({
       success: true,
       data: category,
       message: 'Category created successfully',
     });
   } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Category with this name already exists',
+      });
+    }
     res.status(400).json({
       success: false,
       message: 'Error creating category',
@@ -309,42 +378,60 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays, qcPercent, requiresRelatedEmployeeUser } = req.body;
+    const {
+      name,
+      defaultSlaDays,
+      qcPercent,
+      requiresRelatedEmployeeUser,
+      workbasketId,
+      qcWorkbasketId,
+    } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
-    
-    if (!name) {
+
+    const category = await findScopedCategory({ id, firmScope, res });
+    if (!category) return;
+
+    const normalizedName = typeof name !== 'undefined'
+      ? normalizeEntityName(name)
+      : normalizeEntityName(category.name);
+    if (!normalizedName) {
       return res.status(400).json({
         success: false,
         message: 'Category name is required',
       });
     }
-    
-    const category = await Category.findOne({ _id: id, ...firmScope });
-    
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found',
-      });
-    }
-    
-    // Check for duplicate name (case-insensitive), excluding current category
-    const escapedName = escapeRegExp(name.trim());
-    const existing = await Category.findOne({ 
+
+    // Check for duplicate name (case-insensitive & whitespace-normalized), excluding current category
+    const existing = await Category.findOne({
       _id: { $ne: id },
       ...firmScope,
-      name: { $regex: new RegExp(`^${escapedName}$`, 'i') }
+      name: buildNameCollisionPattern(normalizedName),
     });
-    
+
     if (existing) {
       return res.status(409).json({
         success: false,
         message: 'Category with this name already exists',
       });
     }
-    
-    category.name = name.trim();
+
+    const targetWorkbasketId = typeof workbasketId !== 'undefined' ? workbasketId : category.workbasketId;
+    const targetQcWorkbasketId = typeof qcWorkbasketId !== 'undefined' ? qcWorkbasketId : null;
+    const resolvedFirmId = category.firmId || firmScope.firmId || req.user?.firmId;
+    const wbLink = await resolveCategoryWorkbasketLink({
+      workbasketId: targetWorkbasketId,
+      qcWorkbasketId: targetQcWorkbasketId,
+      firmId: resolvedFirmId,
+      req,
+      res,
+      missingMessage: 'Valid active primary workbasket is required',
+    });
+    if (!wbLink) return;
+
+    category.name = normalizedName;
+    category.workbasketId = wbLink.workbasket._id;
+    category.qcWorkbasketId = wbLink.qcWorkbasket?._id || null;
     if (typeof defaultSlaDays !== 'undefined') {
       category.defaultSlaDays = normalizeSlaDays(defaultSlaDays);
     }
@@ -361,17 +448,25 @@ const updateCategory = async (req, res) => {
         action: 'CATEGORY_UPDATED',
         categoryId: category._id?.toString(),
         categoryName: category.name,
+        workbasketId: String(wbLink.workbasket._id),
+        qcWorkbasketId: wbLink.qcWorkbasket?._id ? String(wbLink.qcWorkbasket._id) : null,
         defaultSlaDays: category.defaultSlaDays,
         qcPercent: category.qcPercent,
       },
     });
-    
+
     res.json({
       success: true,
       data: category,
       message: 'Category updated successfully',
     });
   } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      return res.status(409).json({
+        success: false,
+        message: 'Category with this name already exists',
+      });
+    }
     res.status(400).json({
       success: false,
       message: 'Error updating category',
@@ -444,11 +539,22 @@ const toggleCategoryStatus = async (req, res) => {
 const addSubcategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, defaultSlaDays = 0, qcPercent = 0, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser = false } = req.body;
+    const {
+      name,
+      defaultSlaDays = 0,
+      qcPercent = 0,
+      workbasketId,
+      qcWorkbasketId,
+      deadlineRule,
+      checklistTemplate,
+      sop,
+      requiresRelatedEmployeeUser = false,
+    } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
-    
-    if (!name) {
+
+    const normalizedName = normalizeEntityName(name);
+    if (!normalizedName) {
       return res.status(400).json({
         success: false,
         message: 'Subcategory name is required',
@@ -460,50 +566,42 @@ const addSubcategory = async (req, res) => {
         message: 'Workbasket required',
       });
     }
-    
-    const category = await Category.findOne({ _id: id, ...firmScope });
-    
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found',
-      });
-    }
+
+    const category = await findScopedCategory({ id, firmScope, res });
+    if (!category) return;
 
     const resolvedFirmId = category.firmId || firmScope.firmId || req.user?.firmId;
-
-    const workbasketValidation = await validateCategoryMappedWorkbasket({
+    const wbLink = await resolveCategoryWorkbasketLink({
       workbasketId,
+      qcWorkbasketId,
       firmId: resolvedFirmId,
       req,
+      res,
+      missingMessage: 'Workbasket required',
     });
-    if (!workbasketValidation.valid) {
-      return res.status(400).json({
-        success: false,
-        message: workbasketValidation.message,
-      });
-    }
-    const workbasket = workbasketValidation.workbasket;
-    
-    // Check for duplicate subcategory name within this category (case-insensitive)
+    if (!wbLink) return;
+    const { workbasket, qcWorkbasket } = wbLink;
+
+    // Check for duplicate subcategory name within this category (case-insensitive & whitespace-normalized)
     const duplicate = category.subcategories.find(
-      sub => sub.name.toLowerCase() === name.trim().toLowerCase()
+      (sub) => normalizeEntityName(sub.name).toLowerCase() === normalizedName.toLowerCase(),
     );
-    
+
     if (duplicate) {
       return res.status(409).json({
         success: false,
         message: 'Subcategory with this name already exists in this category',
       });
     }
-    
+
     // Generate unique subcategory ID
     const subcategoryId = new mongoose.Types.ObjectId().toString();
-    
+
     category.subcategories.push({
       id: subcategoryId,
-      name: name.trim(),
+      name: normalizedName,
       workbasketId: workbasket._id,
+      qcWorkbasketId: qcWorkbasket?._id || null,
       isActive: true,
       defaultSlaDays: normalizeSlaDays(defaultSlaDays),
       qcPercent: normalizeQcPercent(qcPercent),
@@ -512,22 +610,23 @@ const addSubcategory = async (req, res) => {
       checklistTemplate: normalizeChecklistTemplate(checklistTemplate || []),
       ...(typeof sop !== 'undefined' ? { sop: normalizeSubcategorySop(sop, { actorXID: req.user?.xID }) } : {}),
     });
-    
+
     await category.save();
     await safeLogCategoryMutation(req, {
-      description: `Subcategory added: ${category.name} / ${name.trim()}`,
+      description: `Subcategory added: ${category.name} / ${normalizedName}`,
       metadata: {
         action: 'SUBCATEGORY_CREATED',
         categoryId: category._id?.toString(),
         categoryName: category.name,
         subcategoryId,
-        subcategoryName: name.trim(),
+        subcategoryName: normalizedName,
         workbasketId: String(workbasket._id),
+        qcWorkbasketId: qcWorkbasket?._id ? String(qcWorkbasket._id) : null,
         defaultSlaDays: normalizeSlaDays(defaultSlaDays),
         qcPercent: normalizeQcPercent(qcPercent),
       },
     });
-    
+
     res.status(201).json({
       success: true,
       data: category,
@@ -548,70 +647,79 @@ const addSubcategory = async (req, res) => {
 const updateSubcategory = async (req, res) => {
   try {
     const { id, subcategoryId } = req.params;
-    const { name, defaultSlaDays, qcPercent, workbasketId, deadlineRule, checklistTemplate, sop, requiresRelatedEmployeeUser } = req.body;
+    const {
+      name,
+      defaultSlaDays,
+      qcPercent,
+      workbasketId,
+      qcWorkbasketId,
+      deadlineRule,
+      checklistTemplate,
+      sop,
+      requiresRelatedEmployeeUser,
+    } = req.body;
     const firmScope = resolveCategoryFirmScope(req, res);
     if (!firmScope) return;
-    
-    if (!name) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subcategory name is required',
-      });
-    }
-    
-    const category = await Category.findOne({ _id: id, ...firmScope });
-    
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: 'Category not found',
-      });
-    }
-    
-    const subcategory = category.subcategories.find(sub => sub.id === subcategoryId);
-    
+
+    const category = await findScopedCategory({ id, firmScope, res });
+    if (!category) return;
+
+    const subcategory = category.subcategories.find((sub) => sub.id === subcategoryId);
+
     if (!subcategory) {
       return res.status(404).json({
         success: false,
         message: 'Subcategory not found',
       });
     }
-    
+
+    const normalizedName = typeof name !== 'undefined'
+      ? normalizeEntityName(name)
+      : normalizeEntityName(subcategory.name);
+    if (!normalizedName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subcategory name is required',
+      });
+    }
+
     // Check for duplicate subcategory name within this category (case-insensitive), excluding current
     const duplicate = category.subcategories.find(
-      sub => sub.id !== subcategoryId && sub.name.toLowerCase() === name.trim().toLowerCase()
+      (sub) => sub.id !== subcategoryId && normalizeEntityName(sub.name).toLowerCase() === normalizedName.toLowerCase(),
     );
-    
+
     if (duplicate) {
       return res.status(409).json({
         success: false,
         message: 'Subcategory with this name already exists in this category',
       });
     }
-    
-    subcategory.name = name.trim();
+
+    subcategory.name = normalizedName;
     const resolvedFirmId = category.firmId || firmScope.firmId || req.user?.firmId;
-    if (typeof workbasketId !== 'undefined') {
-      if (!workbasketId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Workbasket required',
-        });
-      }
-      const workbasketValidation = await validateCategoryMappedWorkbasket({
-        workbasketId,
+    if (typeof workbasketId !== 'undefined' && !workbasketId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Workbasket required',
+      });
+    }
+
+    const targetWorkbasketId = typeof workbasketId !== 'undefined' ? workbasketId : subcategory.workbasketId;
+    if (typeof workbasketId !== 'undefined' || typeof qcWorkbasketId !== 'undefined' || !subcategory.qcWorkbasketId) {
+      const wbLink = await resolveCategoryWorkbasketLink({
+        workbasketId: targetWorkbasketId,
+        qcWorkbasketId: typeof qcWorkbasketId !== 'undefined' ? qcWorkbasketId : null,
         firmId: resolvedFirmId,
         req,
+        res,
+        missingMessage: 'Workbasket required',
       });
-      if (!workbasketValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: workbasketValidation.message,
-        });
-      }
-      const workbasket = workbasketValidation.workbasket;
+      if (!wbLink) return;
+
+      const { workbasket, qcWorkbasket } = wbLink;
       const previousWorkbasketId = subcategory.workbasketId ? String(subcategory.workbasketId) : null;
       subcategory.workbasketId = workbasket._id;
+      subcategory.qcWorkbasketId = qcWorkbasket?._id || null;
 
       if (previousWorkbasketId && previousWorkbasketId !== String(workbasket._id)) {
         const moveResult = await Case.updateMany({
@@ -668,11 +776,12 @@ const updateSubcategory = async (req, res) => {
         subcategoryId: subcategory.id,
         subcategoryName: subcategory.name,
         workbasketId: subcategory.workbasketId ? String(subcategory.workbasketId) : null,
+        qcWorkbasketId: subcategory.qcWorkbasketId ? String(subcategory.qcWorkbasketId) : null,
         defaultSlaDays: subcategory.defaultSlaDays,
         qcPercent: subcategory.qcPercent,
       },
     });
-    
+
     res.json({
       success: true,
       data: category,

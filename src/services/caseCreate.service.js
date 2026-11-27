@@ -373,7 +373,9 @@ module.exports = (deps) => {
       }
 
       if (!routedWorkbasketId) {
-        routedWorkbasketId = resolvedWorkbasketId ? String(resolvedWorkbasketId) : null;
+        routedWorkbasketId = categoryDoc?.workbasketId
+          ? String(categoryDoc.workbasketId)
+          : (resolvedWorkbasketId ? String(resolvedWorkbasketId) : null);
       }
 
       const employeeContextEnabled = Boolean(subcategoryDoc?.employeeContextEnabled);
