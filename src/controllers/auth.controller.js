@@ -22,9 +22,9 @@ const createAuthPasswordService = require('../services/authPassword.service');
 const xIDGenerator = require('../services/xIDGenerator');
 const signupService = require('../services/signup.service');
 const jwtService = require('../services/jwt.service');
-const { isSuperAdminRole, normalizeRole } = require('../utils/role.utils');
+const { isSuperAdminRole, normalizeRole, hasFirmRoleAtLeast, isPrimaryAdminActor } = require('../utils/role.utils');
 const { getTutorialStatus, shouldShowWelcomeTutorial } = require('../utils/tutorialState.utils');
-const { assertPrimaryAdmin, canInviteRole, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
+const { canInviteRole, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { normalizeFirmSlug } = require('../utils/slugify');
 const { isActiveStatus, getFirmInactiveCode } = require('../utils/status.utils');
 const { validatePasswordStrength, PASSWORD_POLICY_MESSAGE } = require('../utils/passwordPolicy');
@@ -2582,9 +2582,22 @@ const createUser = async (req, res) => {
  * Activate user (Admin only)
  * PUT /api/admin/users/:xID/activate
  */
+const assertCanManageTargetUserStatus = (actor, targetUser = null) => {
+  if (!hasFirmRoleAtLeast(actor, 'ADMIN')) {
+    const err = new Error('Admin access required to update user status');
+    err.statusCode = 403;
+    throw err;
+  }
+  if (targetUser && hasFirmRoleAtLeast(targetUser, 'ADMIN') && !isPrimaryAdminActor(actor)) {
+    const err = new Error('Only Primary Admin can modify Admin accounts');
+    err.statusCode = 403;
+    throw err;
+  }
+};
+
 const activateUser = async (req, res) => {
   try {
-    assertPrimaryAdmin(req.user);
+    assertCanManageTargetUserStatus(req.user);
     const { xID } = req.params;
     
     // Get admin from authenticated request
@@ -2599,6 +2612,8 @@ const activateUser = async (req, res) => {
         message: 'User not found',
       });
     }
+
+    assertCanManageTargetUserStatus(admin, user);
 
     if (user.mustSetPassword || !user.passwordSetAt) {
       return res.status(400).json({
@@ -2666,6 +2681,13 @@ const activateUser = async (req, res) => {
       });
     }
 
+    if (Number.isInteger(error?.statusCode)) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error activating user',
@@ -2679,7 +2701,7 @@ const activateUser = async (req, res) => {
  */
 const deactivateUser = async (req, res) => {
   try {
-    assertPrimaryAdmin(req.user);
+    assertCanManageTargetUserStatus(req.user);
     const { xID } = req.params;
     
     // Get admin from authenticated request
@@ -2702,6 +2724,8 @@ const deactivateUser = async (req, res) => {
         message: 'User not found',
       });
     }
+
+    assertCanManageTargetUserStatus(admin, user);
     
     // PROTECTION: Prevent deactivation of primary admin and system users
     try {
@@ -2759,6 +2783,13 @@ const deactivateUser = async (req, res) => {
       message: 'User deactivated successfully',
     });
   } catch (error) {
+    if (Number.isInteger(error?.statusCode)) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error deactivating user',
@@ -3332,7 +3363,7 @@ const resendSetupEmail = async (req, res) => {
  */
 const updateUserStatus = async (req, res) => {
   try {
-    assertPrimaryAdmin(req.user);
+    assertCanManageTargetUserStatus(req.user);
     const { xID } = req.params;
     const { active, status } = req.body;
     
@@ -3374,6 +3405,8 @@ const updateUserStatus = async (req, res) => {
         message: 'User not found',
       });
     }
+
+    assertCanManageTargetUserStatus(admin, user);
     
     // PROTECTION: Prevent deactivation of primary admin and system users
     if (resolvedStatus === 'disabled') {
@@ -3435,6 +3468,13 @@ const updateUserStatus = async (req, res) => {
       message: `User ${resolvedStatus === 'active' ? 'activated' : 'deactivated'} successfully`,
     });
   } catch (error) {
+    if (Number.isInteger(error?.statusCode)) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Error updating user status',

@@ -263,12 +263,15 @@ async function resolveDocketWithTeamRestriction({ docketId, actor, firmId }) {
 
 async function managerMoveDocket({ docketId, actor, firmId, to }) {
   const docket = await findDocket({ docketId, firmId });
-  if (String(actor.role || '').toUpperCase() !== 'MANAGER') {
+  const isAdminActor = isAdmin(actor.role);
+  const isManagerActor = String(actor.role || '').toUpperCase() === 'MANAGER';
+  if (!isAdminActor && !isManagerActor) {
     throw makeError('Manager role required', 403);
   }
-  if (String(docket.ownerTeamId || '') !== String(actor.teamId || '')) {
+  if (!isAdminActor && String(docket.ownerTeamId || '') !== String(actor.teamId || '')) {
     throw makeError('Cross-team movement is forbidden', 403);
   }
+  const effectiveTeamId = isAdminActor ? (docket.ownerTeamId || actor.teamId || null) : actor.teamId;
 
   const targetType = String(to?.type || '').toUpperCase();
   if (!['WL', 'WB'].includes(targetType)) {
@@ -277,15 +280,19 @@ async function managerMoveDocket({ docketId, actor, firmId, to }) {
 
   if (targetType === 'WL') {
     const targetUserXid = String(to.userXID || '').toUpperCase();
-    const targetUser = await User.findOne({ xID: targetUserXid, firmId, teamId: actor.teamId, status: { $ne: 'deleted' } });
-    if (!targetUser) throw makeError('Target user must be in manager team', 400);
+    const userFilter = { xID: targetUserXid, firmId, status: { $ne: 'deleted' } };
+    if (!isAdminActor) {
+      userFilter.teamId = actor.teamId;
+    }
+    const targetUser = await User.findOne(userFilter);
+    if (!targetUser) throw makeError(isAdminActor ? 'Target user not found' : 'Target user must be in manager team', 400);
     const prevAssignee = docket.assignedToXID;
     docket.assignedToXID = targetUserXid;
     docket.status = CaseStatus.IN_PROGRESS;
     docket.state = 'IN_PROGRESS';
     docket.queueType = 'PERSONAL';
-    docket.ownerTeamId = actor.teamId;
-    docket.workbasketId = actor.teamId;
+    docket.ownerTeamId = effectiveTeamId;
+    docket.workbasketId = effectiveTeamId;
     await createNotification({ firmId, recipientXID: targetUserXid, type: NotificationTypes.DOCKET_ASSIGNED, docketId, message: `Docket ${docketId} has been assigned to you.` });
 
     await logCaseHistory({
@@ -308,8 +315,8 @@ async function managerMoveDocket({ docketId, actor, firmId, to }) {
     docket.status = CaseStatus.UNASSIGNED || 'UNASSIGNED';
     docket.state = 'IN_WB';
     docket.queueType = 'GLOBAL';
-    docket.ownerTeamId = actor.teamId;
-    docket.workbasketId = actor.teamId;
+    docket.ownerTeamId = effectiveTeamId;
+    docket.workbasketId = effectiveTeamId;
 
     await logCaseHistory({
       caseId: docketId,

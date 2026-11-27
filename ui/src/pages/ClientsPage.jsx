@@ -26,6 +26,7 @@ import { buildTemplateCsv } from '../constants/bulkUploadSchema';
 import { useUnsavedChangesPrompt } from '../hooks/useUnsavedChangesPrompt';
 import { useQueryState } from '../hooks/useQueryState';
 import { canManageClients as canManageClientsByRoleOrPermission } from '../utils/permissions';
+import { isFirmAdminUser } from '../utils/firmAccess';
 import './ClientsPage.css';
 
 const toDisplayString = (value, fallback = '—') => {
@@ -145,6 +146,7 @@ export const ClientsPage = () => {
   const hasRowsRef = useRef(false);
   const retryTimerRef = useRef(null);
   const canManageClients = canManageClientsByRoleOrPermission(user);
+  const canWriteClients = isFirmAdminUser(user) || (Array.isArray(user?.permissions) && user.permissions.includes('CLIENT_MANAGE'));
   const [repairingEncryption, setRepairingEncryption] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -531,7 +533,7 @@ export const ClientsPage = () => {
 
   const handleSaveClient = async (event) => {
     event.preventDefault();
-    if (!canManageClients) return;
+    if (!canWriteClients) return;
     if (!validateClientForm()) {
       setClientFormMessage({ type: 'error', text: 'Please resolve the highlighted fields before saving.' });
       return;
@@ -711,7 +713,7 @@ export const ClientsPage = () => {
       cellClassName: 'min-w-[10rem]',
       render: (client) => (
         <div className="admin__actions clients-table-actions">
-          {canManageClients ? (
+          {canWriteClients ? (
             <>
               <Button size="small" variant="secondary" onClick={() => openEditClientModal(client)}>Edit Client</Button>
               {!(client.isDefaultClient || client.isSystemClient || client.isInternal) && (
@@ -729,7 +731,7 @@ export const ClientsPage = () => {
         </div>
       ),
     },
-  ], [canManageClients, openEditClientModal, handleToggleClientStatus, openEditCfsModal]);
+  ], [canWriteClients, openEditClientModal, handleToggleClientStatus, openEditCfsModal]);
 
   const refreshSelectedClient = async () => {
     if (!editCfsClient?.clientId) return;
@@ -805,15 +807,17 @@ export const ClientsPage = () => {
       title="Clients"
       subtitle="View and manage registered client workspaces, compliance notes, and attachments."
       actions={canManageClients ? (
-          <div className="clients-page-actions">
-            {(user?.role === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin)) && (
-              <>
-                <Button variant="outline" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
-                <Button variant="outline" onClick={() => downloadBulkTemplate('clients')}>Download Template</Button>
-              </>
-            )}
-            <Button variant="primary" onClick={openCreateClientModal}>+ Add Client</Button>
-          </div>
+          canWriteClients ? (
+            <div className="clients-page-actions">
+              {(user?.role === 'PRIMARY_ADMIN' || Boolean(user?.isPrimaryAdmin)) && (
+                <>
+                  <Button variant="outline" onClick={() => setShowBulkUpload(true)}>Bulk Upload</Button>
+                  <Button variant="outline" onClick={() => downloadBulkTemplate('clients')}>Download Template</Button>
+                </>
+              )}
+              <Button variant="primary" onClick={openCreateClientModal}>+ Add Client</Button>
+            </div>
+          ) : null
         ) : null}
     >
       {/* Telemetry Analytics Strip */}
@@ -1015,7 +1019,7 @@ export const ClientsPage = () => {
                     </div>
                   </div>
 
-                  {canManageClients && (
+                  {canWriteClients && (
                     <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-slate-100/80">
                       <button
                         type="button"
@@ -1057,8 +1061,8 @@ export const ClientsPage = () => {
                 <EmptyState
                   title="No clients available yet"
                   body="Add your first client to start creating dockets."
-                  actionLabel={canManageClients ? 'Add Client' : undefined}
-                  onAction={canManageClients ? openCreateClientModal : undefined}
+                  actionLabel={canWriteClients ? 'Add Client' : undefined}
+                  onAction={canWriteClients ? openCreateClientModal : undefined}
                 />
               )}
             />

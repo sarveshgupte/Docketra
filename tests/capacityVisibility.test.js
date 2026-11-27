@@ -128,15 +128,33 @@ async function testCapacityLoadCountsAndPendingExclusion() {
 
 async function testReassignmentLogsHistoryAndAudit() {
   const originalFindUser = User.findOne;
+  const originalFindTeams = Team.find;
+  const originalFindCases = Case.find;
   const originalReassignCase = require('../src/services/caseAssignment.service').reassignCase;
 
   let reassignParams = [];
+
+  Team.find = () => ({
+    select: () => ({
+      lean: async () => [{ _id: '60d5ec49f3e1a329dc3309a4' }],
+    }),
+  });
+
+  Case.find = () => ({
+    select: () => ({
+      lean: async () => [
+        { caseId: 'DCK-0001', ownerTeamId: '60d5ec49f3e1a329dc3309a4' },
+        { caseId: 'DCK-0002', ownerTeamId: '60d5ec49f3e1a329dc3309a4' },
+      ],
+    }),
+  });
 
   User.findOne = () => ({
     lean: async () => ({
       _id: '60d5ec49f3e1a329dc3309a6',
       xID: 'X000101',
       status: 'active',
+      teamIds: ['60d5ec49f3e1a329dc3309a4'],
     })
   });
 
@@ -149,7 +167,7 @@ async function testReassignmentLogsHistoryAndAudit() {
       caseIds: ['DCK-0001', 'DCK-0002'],
       assignedToXID: 'X000101'
     },
-    user: { firmId: 'firm-1', xID: 'X000001', role: 'manager' }
+    user: { _id: '60d5ec49f3e1a329dc3309a5', firmId: 'firm-1', xID: 'X000001', role: 'manager', teamIds: ['60d5ec49f3e1a329dc3309a4'] }
   };
 
   let jsonResult;
@@ -176,9 +194,30 @@ async function testReassignmentLogsHistoryAndAudit() {
     assert.strictEqual(reassignParams[0].assignedToXID, 'X000101');
     assert.strictEqual(reassignParams[0].firmId, 'firm-1');
 
+    // Cross-team docket reassignment by manager should be blocked with 403
+    Case.find = () => ({
+      select: () => ({
+        lean: async () => [{ caseId: 'DCK-9999', ownerTeamId: '60d5ec49f3e1a329dc3309b9' }],
+      }),
+    });
+    const blockedRes = {
+      statusCode: 200,
+      payload: null,
+      status(code) { this.statusCode = code; return this; },
+      json(data) { this.payload = data; return this; },
+    };
+    await controller.bulkReassignDockets({
+      ...req,
+      body: { caseIds: ['DCK-9999'], assignedToXID: 'X000101' },
+    }, blockedRes);
+    assert.strictEqual(blockedRes.statusCode, 403);
+    assert.strictEqual(blockedRes.payload.success, false);
+
     console.log('✓ Bulk reassignment loops through atomic service with safety controls');
   } finally {
     User.findOne = originalFindUser;
+    Team.find = originalFindTeams;
+    Case.find = originalFindCases;
     require('../src/services/caseAssignment.service').reassignCase = originalReassignCase;
   }
 }

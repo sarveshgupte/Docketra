@@ -179,7 +179,7 @@ export const WorkbasketPage = () => {
         const users = Array.isArray(res.data?.data) ? res.data.data : [];
         return users.filter((u) => {
           const role = String(u?.role || '').trim().toUpperCase();
-          const isFirmUser = role === 'ADMIN' || role === 'STAFF' || role === 'EMPLOYEE';
+          const isFirmUser = ['PRIMARY_ADMIN', 'ADMIN', 'MANAGER', 'USER', 'STAFF', 'EMPLOYEE'].includes(role);
           const isActive = u?.isActive !== false && u?.status !== 'inactive' && u?.status !== 'deleted';
           return isFirmUser && isActive;
         });
@@ -188,7 +188,7 @@ export const WorkbasketPage = () => {
         return [];
       }
     },
-    enabled: Boolean(isAdmin),
+    enabled: Boolean(isManagerOrAdmin),
     staleTime: 60 * 1000,
   });
 
@@ -1092,7 +1092,7 @@ export const WorkbasketPage = () => {
                   {selectedCases.length} of {cases.length} selected
                 </span>
               </div>
-              {isAdmin && (
+              {isManagerOrAdmin && (
                 <div className="flex items-center gap-2">
                   <label htmlFor={filterIds.assignTo} className="text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Assign to:</label>
                   <select 

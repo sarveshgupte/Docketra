@@ -4,6 +4,7 @@ const Case = require('../models/Case.model');
 const CaseStatus = require('../domain/case/caseStatus');
 const { COMPLIANCE_STATES } = require('../domain/compliance/complianceStateMachine');
 const { reassignCase } = require('../services/caseAssignment.service');
+const { normalizeRole } = require('../utils/role.utils');
 const mongoose = require('mongoose');
 const log = require('../utils/log');
 
@@ -324,6 +325,48 @@ const bulkReassignDockets = async (req, res) => {
 
     if (!targetUser) {
       return res.status(404).json({ success: false, message: 'Target user not found or inactive' });
+    }
+
+    if (normalizeRole(req.user?.role) === 'MANAGER') {
+      const ownedTeams = await Team.find({
+        firmId,
+        managerId: req.user?._id,
+        isActive: true,
+      }).select('_id').lean();
+      const permittedTeamIds = new Set([
+        ...(req.user?.teamId ? [String(req.user.teamId)] : []),
+        ...(Array.isArray(req.user?.teamIds) ? req.user.teamIds.map((id) => String(id)) : []),
+        ...(Array.isArray(ownedTeams) ? ownedTeams.map((team) => String(team._id)) : []),
+      ].filter(Boolean));
+
+      const targetTeamIds = [
+        ...(targetUser.teamId ? [String(targetUser.teamId)] : []),
+        ...(Array.isArray(targetUser.teamIds) ? targetUser.teamIds.map((id) => String(id)) : []),
+      ].filter(Boolean);
+
+      if (!targetTeamIds.some((id) => permittedTeamIds.has(id))) {
+        return res.status(403).json({
+          success: false,
+          message: 'Managers can only reassign dockets to active members of their managed workbaskets',
+        });
+      }
+
+      const targetDockets = await Case.find({
+        firmId,
+        caseId: { $in: caseIds },
+      }).select('caseId ownerTeamId workbasketId routedToTeamId').lean();
+
+      const outOfScopeDocket = (targetDockets || []).find((docket) => {
+        const docketTeamId = String(docket?.routedToTeamId || docket?.ownerTeamId || docket?.workbasketId || '');
+        return !docketTeamId || !permittedTeamIds.has(docketTeamId);
+      });
+
+      if (outOfScopeDocket) {
+        return res.status(403).json({
+          success: false,
+          message: 'Managers can only reassign dockets within their managed workbaskets',
+        });
+      }
     }
 
     const successCases = [];

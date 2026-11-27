@@ -12,7 +12,7 @@ const jwtService = require('../services/jwt.service');
 const { generateFirmSlug } = require('../utils/firmSlug');
 const { sendWelcomeEmail } = require('../services/email/sendWelcomeEmail');
 const { normalizeRole } = require('../utils/role.utils');
-const { assertPrimaryAdmin, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
+const { assertPrimaryAdmin, canInviteRole, getTagValidationError, normalizeId } = require('../utils/hierarchy.utils');
 const { logAuditEvent } = require('../services/adminActionAudit.service');
 const log = require('../utils/log');
 const settingsAuditService = require('../services/settingsAudit.service');
@@ -156,17 +156,28 @@ const createUser = async (req, res) => {
   };
 
   try {
+    const scope = resolveUserFirmScope(req, res);
+    if (!scope || !scope.firmId) return;
+
     const { name, email, role, qcSamplingRate } = req.body;
+    const requestedRole = normalizeRole(role || 'USER') || 'USER';
+    if (requestedRole === 'SUPER_ADMIN' || requestedRole === 'PRIMARY_ADMIN' || !canInviteRole(req.user?.role, requestedRole)) {
+      return res.status(403).json({
+        success: false,
+        error: 'You are not permitted to create a user with this role',
+        ...responseMeta,
+      });
+    }
 
     // Check if user already exists
     const normalizedEmail = email.trim().toLowerCase();
     const existingUser = await User.findOne({
-      firmId: req.user?.firmId,
+      firmId: scope.firmId,
       email: normalizedEmail,
       status: { $ne: 'deleted' },
     });
     if (existingUser) {
-      if (role && existingUser.role !== role) {
+      if (role && normalizeRole(existingUser.role) !== requestedRole) {
         return res.status(409).json({
           success: false,
           error: 'User with this email already exists with a different role',
@@ -184,7 +195,48 @@ const createUser = async (req, res) => {
       });
     }
 
-    await assertFirmPlanCapacity({ firmId: req.user?.firmId, role: role || 'Employee' });
+    const inviterRole = normalizeRole(req.user?.role);
+    let primaryAdminId = normalizeId(req.body?.primaryAdminId)
+      || normalizeId(req.user?.primaryAdminId)
+      || (inviterRole === 'PRIMARY_ADMIN' ? normalizeId(req.user?._id) : null);
+    if (!primaryAdminId) {
+      const firmPrimaryAdmin = await User.findOne({
+        firmId: scope.firmId,
+        role: 'PRIMARY_ADMIN',
+        status: { $ne: 'deleted' },
+      }).select('_id').lean();
+      primaryAdminId = normalizeId(firmPrimaryAdmin?._id);
+    }
+
+    let adminId = inviterRole === 'ADMIN'
+      ? normalizeId(req.user?._id)
+      : (inviterRole === 'MANAGER' ? normalizeId(req.user?.adminId) : normalizeId(req.body?.adminId));
+    let managerId = inviterRole === 'MANAGER'
+      ? normalizeId(req.user?._id)
+      : normalizeId(req.body?.managerId || req.body?.reportsToUserId);
+
+    if (requestedRole === 'ADMIN') {
+      adminId = null;
+      managerId = null;
+    } else if (requestedRole === 'MANAGER') {
+      managerId = null;
+    }
+
+    const hierarchyError = getTagValidationError({
+      role: requestedRole,
+      primaryAdminId,
+      adminId,
+      managerId,
+    });
+    if (hierarchyError) {
+      return res.status(400).json({
+        success: false,
+        error: hierarchyError,
+        ...responseMeta,
+      });
+    }
+
+    await assertFirmPlanCapacity({ firmId: scope.firmId, role: requestedRole });
     
     let parsedRate = null;
     if (qcSamplingRate !== undefined && qcSamplingRate !== null && qcSamplingRate !== '') {
@@ -194,13 +246,17 @@ const createUser = async (req, res) => {
     const user = new User({
       name,
       email: normalizedEmail,
-      role,
+      firmId: scope.firmId,
+      role: requestedRole,
+      primaryAdminId,
+      adminId,
+      managerId,
       qcSamplingRate: parsedRate,
       createdBy: req.user?._id || null,
     });
     
     await user.save();
-    await incrementTenantMetric(req.user?.firmId, 'users').catch(() => null);
+    await incrementTenantMetric(scope.firmId, 'users').catch(() => null);
     
     res.status(201).json({
       success: true,

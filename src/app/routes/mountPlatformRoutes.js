@@ -71,6 +71,11 @@ const mountPlatformRoutes = (app, deps) => {
 
   app.use('/api/categories', writeGuardChain, categoryRoutes);
   app.use('/api/work-types', ...tenantScopedApiAccess, writeGuardChain, workTypeRoutes);
+  app.use('/api/admin/workbaskets', ...tenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), (req, res, next) => {
+    const suffix = req.url.startsWith('/?') ? req.url.slice(1) : (req.url === '/' ? '' : req.url);
+    req.url = `/workbaskets${suffix}`;
+    return adminRoutes(req, res, next);
+  });
   app.use('/api/admin', ...adminTenantScopedApiAccess, writeGuardChain, adminAuditTrail('admin'), adminRoutes);
   app.use('/api/dashboard', ...tenantScopedApiAccess, writeGuardChain, dashboardRoutes);
   app.use('/api/docketra-intelligence', ...tenantScopedApiAccess, writeGuardChain, docketraIntelligenceRoutes);

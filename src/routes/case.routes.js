@@ -3,7 +3,7 @@ const { applyRouteValidation } = require('../middleware/requestValidation.middle
 const routeSchemas = require('../schemas/case.routes.schema.js');
 const router = applyRouteValidation(express.Router(), routeSchemas);
 const { authorizeFirmPermission } = require('../middleware/permission.middleware');
-const { requireRole } = require('../middleware/rbac.middleware');
+const { requireManagerOrPrimaryAdmin } = require('../middleware/rbac.middleware');
 const { restrictTraineeDownload } = require('../middleware/downloadShield.middleware');
 const {
   userReadLimiter,
@@ -260,7 +260,7 @@ router.post('/:caseId/route', authorizeFirmPermission('CASE_UPDATE'), userWriteL
 router.post('/:caseId/accept', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, requireDocketAccess, acceptRoutedCase);
 router.post('/:caseId/return', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, requireDocketAccess, returnRoutedCase);
 router.post('/:caseId/routed-status', authorizeFirmPermission('CASE_UPDATE'), userWriteLimiter, checkCaseClientAccess, requireDocketAccess, updateRoutedCaseStatus);
-router.post('/:caseId/manager-move', requireRole(['MANAGER']), userWriteLimiter, checkCaseClientAccess, requireDocketAccess, managerMoveCase);
+router.post('/:caseId/manager-move', requireManagerOrPrimaryAdmin, userWriteLimiter, checkCaseClientAccess, requireDocketAccess, managerMoveCase);
 
 
 // Client Fact Sheet routes (Read-Only from Case view)

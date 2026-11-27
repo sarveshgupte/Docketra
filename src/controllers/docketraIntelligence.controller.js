@@ -3,16 +3,23 @@ const { hasFirmRoleAtLeast } = require('../utils/role.utils');
 const docketraIntelligenceService = require('../services/docketraIntelligence.service');
 const log = require('../utils/log');
 
+const requireManagerAccess = (req, res, message) => {
+  if (hasFirmRoleAtLeast(req.user, 'MANAGER')) {
+    return true;
+  }
+  res.status(403).json({
+    success: false,
+    message,
+    data: {},
+  });
+  return false;
+};
+
 const getWorkloadIntelligence = async (req, res) => {
   try {
     assertFirmContext(req);
-
-    if (!hasFirmRoleAtLeast(req.user, 'MANAGER')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Workload intelligence is available for manager and above roles only',
-        data: {},
-      });
+    if (!requireManagerAccess(req, res, 'Workload intelligence is available for manager and above roles only')) {
+      return undefined;
     }
 
     const data = await docketraIntelligenceService.getWorkloadIntelligence({
@@ -40,13 +47,8 @@ const getWorkloadIntelligence = async (req, res) => {
 const getWorkbasketCapacityIntelligence = async (req, res) => {
   try {
     assertFirmContext(req);
-
-    if (!hasFirmRoleAtLeast(req.user, 'MANAGER')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Workbasket capacity intelligence is available for manager and above roles only',
-        data: {},
-      });
+    if (!requireManagerAccess(req, res, 'Workbasket capacity intelligence is available for manager and above roles only')) {
+      return undefined;
     }
 
     const data = await docketraIntelligenceService.getWorkbasketCapacityIntelligence({
@@ -77,13 +79,8 @@ const getWorkbasketCapacityIntelligence = async (req, res) => {
 const getDeadlineRiskIntelligence = async (req, res) => {
   try {
     assertFirmContext(req);
-
-    if (!hasFirmRoleAtLeast(req.user, 'MANAGER')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Deadline risk intelligence is available for manager and above roles only',
-        data: {},
-      });
+    if (!requireManagerAccess(req, res, 'Deadline risk intelligence is available for manager and above roles only')) {
+      return undefined;
     }
 
     const data = await docketraIntelligenceService.getDeadlineRiskIntelligence({
@@ -118,30 +115,38 @@ const getDeadlineRiskIntelligence = async (req, res) => {
 const getExecutiveBrief = async (req, res) => {
   try {
     assertFirmContext(req);
+    if (!requireManagerAccess(req, res, 'Executive brief is available for manager and above roles only')) {
+      return undefined;
+    }
     const data = await docketraIntelligenceService.generateExecutiveAiBrief({ firmId: req.user.firmId });
     return res.json({ success: true, data });
   } catch (error) {
+    const statusCode = Number(error?.statusCode || 500);
     log.error('DOCKETRA_INTELLIGENCE_EXECUTIVE_BRIEF_ERROR', { message: error.message, stack: error.stack });
-    return res.status(500).json({ success: false, message: 'Failed to load executive brief' });
+    return res.status(statusCode).json({ success: false, message: 'Failed to load executive brief' });
   }
 };
 
 const getClientRiskScores = async (req, res) => {
   try {
     assertFirmContext(req);
+    if (!requireManagerAccess(req, res, 'Client risk intelligence is available for manager and above roles only')) {
+      return undefined;
+    }
     const data = await docketraIntelligenceService.getClientComplianceRiskScores({ firmId: req.user.firmId });
     return res.json({ success: true, data });
   } catch (error) {
+    const statusCode = Number(error?.statusCode || 500);
     log.error('DOCKETRA_INTELLIGENCE_CLIENT_RISK_SCORES_ERROR', { message: error.message, stack: error.stack });
-    return res.status(500).json({ success: false, message: 'Failed to load client risk scores' });
+    return res.status(statusCode).json({ success: false, message: 'Failed to load client risk scores' });
   }
 };
 
 const rebalanceWorkloadAction = async (req, res) => {
   try {
     assertFirmContext(req);
-    if (!hasFirmRoleAtLeast(req.user, 'MANAGER')) {
-      return res.status(403).json({ success: false, message: 'Rebalance action is available for manager and above roles only' });
+    if (!requireManagerAccess(req, res, 'Rebalance action is available for manager and above roles only')) {
+      return undefined;
     }
     const execute = req.body?.execute === true;
     const data = await docketraIntelligenceService.rebalanceWorkload({ firmId: req.user.firmId, execute });

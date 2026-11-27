@@ -492,7 +492,7 @@ async function runTests() {
       const intelService = require('../src/services/docketraIntelligence.service');
       const origBrief = intelService.generateExecutiveAiBrief;
       intelService.generateExecutiveAiBrief = () => { throw new Error(SECRET_SENSITIVE_ERROR); };
-      const req = { user: { firmId: testObjectId }, firmId: testObjectId };
+      const req = { user: { firmId: testObjectId, role: 'ADMIN' }, firmId: testObjectId };
       const res = mockRes();
       await docketraIntelligenceController.getExecutiveBrief(req, res);
       assert.strictEqual(res.statusCode, 500);
