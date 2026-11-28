@@ -32,7 +32,7 @@ const createAuthSignupService = (deps) => {
       if (!agreedToPilotTerms) {
         return res.status(400).json({
           success: false,
-          message: 'You must review and agree to the Docketra Pilot Evaluation Terms and Privacy Policy to register.',
+          message: 'You must review and agree to the DocketsHQ Pilot Evaluation Terms and Privacy Policy to register.',
         });
       }
 

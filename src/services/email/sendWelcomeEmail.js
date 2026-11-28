@@ -18,13 +18,14 @@ const sendWelcomeEmail = async ({
     throw new Error('Missing required welcome email fields');
   }
 
-  const frontendUrl = String(process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const defaultFrontendUrl = process.env.NODE_ENV === 'production' ? 'https://docketshq.com' : 'http://localhost:5173';
+  const frontendUrl = String(process.env.FRONTEND_URL || defaultFrontendUrl).replace(/\/$/, '');
   const workspaceUrl = `${frontendUrl}/app/firm/${resolvedFirmId}/dashboard`;
   const settingsUrl = isAdminRole
     ? `${frontendUrl}/app/firm/${resolvedFirmId}/settings/firm`
     : `${frontendUrl}/app/firm/${resolvedFirmId}/profile`;
-  const supportEmail = String(process.env.MAIL_FROM || 'help@docketra.in').trim();
-  const subject = 'Welcome to Docketra — Your Workspace is Ready';
+  const supportEmail = String(process.env.SUPPORT_EMAIL || process.env.MAIL_FROM || 'help@docketshq.com').trim();
+  const subject = 'Welcome to DocketsHQ — Your Workspace is Ready';
   const roleLabel = isAdminRole ? 'Admin' : 'User';
   const roleChecklist = isAdminRole
     ? [
@@ -42,7 +43,7 @@ const sendWelcomeEmail = async ({
 
   const text = `Hi ${resolvedName},
 
-Your Docketra account has been successfully set up.
+Your DocketsHQ account has been successfully set up.
 
 Role: ${roleLabel}
 Your XID: ${resolvedXid}
@@ -64,12 +65,12 @@ Need help? Reply to this email or contact ${supportEmail}.
 
 If you did not create this account, please ignore this email.
 
-— Team Docketra`;
+— Team DocketsHQ`;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto;">
       <p>Hi ${resolvedName},</p>
-      <p>Your Docketra account has been successfully set up.</p>
+      <p>Your DocketsHQ account has been successfully set up.</p>
       <p><strong>Role:</strong> ${roleLabel}</p>
       <p><strong>Your XID:</strong> ${resolvedXid}</p>
       <p><strong>Access your workspace:</strong><br/><a href="${workspaceUrl}">${workspaceUrl}</a></p>
@@ -85,7 +86,7 @@ If you did not create this account, please ignore this email.
       </ul>
       <p>Need help? Reply to this email or contact ${supportEmail}.</p>
       <p>If you did not create this account, please ignore this email.</p>
-      <p>— Team Docketra</p>
+      <p>— Team DocketsHQ</p>
     </div>
   `;
 

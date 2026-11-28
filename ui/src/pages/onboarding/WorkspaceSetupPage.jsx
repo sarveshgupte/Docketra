@@ -159,7 +159,7 @@ export function WorkspaceSetupPage() {
   }, [searchParams, showSuccess]);
 
   const workspaceUrl = useMemo(() => {
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://docketra.in';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://docketshq.com';
     return `${origin}/${firmSlug || 'workspace'}`;
   }, [firmSlug]);
 

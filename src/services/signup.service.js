@@ -27,6 +27,7 @@ const { setupDefaultFirm } = require('./firmSetup.service');
 const { resolveCanonicalTenantFromFirmId } = require('./tenantIdentity.service');
 const { RESERVED_FIRM_SLUGS } = require('../middleware/firmSlugGuard.middleware');
 const { PIONEER_COHORT_CONFIG } = require('../constants/subscriptionPlans');
+const { resolveAllowedFrontendOrigin } = require('./authGoogle.service');
 
 const SALT_ROUNDS = 10;
 const OTP_EXPIRY_MINUTES = 5;
@@ -470,13 +471,17 @@ const generateFirmId = async (session) => {
  * @param {string} firmSlug
  * @returns {string} firmUrl
  */
-const buildFirmUrl = (firmSlug) => {
+const buildFirmUrl = (firmSlug, req = null) => {
   const appRootDomain = String(process.env.APP_ROOT_DOMAIN || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-  const frontendUrl = String(process.env.FRONTEND_URL || 'http://localhost:3000').trim();
-
   if (appRootDomain) {
     return `https://${firmSlug}.${appRootDomain}/login`;
   }
+
+  const requestOrigin = resolveAllowedFrontendOrigin(
+    req?.headers?.origin || req?.headers?.referer || req?.query?.returnTo
+  );
+  const defaultOrigin = process.env.NODE_ENV === 'production' ? 'https://docketshq.com' : 'http://localhost:3000';
+  const frontendUrl = requestOrigin || String(process.env.FRONTEND_URL || defaultOrigin).trim();
 
   try {
     const resolved = new URL(frontendUrl);
@@ -496,7 +501,7 @@ const sendSignupWelcomeEmail = async ({
   authProvider = 'password',
   req = null,
 }) => {
-  const workspaceUrl = buildFirmUrl(firmSlug);
+  const workspaceUrl = buildFirmUrl(firmSlug, req);
   const sendPayload = {
     name,
     email,
@@ -734,7 +739,7 @@ const createFirmAndAdmin = async ({
   firm.bootstrapStatus = 'COMPLETED';
   await firm.save({ session });
 
-  const firmUrl = buildFirmUrl(firmSlug);
+  const firmUrl = buildFirmUrl(firmSlug, req);
 
   return {
     adminXID,
@@ -888,7 +893,7 @@ const resendCredentialsEmail = async ({ email, req = null }) => {
     name: adminUser.name,
     email: normalizedEmail,
     xid: adminUser.xID,
-    firmName: canonicalTenant.firmName || 'Docketra Workspace',
+    firmName: canonicalTenant.firmName || 'DocketsHQ Workspace',
     firmSlug: canonicalTenant.firmSlug,
     req,
   });

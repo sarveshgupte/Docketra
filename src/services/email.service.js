@@ -24,6 +24,12 @@ const { normalizeFirmSlug } = require('../utils/slugify');
 
 const resolveMailFrom = () => process.env.MAIL_FROM || process.env.SMTP_FROM || process.env.EMAIL_FROM;
 
+const resolveDefaultFrontendUrl = () => {
+  const configured = String(process.env.FRONTEND_URL || '').trim();
+  if (configured) return configured.replace(/\/+$/, '');
+  return process.env.NODE_ENV === 'production' ? 'https://docketshq.com' : 'http://localhost:3000';
+};
+
 const shouldUseTransactionalEmail = () => {
   if (process.env.NODE_ENV === 'test') return false;
   if (String(process.env.EMAIL_DELIVERY_MODE || '').trim().toLowerCase() === 'console') return false;
@@ -338,7 +344,7 @@ const sendPasswordSetupEmail = async ({
   token, 
   xID, 
   firmSlug = null, 
-  frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
+  frontendUrl = resolveDefaultFrontendUrl(),
   context = null,
   role = 'STAFF',
   firmName = null,
@@ -409,7 +415,7 @@ const sendPasswordSetupReminderEmail = async ({
   token, 
   xID, 
   firmSlug = null, 
-  frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
+  frontendUrl = resolveDefaultFrontendUrl(),
   req = null,
   role = 'STAFF',
   firmName = null,
@@ -436,7 +442,7 @@ const sendPasswordSetupReminderEmail = async ({
  * @param {string} frontendUrl - Base URL of frontend application
  * @returns {Promise<Object>} Result object with success status
  */
-const sendPasswordResetEmail = async (email, name, token, frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000') => {
+const sendPasswordResetEmail = async (email, name, token, frontendUrl = resolveDefaultFrontendUrl()) => {
   const resetLink = `${frontendUrl}/reset-password?token=${token}`;
   
   const subject = 'Password Reset Required for your DocketsHQ account';
@@ -489,7 +495,7 @@ DocketsHQ Team
  * @param {string} frontendUrl - Base URL of frontend application
  * @returns {Promise<Object>} Result object with success status
  */
-const sendForgotPasswordEmail = async (email, name, token, frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000') => {
+const sendForgotPasswordEmail = async (email, name, token, frontendUrl = resolveDefaultFrontendUrl()) => {
   const resetLink = `${frontendUrl}/reset-password?token=${token}`;
   
   const subject = 'Reset your DocketsHQ password';
@@ -841,7 +847,7 @@ const sendAdminPasswordResetEmail = async ({
   token,
   xID,
   firmSlug = null,
-  frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000',
+  frontendUrl = resolveDefaultFrontendUrl(),
   context = null,
 }) => {
   const normalizedFirmSlug = normalizeFirmSlug(firmSlug);

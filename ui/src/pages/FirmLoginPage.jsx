@@ -774,7 +774,7 @@ export const FirmLoginPage = () => {
           <span>•</span>
           <Link to="/terms" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
           <span>•</span>
-          <a href="mailto:support@docketra.in" className="hover:text-slate-600 transition-colors">Contact Support</a>
+          <a href="mailto:support@docketshq.com" className="hover:text-slate-600 transition-colors">Contact Support</a>
         </div>
         <p className="text-[11px]">© {new Date().getFullYear()} DocketsHQ. The Company Brain for Professional Practices.</p>
       </footer>
